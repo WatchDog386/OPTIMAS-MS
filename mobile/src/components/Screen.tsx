@@ -41,6 +41,6 @@ export function Screen({ children, scroll = true, refreshing, onRefresh, edges =
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: space.xl, paddingBottom: space.xxxl * 2, gap: space.lg },
-  footer: { paddingHorizontal: space.xl, paddingVertical: space.md, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.bg },
+  content: { padding: space.xl, paddingBottom: space.xxxl, gap: space.lg },
+  footer: { paddingHorizontal: space.xl, paddingVertical: space.md, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface },
 });

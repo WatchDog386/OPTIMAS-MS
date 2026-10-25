@@ -72,5 +72,5 @@ function Num({ label, value, tint = colors.text }: { label: string; value: numbe
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   grid: { flexDirection: 'row', backgroundColor: colors.surfaceAlt, borderRadius: radius.md, paddingVertical: space.md },
-  risk: { borderWidth: 1, borderColor: 'rgba(255,92,122,0.5)' },
+  risk: { borderWidth: 1, borderColor: `${colors.danger}55` },
 });

@@ -146,8 +146,8 @@ function DutyStat({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  dutyRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.18)', borderRadius: radius.md, paddingVertical: space.lg },
-  divider: { width: 1, height: 32, backgroundColor: colors.border },
-  alert: { flexDirection: 'row', alignItems: 'center', gap: space.md, borderWidth: 1, borderColor: 'rgba(255,181,71,0.35)' },
+  dutyRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.heroInset, borderRadius: radius.md, paddingVertical: space.lg },
+  divider: { width: 1, height: 32, backgroundColor: colors.heroBorder },
+  alert: { flexDirection: 'row', alignItems: 'center', gap: space.md, borderWidth: 1, borderColor: `${colors.warning}40`, backgroundColor: colors.warningSoft },
   alertIcon: { width: 42, height: 42, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
 });

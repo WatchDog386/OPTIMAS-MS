@@ -1,41 +1,61 @@
 /**
- * Optimas MS palette — deep navy surfaces with an electric-lime brand accent,
- * inspired by the Spiro Swap app's high-contrast, energetic look.
+ * Optimas MS — light theme (Material 3 inspired).
+ * White canvas, slate typography, deep navy as the interactive primary,
+ * and the electric-lime brand accent reserved for highlights on navy "hero" surfaces.
  */
 export const colors = {
-  bg: '#060B1A',
-  surface: '#0E1730',
-  surfaceAlt: '#152241',
-  surfaceHigh: '#1C2B50',
-  border: '#22325A',
+  // Canvas & surfaces
+  bg: '#FFFFFF',
+  surface: '#FFFFFF',
+  surfaceAlt: '#F4F6FA',
+  surfaceHigh: '#EBEFF5',
+  border: '#E3E8EF',
+  borderStrong: '#CBD3DF',
 
-  primary: '#B8F53B',
-  primaryPressed: '#9FDB24',
-  onPrimary: '#071022',
-  primarySoft: 'rgba(184, 245, 59, 0.12)',
+  // Interactive primary (navy)
+  primary: '#13265C',
+  primaryPressed: '#0C1A42',
+  onPrimary: '#FFFFFF',
+  primarySoft: '#E9EEF8',
 
-  accent: '#2DE1C2',
-  accentSoft: 'rgba(45, 225, 194, 0.12)',
+  // Brand accent (Optimas lime) — use on navy, or as a fill with navy text
+  brand: '#B8F53B',
+  onBrand: '#0C1A42',
+  brandSoft: '#F2FBDF',
 
-  text: '#F3F6FF',
-  textMuted: '#93A1C2',
-  textDim: '#5D6C8F',
+  accent: '#0E9F9A',
+  accentSoft: '#E3F6F5',
 
-  success: '#2EE59D',
-  successSoft: 'rgba(46, 229, 157, 0.14)',
-  warning: '#FFB547',
-  warningSoft: 'rgba(255, 181, 71, 0.14)',
-  danger: '#FF5C7A',
-  dangerSoft: 'rgba(255, 92, 122, 0.14)',
-  info: '#5AA8FF',
-  infoSoft: 'rgba(90, 168, 255, 0.14)',
+  // Text
+  text: '#0F172A',
+  textMuted: '#5B6577',
+  textDim: '#8E97A8',
 
-  overlay: 'rgba(3, 6, 15, 0.72)',
+  // Semantic
+  success: '#15803D',
+  successSoft: '#E7F6EC',
+  warning: '#B45309',
+  warningSoft: '#FEF3E2',
+  danger: '#DC2626',
+  dangerSoft: '#FDECEC',
+  info: '#1D4ED8',
+  infoSoft: '#EAF0FE',
+
+  // Navy hero surfaces
+  hero: '#13265C',
+  onHero: '#FFFFFF',
+  onHeroMuted: '#B9C4DE',
+  onHeroDim: '#8090B5',
+  heroInset: 'rgba(255,255,255,0.08)',
+  heroBorder: 'rgba(255,255,255,0.10)',
+
+  overlay: 'rgba(8, 15, 35, 0.66)',
+  scrim: 'rgba(0,0,0,0.45)',
   white: '#FFFFFF',
+  black: '#000000',
 } as const;
 
 export const gradients = {
-  hero: ['#1B2D5C', '#0E1730'] as const,
-  brand: ['#C9FF52', '#8EE01F'] as const,
-  teal: ['#1E5C63', '#0E1730'] as const,
+  hero: ['#1B3577', '#0F1F4D'] as const,
+  brand: ['#C9FF52', '#A3E635'] as const,
 };

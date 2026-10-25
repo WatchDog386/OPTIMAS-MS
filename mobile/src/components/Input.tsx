@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, radius, space } from '../theme';
@@ -9,21 +10,33 @@ interface Props extends TextInputProps {
   error?: string;
 }
 
-export function Input({ label, icon, error, style, multiline, ...rest }: Props) {
+/** Material 3 outlined text field with focus and error states. */
+export function Input({ label, icon, error, style, multiline, onFocus, onBlur, ...rest }: Props) {
+  const [focused, setFocused] = useState(false);
+  const borderColor = error ? colors.danger : focused ? colors.primary : colors.borderStrong;
   return (
     <View style={{ gap: 6 }}>
       {label ? (
-        <Text variant="label" color={colors.textMuted}>
+        <Text variant="label" color={focused ? colors.primary : colors.textMuted}>
           {label}
         </Text>
       ) : null}
-      <View style={[styles.field, multiline && styles.multi, !!error && { borderColor: colors.danger }]}>
-        {icon ? <Ionicons name={icon} size={18} color={colors.textDim} /> : null}
+      <View style={[styles.field, multiline && styles.multi, { borderColor, borderWidth: focused || error ? 2 : 1 }]}>
+        {icon ? <Ionicons name={icon} size={20} color={focused ? colors.primary : colors.textDim} /> : null}
         <TextInput
           placeholderTextColor={colors.textDim}
           selectionColor={colors.primary}
+          cursorColor={colors.primary}
           multiline={multiline}
-          style={[styles.input, multiline && { textAlignVertical: 'top', minHeight: 90 }, style]}
+          onFocus={(e) => {
+            setFocused(true);
+            onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            setFocused(false);
+            onBlur?.(e);
+          }}
+          style={[styles.input, multiline && { textAlignVertical: 'top', minHeight: 96 }, style]}
           {...rest}
         />
       </View>
@@ -40,14 +53,12 @@ const styles = StyleSheet.create({
   field: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.sm,
-    minHeight: 52,
+    gap: space.md,
+    minHeight: 54,
     paddingHorizontal: space.lg,
     borderRadius: radius.md,
     backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   multi: { alignItems: 'flex-start', paddingVertical: space.md },
-  input: { flex: 1, color: colors.text, fontFamily: fonts.medium, fontSize: 15, paddingVertical: 0 },
+  input: { flex: 1, color: colors.text, fontFamily: fonts.regular, fontSize: 16, paddingVertical: 0 },
 });

@@ -46,8 +46,8 @@ export default function Notifications() {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: space.md, padding: space.lg, borderRadius: radius.lg, backgroundColor: colors.surface },
-  unread: { borderWidth: 1, borderColor: 'rgba(184,245,59,0.3)' },
+  row: { flexDirection: 'row', gap: space.md, padding: space.lg, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  unread: { backgroundColor: colors.primarySoft, borderColor: colors.primarySoft },
   icon: { width: 42, height: 42, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
   dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary, marginTop: 6 },
 });

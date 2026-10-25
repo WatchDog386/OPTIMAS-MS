@@ -5,7 +5,7 @@ import type { Item } from '../../src/api/types';
 import { Badge, Card, Screen, SectionHeader, Text } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { colors, radius, space } from '../../src/theme';
-import { humanize, kes } from '../../src/utils/format';
+import { kes } from '../../src/utils/format';
 
 const ACTIONS = [
   { icon: 'arrow-up-circle', label: 'Issue', href: '/admin/transfer?direction=issue', tint: colors.primary },
@@ -21,6 +21,15 @@ const categoryIcon: Record<Item['category'], keyof typeof Ionicons.glyphMap> = {
   CONNECTOR: 'link-outline',
   ACCESSORY: 'pricetag-outline',
   TOOL: 'hammer-outline',
+};
+
+const categoryLabel: Record<Item['category'], string> = {
+  ROUTER: 'Router',
+  ONT: 'ONT',
+  CABLE: 'Cable',
+  CONNECTOR: 'Connector',
+  ACCESSORY: 'Accessory',
+  TOOL: 'Tool',
 };
 
 export default function Store() {
@@ -50,7 +59,7 @@ export default function Store() {
               {item.name}
             </Text>
             <Text variant="bodySm" color={colors.textMuted}>
-              {item.sku} · {humanize(item.category)} · {kes(item.unitPrice)}
+              {item.sku} · {categoryLabel[item.category]} · {kes(item.unitPrice)}
             </Text>
             <View style={{ flexDirection: 'row', gap: space.sm, marginTop: 4 }}>
               <Badge label={`${item.stock?.withTechnicians ?? 0} ${item.unit} with techs`} tone="info" dot={false} />

@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius, space } from '../theme';
+import { colors, radius, shadow, space } from '../theme';
 import { Text } from './Text';
 
 interface Props {
@@ -9,13 +9,12 @@ interface Props {
   icon: keyof typeof Ionicons.glyphMap;
   tint?: string;
   hint?: string;
-  onPress?: () => void;
 }
 
 export function StatTile({ label, value, icon, tint = colors.primary, hint }: Props) {
   return (
-    <View style={styles.tile}>
-      <View style={[styles.icon, { backgroundColor: `${tint}22` }]}>
+    <View style={[styles.tile, shadow.card]}>
+      <View style={[styles.icon, { backgroundColor: `${tint}14` }]}>
         <Ionicons name={icon} size={18} color={tint} />
       </View>
       <Text variant="stat">{value}</Text>
@@ -37,6 +36,15 @@ export function StatGrid({ children }: { children: React.ReactNode }) {
 
 const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.md },
-  tile: { flexGrow: 1, flexBasis: '45%', backgroundColor: colors.surface, borderRadius: radius.lg, padding: space.lg, gap: 4 },
-  icon: { width: 36, height: 36, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', marginBottom: space.sm },
+  tile: {
+    flexGrow: 1,
+    flexBasis: '45%',
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: space.lg,
+    gap: 2,
+  },
+  icon: { width: 36, height: 36, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', marginBottom: space.sm },
 });

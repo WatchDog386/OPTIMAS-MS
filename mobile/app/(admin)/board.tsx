@@ -33,7 +33,7 @@ export default function AdminJobs() {
       </Screen>
       {canCreate ? (
         <Pressable style={[styles.fab, shadow.glow]} onPress={() => router.push('/admin/task-new')} accessibilityLabel="New job">
-          <Ionicons name="add" size={30} color={colors.onPrimary} />
+          <Ionicons name="add" size={28} color={colors.onPrimary} />
         </Pressable>
       ) : null}
     </View>
@@ -41,5 +41,5 @@ export default function AdminJobs() {
 }
 
 const styles = StyleSheet.create({
-  fab: { position: 'absolute', right: 24, bottom: 104, width: 62, height: 62, borderRadius: 31, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  fab: { position: 'absolute', right: 20, bottom: 20, width: 58, height: 58, borderRadius: 18, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
 });

@@ -23,5 +23,5 @@ export function EmptyState({ icon, title, message }: { icon: keyof typeof Ionico
 
 const styles = StyleSheet.create({
   wrap: { alignItems: 'center', gap: space.sm, paddingVertical: space.xxl, paddingHorizontal: space.xl },
-  icon: { width: 64, height: 64, borderRadius: radius.lg, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', marginBottom: space.sm },
+  icon: { width: 64, height: 64, borderRadius: radius.lg, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center', marginBottom: space.sm },
 });

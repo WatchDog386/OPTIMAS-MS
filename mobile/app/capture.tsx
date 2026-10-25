@@ -160,9 +160,9 @@ export default function Capture() {
             ) : null}
           </View>
           <Pressable onPress={shoot} disabled={busy} style={styles.shutterOuter} accessibilityLabel="Take photo">
-            <View style={styles.shutterInner}>{busy ? <ActivityIndicator color={colors.onPrimary} /> : null}</View>
+            <View style={styles.shutterInner}>{busy ? <ActivityIndicator color={colors.onBrand} /> : null}</View>
           </Pressable>
-          <Text variant="label" color={colors.textMuted} align="center">
+          <Text variant="label" color={colors.white} align="center">
             {busy ? 'Verifying photo…' : 'Time, GPS and device are recorded with this photo'}
           </Text>
         </View>
@@ -176,13 +176,13 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center', padding: space.xxl, gap: space.lg, backgroundColor: colors.bg },
   overlay: { flex: 1, justifyContent: 'space-between' },
   topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: space.xl, paddingTop: space.sm },
-  round: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' },
-  liveTag: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,0,0,0.45)', paddingHorizontal: space.md, paddingVertical: 6, borderRadius: radius.pill },
+  round: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.scrim, alignItems: 'center', justifyContent: 'center' },
+  liveTag: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.scrim, paddingHorizontal: space.md, paddingVertical: 6, borderRadius: radius.pill },
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.danger },
   frame: { alignSelf: 'center', width: '78%', aspectRatio: 3 / 4, borderRadius: radius.xl, borderWidth: 2, borderColor: 'rgba(184,245,59,0.7)' },
   frameSelfie: { borderRadius: 999, width: '70%', aspectRatio: 0.8 },
   bottom: { padding: space.xl, gap: space.lg, alignItems: 'center' },
-  hintCard: { alignSelf: 'stretch', backgroundColor: colors.overlay, borderRadius: radius.lg, padding: space.lg, gap: 4 },
+  hintCard: { alignSelf: 'stretch', backgroundColor: colors.surface, borderRadius: radius.lg, padding: space.lg, gap: 4 },
   shutterOuter: { width: 82, height: 82, borderRadius: 41, borderWidth: 4, borderColor: colors.white, alignItems: 'center', justifyContent: 'center' },
-  shutterInner: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  shutterInner: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center' },
 });

@@ -75,7 +75,7 @@ export default function TaskDetail() {
       <Card variant="hero" style={{ gap: space.md, padding: space.xl }}>
         <View style={styles.row}>
           <View style={styles.typeIcon}>
-            <Ionicons name={taskTypeIcon[task.type]} size={22} color={colors.primary} />
+            <Ionicons name={taskTypeIcon[task.type]} size={22} color={colors.brand} />
           </View>
           <Badge label={`${humanize(task.priority)} priority`} tone={priorityTone[task.priority]} />
         </View>
@@ -246,8 +246,8 @@ function ProofPhoto({ label, photo }: { label: string; photo?: PhotoRef | null }
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm, justifyContent: 'space-between' },
-  typeIcon: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
-  metrics: { flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.18)', borderRadius: radius.md, padding: space.md },
+  typeIcon: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.heroInset, alignItems: 'center', justifyContent: 'center' },
+  metrics: { flexDirection: 'row', backgroundColor: colors.heroInset, borderRadius: radius.md, padding: space.md },
   matRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   total: { paddingTop: space.md, borderTopWidth: 1, borderTopColor: colors.border },
   photoEmpty: { aspectRatio: 3 / 4, borderRadius: radius.md, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },

@@ -5,9 +5,9 @@
     "scheme": "optimasms",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "dark",
-    "backgroundColor": "#060B1A",
-    "splash": { "backgroundColor": "#060B1A" },
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#FFFFFF",
+    "splash": { "backgroundColor": "#FFFFFF" },
     "ios": {
       "bundleIdentifier": "ke.co.optimas.ms",
       "supportsTablet": false,
@@ -18,13 +18,13 @@
     },
     "android": {
       "package": "ke.co.optimas.ms",
-      "adaptiveIcon": { "backgroundColor": "#060B1A" },
+      "adaptiveIcon": { "backgroundColor": "#FFFFFF" },
       "permissions": ["CAMERA", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
       "blockedPermissions": ["READ_MEDIA_IMAGES", "READ_EXTERNAL_STORAGE"]
     },
     "plugins": [
       "expo-router",
-      ["expo-notifications", { "color": "#B8F53B" }],
+      ["expo-notifications", { "color": "#13265C" }],
       "expo-secure-store",
       "expo-font",
       ["expo-camera", { "cameraPermission": "Optimas MS uses the camera for check-in photos, proof-of-work photos and scanning router serial numbers.", "recordAudioAndroid": false }],

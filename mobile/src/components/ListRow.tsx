@@ -17,10 +17,15 @@ interface Props {
 
 export function ListRow({ title, subtitle, icon, iconTint = colors.primary, left, right, onPress, chevron = !!onPress }: Props) {
   return (
-    <Pressable disabled={!onPress} onPress={onPress} style={({ pressed }) => [styles.row, pressed && { opacity: 0.8 }]}>
+    <Pressable
+      disabled={!onPress}
+      onPress={onPress}
+      android_ripple={{ color: 'rgba(15,23,42,0.06)' }}
+      style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.surfaceAlt }]}
+    >
       {left ??
         (icon ? (
-          <View style={[styles.icon, { backgroundColor: `${iconTint}1F` }]}>
+          <View style={[styles.icon, { backgroundColor: `${iconTint}14` }]}>
             <Ionicons name={icon} size={20} color={iconTint} />
           </View>
         ) : null)}
@@ -41,6 +46,16 @@ export function ListRow({ title, subtitle, icon, iconTint = colors.primary, left
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: space.md, backgroundColor: colors.surface, borderRadius: radius.md, padding: space.md + 2 },
-  icon: { width: 42, height: 42, borderRadius: radius.sm + 2, alignItems: 'center', justifyContent: 'center' },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: space.md + 2,
+    overflow: 'hidden',
+  },
+  icon: { width: 42, height: 42, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
 });

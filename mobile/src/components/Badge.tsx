@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { colors, radius, space } from '../theme';
+import { colors, radius, space, useInverse } from '../theme';
 import { Text } from './Text';
 
 export type Tone = 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'brand';
@@ -14,7 +14,8 @@ const tones: Record<Tone, { bg: string; fg: string }> = {
 };
 
 export function Badge({ label, tone = 'neutral', dot = true }: { label: string; tone?: Tone; dot?: boolean }) {
-  const t = tones[tone];
+  const inverse = useInverse();
+  const t = inverse && (tone === 'neutral' || tone === 'brand') ? { bg: colors.heroInset, fg: tone === 'brand' ? colors.brand : colors.onHeroMuted } : tones[tone];
   return (
     <View style={[styles.base, { backgroundColor: t.bg }]}>
       {dot ? <View style={[styles.dot, { backgroundColor: t.fg }]} /> : null}

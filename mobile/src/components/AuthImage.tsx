@@ -12,5 +12,5 @@ export function AuthImage({ photoId, style }: { photoId: string; style?: ImageSt
 }
 
 const styles = StyleSheet.create({
-  frame: { backgroundColor: colors.surfaceAlt, borderRadius: radius.md, overflow: 'hidden', aspectRatio: 3 / 4 },
+  frame: { backgroundColor: colors.surfaceHigh, borderRadius: radius.md, overflow: 'hidden', aspectRatio: 3 / 4 },
 });

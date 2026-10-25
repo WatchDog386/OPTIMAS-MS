@@ -66,7 +66,7 @@ export default function MyStock() {
           </Text>
         </View>
         <View style={styles.heroIcon}>
-          <Ionicons name="wifi" size={34} color={colors.primary} />
+          <Ionicons name="wifi" size={34} color={colors.brand} />
         </View>
       </Card>
 
@@ -141,5 +141,5 @@ export default function MyStock() {
 
 const styles = StyleSheet.create({
   hero: { flexDirection: 'row', alignItems: 'center', padding: space.xl },
-  heroIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  heroIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.heroInset, alignItems: 'center', justifyContent: 'center' },
 });

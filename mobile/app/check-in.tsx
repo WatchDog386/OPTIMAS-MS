@@ -87,7 +87,7 @@ export default function CheckIn() {
       {isIn ? (
         <>
           <Card variant="hero" style={{ gap: space.sm }}>
-            <Ionicons name="shield-checkmark" size={26} color={colors.primary} />
+            <Ionicons name="shield-checkmark" size={26} color={colors.brand} />
             <Text variant="title">Dress code check</Text>
             <Text variant="bodySm" color={colors.textMuted}>
               Your photo is reviewed by your supervisor. Make sure your uniform and staff ID are clearly visible.
@@ -160,7 +160,7 @@ export default function CheckIn() {
 
 const styles = StyleSheet.create({
   check: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.lg, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: 'transparent' },
-  checkOn: { borderColor: 'rgba(184,245,59,0.45)' },
+  checkOn: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
   checkIcon: { width: 42, height: 42, borderRadius: radius.sm, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
   box: { width: 26, height: 26, borderRadius: 8, borderWidth: 2, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   boxOn: { backgroundColor: colors.primary, borderColor: colors.primary },
