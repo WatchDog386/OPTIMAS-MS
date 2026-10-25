@@ -6,6 +6,7 @@ import { api, ApiError } from '../../src/api/client';
 import type { PhotoRef, Task } from '../../src/api/types';
 import { AuthImage, Badge, Button, Card, Input, Loading, Screen, ScreenHeader, SectionHeader, SignatureView, Text } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
+import { confirmAction } from '../../src/utils/confirm';
 import { isManager, useAuth } from '../../src/store/auth';
 import { requestCapture } from '../../src/store/bridge';
 import { colors, radius, space } from '../../src/theme';
@@ -39,11 +40,11 @@ export default function TaskDetail() {
   };
   const verify = (decision: 'VERIFIED' | 'REJECTED') =>
     run(() => api(`/tasks/${task.id}/verify`, { body: { decision, note: note || undefined } }));
-  const cancel = () =>
-    Alert.alert('Cancel job', 'This job will be cancelled for the technician.', [
-      { text: 'Keep', style: 'cancel' },
-      { text: 'Cancel job', style: 'destructive', onPress: () => run(() => api(`/tasks/${task.id}/cancel`, { body: {} })) },
-    ]);
+  const cancel = async () => {
+    if (await confirmAction('Cancel job', 'This job will be cancelled for the technician.', 'Cancel job')) {
+      await run(() => api(`/tasks/${task.id}/cancel`, { body: {} }));
+    }
+  };
 
   const openMaps = () => {
     const q = task.lat != null && task.lng != null ? `${task.lat},${task.lng}` : encodeURIComponent(task.address);

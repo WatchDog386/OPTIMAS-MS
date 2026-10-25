@@ -1,8 +1,9 @@
-import { Alert, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { useAuth } from '../store/auth';
 import { unregisterPush } from '../utils/push';
+import { confirmAction } from '../utils/confirm';
 import { colors, space } from '../theme';
 import { humanize } from '../utils/format';
 import { Avatar } from './Avatar';
@@ -14,19 +15,12 @@ import { Text } from './Text';
 /** Shared profile header + sign-out used by both technician and manager apps. */
 export function ProfileView({ children }: { children?: ReactNode }) {
   const user = useAuth((s) => s.user)!;
-  const signOut = () =>
-    Alert.alert('Sign out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign out',
-        style: 'destructive',
-        onPress: async () => {
-          await unregisterPush();
-          await useAuth.getState().logout();
-          router.replace('/login');
-        },
-      },
-    ]);
+  const signOut = async () => {
+    if (!(await confirmAction('Sign out', 'Are you sure you want to sign out?', 'Sign out'))) return;
+    await unregisterPush();
+    await useAuth.getState().logout();
+    router.replace('/login');
+  };
 
   return (
     <>
