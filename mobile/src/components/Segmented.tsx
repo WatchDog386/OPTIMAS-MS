@@ -15,7 +15,7 @@ export function Segmented<T extends string>({ options, value, onChange }: Props<
         const active = o.value === value;
         return (
           <Pressable key={o.value} onPress={() => onChange(o.value)} style={[styles.chip, active && styles.active]}>
-            <Text variant="label" color={active ? colors.onPrimary : colors.textMuted}>
+            <Text variant="label" color={active ? colors.onHighlight : colors.textMuted}>
               {o.label}
             </Text>
           </Pressable>
@@ -27,6 +27,6 @@ export function Segmented<T extends string>({ options, value, onChange }: Props<
 
 const styles = StyleSheet.create({
   row: { gap: space.sm },
-  chip: { paddingHorizontal: space.lg, paddingVertical: space.sm + 2, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.surfaceAlt },
-  active: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chip: { paddingHorizontal: space.lg, paddingVertical: space.sm + 2, borderRadius: radius.pill, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder },
+  active: { backgroundColor: colors.highlight, borderColor: colors.highlight },
 });

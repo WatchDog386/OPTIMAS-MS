@@ -24,14 +24,14 @@ interface Props {
 /** Material 3 buttons: filled (primary), outlined (secondary), text (ghost), and tonal danger. */
 const light: Record<Variant, { bg: string; fg: string; border?: string }> = {
   primary: { bg: colors.primary, fg: colors.onPrimary },
-  secondary: { bg: colors.surfaceAlt, fg: colors.text, border: colors.surfaceAlt },
+  secondary: { bg: colors.glassStrong, fg: colors.text, border: colors.glassBorder },
   ghost: { bg: 'transparent', fg: colors.primary },
   danger: { bg: colors.dangerSoft, fg: colors.danger },
 };
 
 /** On navy hero cards the primary action becomes the lime brand button. */
 const inverse: Record<Variant, { bg: string; fg: string; border?: string }> = {
-  primary: { bg: colors.white, fg: colors.charcoal },
+  primary: { bg: colors.highlight, fg: colors.onHighlight },
   secondary: { bg: colors.heroInset, fg: colors.onHero, border: colors.heroBorder },
   ghost: { bg: 'transparent', fg: colors.onHero },
   danger: { bg: colors.dangerSoft, fg: colors.danger },

@@ -14,6 +14,7 @@ const inverseMap: Record<string, string> = {
   [colors.text]: colors.onHero,
   [colors.textMuted]: colors.onHeroMuted,
   [colors.textDim]: colors.onHeroDim,
+  [colors.primary]: colors.onHero,
 };
 
 export function Text({ variant = 'body', color = colors.text, align, fixedColor, style, ...rest }: Props) {

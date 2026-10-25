@@ -86,12 +86,12 @@ export function FloatingTabBar({ state, descriptors, navigateToTab }: BottomTabB
           <>
             <Svg width={width} height={BAR_HEIGHT} style={StyleSheet.absoluteFill}>
               <Defs>
-                <SvgGradient id="lime" x1="0" y1="0" x2="0" y2="1">
-                  <Stop offset="0" stopColor="#CDEE66" />
-                  <Stop offset="1" stopColor="#B9DD48" />
+                <SvgGradient id="navfill" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0" stopColor="#F2F65A" />
+                  <Stop offset="1" stopColor="#E2EA2C" />
                 </SvgGradient>
               </Defs>
-              <Path d={barPath(width, cx, NOTCH_DEPTH)} fill="url(#lime)" />
+              <Path d={barPath(width, cx, NOTCH_DEPTH)} fill="url(#navfill)" />
             </Svg>
             <View style={[styles.bubble, { left: cx - BUBBLE / 2, top: NOTCH_DEPTH - BUBBLE_GAP - BUBBLE }]}>
               {activeIcon ? activeIcon({ focused: true, color: colors.white, size: 22 }) : null}

@@ -22,7 +22,7 @@ export function QuickActions({ items, title = 'Quick Actions' }: { items: QuickA
         {items.map((a) => (
           <Pressable key={a.label} onPress={a.onPress} style={({ pressed }) => [styles.item, pressed && { transform: [{ scale: 0.94 }], opacity: 0.8 }]} accessibilityRole="button" accessibilityLabel={a.label}>
             <View style={styles.circle}>
-              <Ionicons name={a.icon} size={26} color={a.tint ?? colors.primary} />
+              <Ionicons name={a.icon} size={24} color={a.tint ?? colors.text} />
               {a.badge ? (
                 <View style={styles.badge}>
                   <Text variant="label" color={colors.white} fixedColor style={{ fontSize: 10, lineHeight: 12, fontFamily: fonts.bold }}>
@@ -44,6 +44,6 @@ export function QuickActions({ items, title = 'Quick Actions' }: { items: QuickA
 const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: space.lg },
   item: { width: '25%', alignItems: 'center', gap: space.sm, paddingHorizontal: 2 },
-  circle: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
+  circle: { width: 58, height: 58, borderRadius: 29, backgroundColor: colors.glassStrong, borderWidth: 1, borderColor: colors.glassBorder, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: -2, right: -2, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.white },
 });

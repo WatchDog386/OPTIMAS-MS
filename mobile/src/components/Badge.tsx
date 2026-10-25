@@ -10,7 +10,7 @@ const tones: Record<Tone, { bg: string; fg: string }> = {
   danger: { bg: colors.dangerSoft, fg: colors.danger },
   info: { bg: colors.infoSoft, fg: colors.info },
   neutral: { bg: colors.surfaceHigh, fg: colors.textMuted },
-  brand: { bg: colors.brandSoft, fg: colors.brand },
+  brand: { bg: colors.highlight, fg: colors.onHighlight },
 };
 
 export function Badge({ label, tone = 'neutral', dot = true }: { label: string; tone?: Tone; dot?: boolean }) {

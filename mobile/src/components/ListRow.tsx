@@ -21,7 +21,7 @@ export function ListRow({ title, subtitle, icon, iconTint = colors.primary, left
       disabled={!onPress}
       onPress={onPress}
       android_ripple={{ color: 'rgba(15,23,42,0.06)' }}
-      style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.surfaceAlt }]}
+      style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.glassStrong }]}
     >
       {left ??
         (icon ? (
@@ -50,10 +50,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+    backgroundColor: colors.glass,
+    borderRadius: radius.xl - 4,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.glassBorder,
     padding: space.md + 2,
     overflow: 'hidden',
   },

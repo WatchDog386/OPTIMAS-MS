@@ -13,7 +13,7 @@ interface Props extends TextInputProps {
 /** Material 3 outlined text field with focus and error states. */
 export function Input({ label, icon, error, style, multiline, onFocus, onBlur, ...rest }: Props) {
   const [focused, setFocused] = useState(false);
-  const borderColor = error ? colors.danger : focused ? colors.borderStrong : colors.border;
+  const borderColor = error ? colors.danger : focused ? 'rgba(28,29,31,0.25)' : colors.glassBorder;
   return (
     <View style={{ gap: 6 }}>
       {label ? (
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingHorizontal: space.lg + 2,
     borderRadius: radius.pill,
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: 'rgba(255,255,255,0.72)',
   },
   multi: { alignItems: 'flex-start', paddingVertical: space.md, borderRadius: radius.lg },
   input: { flex: 1, color: colors.text, fontFamily: fonts.regular, fontSize: 14.5, paddingVertical: 0 },

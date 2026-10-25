@@ -16,11 +16,11 @@ what materials they used — and, crucially, **where every router is at all time
 ![](docs/screenshots/store-and-reconciliation.png)
 
 ### Design system
-Shared with the Optimas **Business-SME** app: **Figtree** typeface, Safaricom-green actions, green-grey ink text,
-grey-green pill fields, a soft sky glow behind headers, swipeable **bank-card hero cards** (teal / charcoal / garnet /
-amethyst, silver chip and contactless mark, action pill cut into the corner), a round-icon **Quick Actions** grid,
-section blocks with tinted round icons, and a floating **lime tab bar** whose active tab rides in a raised black bubble
-(`mobile/src/theme`, `mobile/src/components`).
+"Glass" light theme: a soft grey **frosted backdrop** with diffused light, **translucent white cards** with bright
+edges and large radii, ink-black actions, a **yellow highlight** for active states, **hatched** inactive bars, a
+profile hero with a big two-line name, and a floating yellow tab bar whose active tab rides in a black bubble.
+Typography (**Figtree**) and the quick-action / section patterns are shared with the Optimas Business-SME app
+(`mobile/src/theme`, `mobile/src/components/Glass*.tsx`).
 
 ---
 

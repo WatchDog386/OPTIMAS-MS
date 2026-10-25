@@ -21,7 +21,7 @@ export function Section({ title, subtitle, action, children }: { title: string; 
         </View>
         {action ? (
           <Pressable onPress={action.onPress} hitSlop={10}>
-            <Text variant="title" color={colors.primary} style={{ fontSize: 13.5 }}>
+            <Text variant="title" style={{ fontSize: 13.5, textDecorationLine: 'underline' }}>
               {action.label}
             </Text>
           </Pressable>
@@ -51,7 +51,7 @@ export function SectionRow({
   onPress?: () => void;
 }) {
   return (
-    <Pressable onPress={onPress} disabled={!onPress} style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.surfaceAlt }]}>
+    <Pressable onPress={onPress} disabled={!onPress} style={({ pressed }) => [styles.row, pressed && { backgroundColor: 'rgba(255,255,255,0.6)' }]}>
       <View style={[styles.icon, { backgroundColor: tintBg }]}>
         <Ionicons name={icon} size={20} color={tint} />
       </View>
@@ -73,7 +73,7 @@ export function SectionRow({
 
 /** Small soft pill, e.g. an amount owed. */
 export function Pill({ label, tone = 'danger' }: { label: string; tone?: 'danger' | 'success' | 'warning' | 'neutral' }) {
-  const t = { danger: [colors.dangerSoft, '#B91C1C'], success: [colors.successSoft, '#047857'], warning: [colors.warningSoft, '#B45309'], neutral: [colors.surfaceAlt, colors.textMuted] }[tone];
+  const t = { danger: [colors.dangerSoft, '#B91C1C'], success: [colors.successSoft, '#047857'], warning: [colors.warningSoft, '#B45309'], neutral: ['rgba(255,255,255,0.8)', colors.textMuted] }[tone];
   return (
     <View style={[styles.pill, { backgroundColor: t[0] }]}>
       <Text variant="label" color={t[1]} style={{ fontFamily: fonts.semibold, fontSize: 11 }}>
@@ -84,7 +84,7 @@ export function Pill({ label, tone = 'danger' }: { label: string; tone?: 'danger
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: space.lg, gap: 2 },
+  card: { backgroundColor: colors.glass, borderRadius: radius.xl + 2, borderWidth: 1, borderColor: colors.glassBorder, padding: space.lg + 4, gap: 2 },
   head: { flexDirection: 'row', alignItems: 'flex-end', gap: space.md, marginBottom: space.sm + 2 },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: 10, paddingHorizontal: 4, marginHorizontal: -4, borderRadius: radius.md },
   icon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },

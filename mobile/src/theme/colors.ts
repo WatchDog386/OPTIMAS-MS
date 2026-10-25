@@ -1,5 +1,7 @@
 /**
- * Optimas MS — light theme, matched to the Optimas Business-SME app:
+ * Optimas MS — "glass" light theme: soft grey frosted backdrop, translucent white cards,
+ * ink-black actions and a bright yellow highlight with hatched inactive states.
+ * Typography and ink scale are shared with the Optimas Business-SME app:
  * Safaricom green actions, green-grey "ink" typography, grey-green fields,
  * a soft sky glow behind headers, and bank-card style hero cards.
  */
@@ -12,11 +14,23 @@ export const colors = {
   border: '#E3E9E6',
   borderStrong: '#CBD5D0',
 
-  // Interactive primary (Safaricom green)
-  primary: '#2DA043',
-  primaryPressed: '#248537',
+  // Interactive primary (ink)
+  primary: '#1C1D1F',
+  primaryPressed: '#000000',
   onPrimary: '#FFFFFF',
-  primarySoft: '#EAF7ED',
+  primarySoft: 'rgba(28,29,31,0.06)',
+
+  // Highlight (yellow) — active pills, progress fills, check badges
+  highlight: '#ECF23A',
+  onHighlight: '#1C1D1F',
+
+  // Glass
+  glass: 'rgba(255,255,255,0.58)',
+  glassStrong: 'rgba(255,255,255,0.86)',
+  glassBorder: 'rgba(255,255,255,0.9)',
+  hatch: 'rgba(28,29,31,0.13)',
+  bgTop: '#F3F3F3',
+  bgBottom: '#DEDEDE',
 
   // Brand accents
   brand: '#2DA043',
@@ -45,8 +59,8 @@ export const colors = {
   info: '#0284C7',
   infoSoft: '#E0F2FE',
 
-  // Hero (teal card) surfaces
-  hero: '#3A8F91',
+  // Hero (charcoal) surfaces
+  hero: '#1F2022',
   onHero: '#FFFFFF',
   onHeroMuted: 'rgba(255,255,255,0.72)',
   onHeroDim: 'rgba(255,255,255,0.5)',
@@ -73,9 +87,9 @@ export const cardThemes = {
 export type CardTheme = (typeof cardThemes)[keyof typeof cardThemes];
 
 export const gradients = {
-  hero: ['#3A8F91', '#469D9F', '#56ACAD'] as const,
+  hero: ['#2C2D30', '#17181A'] as const,
   brand: ['#45B65C', '#2DA043'] as const,
-  lime: ['#CDEE66', '#B9DD48'] as const,
+  lime: ['#F2F65A', '#E2EA2C'] as const,
   glowTop: ['#D7E7FF', '#E8F1FF', 'rgba(255,255,255,0)'] as const,
   glowBottom: ['rgba(255,255,255,0)', '#E8F1FF', '#D7E7FF'] as const,
 };

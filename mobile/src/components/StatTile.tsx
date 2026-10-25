@@ -39,10 +39,10 @@ const styles = StyleSheet.create({
   tile: {
     flexGrow: 1,
     flexBasis: '45%',
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+    backgroundColor: colors.glass,
+    borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.glassBorder,
     padding: space.lg,
     gap: 2,
   },

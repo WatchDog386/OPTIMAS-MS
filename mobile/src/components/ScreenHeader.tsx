@@ -31,5 +31,5 @@ export function ScreenHeader({ title, subtitle, right, back = true }: { title: s
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  back: { width: 42, height: 42, borderRadius: radius.pill, backgroundColor: colors.white, shadowColor: '#2563EB', shadowOpacity: 0.22, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 3, alignItems: 'center', justifyContent: 'center' },
+  back: { width: 46, height: 46, borderRadius: radius.pill, backgroundColor: colors.glassStrong, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#1C1D1F', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 1, alignItems: 'center', justifyContent: 'center' },
 });

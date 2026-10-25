@@ -24,7 +24,7 @@ export function NotificationBell() {
 }
 
 const styles = StyleSheet.create({
-  btn: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.white, shadowColor: '#2563EB', shadowOpacity: 0.22, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 3, alignItems: 'center', justifyContent: 'center' },
+  btn: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.glassStrong, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#1C1D1F', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 1, alignItems: 'center', justifyContent: 'center' },
   badge: {
     position: 'absolute',
     top: 6,

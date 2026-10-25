@@ -37,12 +37,12 @@ export function Card({ children, onPress, variant = 'default', style, padded = t
     );
 
   const elevation = variant === 'default' ? shadow.card : isHero ? shadow.raised : undefined;
-  if (!onPress) return <View style={elevation}>{body}</View>;
+  if (!onPress) return <View style={[elevation, { borderRadius: radius.xl }]}>{body}</View>;
   return (
     <Pressable
       onPress={onPress}
       android_ripple={{ color: 'rgba(15,23,42,0.06)' }}
-      style={({ pressed }) => [elevation, pressed && styles.pressed]}
+      style={({ pressed }) => [elevation, { borderRadius: radius.xl }, pressed && styles.pressed]}
     >
       {body}
     </Pressable>
@@ -50,11 +50,11 @@ export function Card({ children, onPress, variant = 'default', style, padded = t
 }
 
 const styles = StyleSheet.create({
-  base: { backgroundColor: colors.surface, borderRadius: radius.lg, overflow: 'hidden' },
-  padded: { padding: space.lg },
-  elevated: { borderWidth: 1, borderColor: colors.border },
-  outline: { borderWidth: 1, borderColor: colors.border },
-  tonal: { backgroundColor: colors.surfaceAlt },
+  base: { backgroundColor: colors.glass, borderRadius: radius.xl, overflow: 'hidden' },
+  padded: { padding: space.lg + 2 },
+  elevated: { borderWidth: 1, borderColor: colors.glassBorder },
+  outline: { borderWidth: 1, borderColor: colors.glassBorder, backgroundColor: 'rgba(255,255,255,0.35)' },
+  tonal: { backgroundColor: 'rgba(255,255,255,0.4)' },
   heroBorder: { borderWidth: 1, borderColor: colors.heroBorder },
   pressed: { opacity: 0.94, transform: [{ scale: 0.985 }] },
 });
