@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "Optimas MS",
+    "slug": "optimas-ms",
+    "scheme": "optimasms",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#060B1A",
+    "splash": { "backgroundColor": "#060B1A" },
+    "ios": {
+      "bundleIdentifier": "ke.co.optimas.ms",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Optimas MS uses the camera for check-in photos, proof-of-work photos and scanning router serial numbers.",
+        "NSLocationWhenInUseUsageDescription": "Optimas MS records your location when you check in, check out and start or finish a job."
+      }
+    },
+    "android": {
+      "package": "ke.co.optimas.ms",
+      "adaptiveIcon": { "backgroundColor": "#060B1A" },
+      "permissions": ["CAMERA", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
+      "blockedPermissions": ["READ_MEDIA_IMAGES", "READ_EXTERNAL_STORAGE"]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-font",
+      ["expo-camera", { "cameraPermission": "Optimas MS uses the camera for check-in photos, proof-of-work photos and scanning router serial numbers.", "recordAudioAndroid": false }],
+      ["expo-location", { "locationWhenInUsePermission": "Optimas MS records your location when you check in, check out and start or finish a job." }]
+    ],
+    "experiments": { "typedRoutes": false },
+    "extra": { "apiUrl": "http://192.168.1.10:4000/api/v1" }
+  }
+}

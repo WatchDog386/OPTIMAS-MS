@@ -1,0 +1,242 @@
+import { useState } from 'react';
+import { Alert, Linking, Platform, StyleSheet, View } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { api, ApiError } from '../../src/api/client';
+import type { PhotoRef, Task } from '../../src/api/types';
+import { AuthImage, Badge, Button, Card, Input, Loading, Screen, ScreenHeader, SectionHeader, Text } from '../../src/components';
+import { useApi } from '../../src/hooks/useApi';
+import { isManager, useAuth } from '../../src/store/auth';
+import { requestCapture } from '../../src/store/bridge';
+import { colors, radius, space } from '../../src/theme';
+import { dateTime, duration, flagLabel, humanize, kes, priorityTone, taskStatusTone, taskTypeIcon, time } from '../../src/utils/format';
+
+export default function TaskDetail() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const user = useAuth((s) => s.user)!;
+  const manager = isManager(user.role);
+  const { data, setData, refresh, refreshing } = useApi<{ task: Task }>(`/tasks/${id}`);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState('');
+  const task = data?.task;
+  if (!task) return <Loading />;
+
+  const mine = task.assignee.id === user.id;
+  const run = async (fn: () => Promise<{ task: Task }>) => {
+    setBusy(true);
+    try {
+      setData(await fn());
+    } catch (e) {
+      Alert.alert('Action failed', e instanceof ApiError ? e.message : 'Try again');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const start = async () => {
+    const photo = await requestCapture('TASK_START', { taskId: task.id });
+    if (photo) await run(() => api(`/tasks/${task.id}/start`, { body: { photoId: photo.photoId } }));
+  };
+  const verify = (decision: 'VERIFIED' | 'REJECTED') =>
+    run(() => api(`/tasks/${task.id}/verify`, { body: { decision, note: note || undefined } }));
+  const cancel = () =>
+    Alert.alert('Cancel job', 'This job will be cancelled for the technician.', [
+      { text: 'Keep', style: 'cancel' },
+      { text: 'Cancel job', style: 'destructive', onPress: () => run(() => api(`/tasks/${task.id}/cancel`, { body: {} })) },
+    ]);
+
+  const openMaps = () => {
+    const q = task.lat != null && task.lng != null ? `${task.lat},${task.lng}` : encodeURIComponent(task.address);
+    Linking.openURL(Platform.OS === 'ios' ? `http://maps.apple.com/?q=${q}` : `https://www.google.com/maps/search/?api=1&query=${q}`);
+  };
+  const materialsTotal = task.materials?.reduce((n, m) => n + m.amount, 0) ?? 0;
+
+  const footer =
+    mine && task.status === 'ASSIGNED' ? (
+      <Button label="Start job · take photo" icon="camera" size="lg" loading={busy} onPress={start} />
+    ) : mine && task.status === 'IN_PROGRESS' ? (
+      <Button label="Complete job" icon="checkmark-done" size="lg" onPress={() => router.push(`/task/complete?id=${task.id}`)} />
+    ) : manager && task.status === 'COMPLETED' ? (
+      <View style={{ gap: space.sm }}>
+        <Input placeholder="Note (required to reject)" value={note} onChangeText={setNote} />
+        <View style={{ flexDirection: 'row', gap: space.sm }}>
+          <Button label="Reject" variant="danger" icon="close" loading={busy} onPress={() => verify('REJECTED')} style={{ flex: 1 }} />
+          <Button label="Verify" icon="shield-checkmark" loading={busy} onPress={() => verify('VERIFIED')} style={{ flex: 1.4 }} />
+        </View>
+      </View>
+    ) : manager && (task.status === 'ASSIGNED' || task.status === 'IN_PROGRESS') ? (
+      <Button label="Cancel job" variant="danger" icon="close-circle-outline" loading={busy} onPress={cancel} />
+    ) : undefined;
+
+  return (
+    <Screen refreshing={refreshing} onRefresh={refresh} footer={footer}>
+      <ScreenHeader title={task.code} subtitle={humanize(task.type)} right={<Badge label={humanize(task.status)} tone={taskStatusTone[task.status]} />} />
+
+      <Card variant="hero" style={{ gap: space.md, padding: space.xl }}>
+        <View style={styles.row}>
+          <View style={styles.typeIcon}>
+            <Ionicons name={taskTypeIcon[task.type]} size={22} color={colors.primary} />
+          </View>
+          <Badge label={`${humanize(task.priority)} priority`} tone={priorityTone[task.priority]} />
+        </View>
+        <Text variant="h2">{task.title}</Text>
+        {task.description ? (
+          <Text variant="bodySm" color={colors.textMuted}>
+            {task.description}
+          </Text>
+        ) : null}
+        <View style={styles.metrics}>
+          <Metric label="Started" value={time(task.startedAt)} />
+          <Metric label="Finished" value={time(task.endedAt)} />
+          <Metric label="Duration" value={task.durationMinutes != null ? duration(task.durationMinutes) : task.startedAt ? 'Running' : '—'} />
+        </View>
+      </Card>
+
+      <SectionHeader title="Customer" />
+      <Card style={{ gap: space.md }}>
+        <Text variant="title">{task.customerName}</Text>
+        {task.customerAccount ? (
+          <Text variant="bodySm" color={colors.textMuted}>
+            Account {task.customerAccount}
+          </Text>
+        ) : null}
+        <View style={styles.row}>
+          <Ionicons name="location-outline" size={16} color={colors.textMuted} />
+          <Text variant="bodySm" color={colors.textMuted} style={{ flex: 1 }}>
+            {task.address}
+          </Text>
+        </View>
+        <View style={{ flexDirection: 'row', gap: space.sm }}>
+          {task.customerPhone ? (
+            <Button label="Call" icon="call" variant="secondary" style={{ flex: 1 }} onPress={() => Linking.openURL(`tel:${task.customerPhone}`)} />
+          ) : null}
+          <Button label="Navigate" icon="navigate" variant="secondary" style={{ flex: 1 }} onPress={openMaps} />
+        </View>
+      </Card>
+
+      {manager ? (
+        <Card style={styles.row}>
+          <Ionicons name="person-circle-outline" size={22} color={colors.primary} />
+          <View style={{ flex: 1 }}>
+            <Text variant="label" color={colors.textMuted}>
+              Assigned to
+            </Text>
+            <Text variant="title">
+              {task.assignee.name} · {task.assignee.staffNo}
+            </Text>
+          </View>
+        </Card>
+      ) : null}
+
+      {task.startPhoto || task.endPhoto ? (
+        <>
+          <SectionHeader title="Proof of work" />
+          <View style={{ flexDirection: 'row', gap: space.md }}>
+            <ProofPhoto label="Before" photo={task.startPhoto} />
+            <ProofPhoto label="After" photo={task.endPhoto} />
+          </View>
+        </>
+      ) : null}
+
+      {task.materials?.length ? (
+        <>
+          <SectionHeader title="Materials used" />
+          <Card style={{ gap: space.md }}>
+            {task.materials.map((m) => (
+              <View key={m.id} style={styles.matRow}>
+                <View style={{ flex: 1 }}>
+                  <Text variant="title">{m.item.name}</Text>
+                  <Text variant="bodySm" color={colors.textMuted}>
+                    {m.unit ? `S/N ${m.unit.serialNumber}` : `${m.quantity} ${m.item.unit} × ${kes(m.unitPrice)}`}
+                  </Text>
+                </View>
+                <Text variant="title">{kes(m.amount)}</Text>
+              </View>
+            ))}
+            <View style={[styles.matRow, styles.total]}>
+              <Text variant="title" color={colors.textMuted}>
+                Materials value
+              </Text>
+              <Text variant="h2">{kes(materialsTotal)}</Text>
+            </View>
+            {task.amountCollected != null ? (
+              <View style={styles.matRow}>
+                <Text variant="title" color={colors.textMuted}>
+                  Collected from customer
+                </Text>
+                <Text variant="h2" color={colors.primary}>
+                  {kes(task.amountCollected)}
+                </Text>
+              </View>
+            ) : null}
+          </Card>
+        </>
+      ) : null}
+
+      {task.completionNotes ? (
+        <>
+          <SectionHeader title="Technician notes" />
+          <Card>
+            <Text variant="body">{task.completionNotes}</Text>
+          </Card>
+        </>
+      ) : null}
+
+      {task.verifiedBy ? (
+        <Card style={{ borderWidth: 1, borderColor: task.status === 'VERIFIED' ? colors.success : colors.danger, gap: 4 }}>
+          <Text variant="title" color={task.status === 'VERIFIED' ? colors.success : colors.danger}>
+            {task.status === 'VERIFIED' ? 'Verified' : 'Rejected'} by {task.verifiedBy.name}
+          </Text>
+          {task.verificationNote ? (
+            <Text variant="bodySm" color={colors.textMuted}>
+              {task.verificationNote}
+            </Text>
+          ) : null}
+        </Card>
+      ) : null}
+
+      <Text variant="label" color={colors.textDim} align="center">
+        Created {dateTime(task.createdAt)}
+        {task.dueAt ? ` · Due ${dateTime(task.dueAt)}` : ''}
+      </Text>
+    </Screen>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={{ flex: 1, gap: 2 }}>
+      <Text variant="label" color={colors.textMuted}>
+        {label}
+      </Text>
+      <Text variant="title">{value}</Text>
+    </View>
+  );
+}
+
+function ProofPhoto({ label, photo }: { label: string; photo?: PhotoRef | null }) {
+  return (
+    <View style={{ flex: 1, gap: 6 }}>
+      {photo ? (
+        <AuthImage photoId={photo.id} />
+      ) : (
+        <View style={styles.photoEmpty}>
+          <Ionicons name="image-outline" size={26} color={colors.textDim} />
+        </View>
+      )}
+      <Text variant="label" color={colors.textMuted}>
+        {label} {photo ? `· ${time(photo.receivedAt)}` : ''}
+      </Text>
+      {photo?.flags.map((f) => <Badge key={f} label={flagLabel[f] ?? f} tone="warning" />)}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: space.sm, justifyContent: 'space-between' },
+  typeIcon: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  metrics: { flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.18)', borderRadius: radius.md, padding: space.md },
+  matRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  total: { paddingTop: space.md, borderTopWidth: 1, borderTopColor: colors.border },
+  photoEmpty: { aspectRatio: 3 / 4, borderRadius: radius.md, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
+});
