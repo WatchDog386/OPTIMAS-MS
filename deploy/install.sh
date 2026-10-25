@@ -10,6 +10,14 @@ apt-get install -y ca-certificates curl git ufw fail2ban unattended-upgrades qem
 echo "▶ Enabling QEMU guest agent (lets Proxmox see the VM IP and shut it down cleanly)…"
 systemctl enable --now qemu-guest-agent || true
 
+echo "▶ Adding swap if RAM is small (building the app needs headroom on 2 GB VMs)…"
+mem_kb=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
+if [ "$mem_kb" -lt 3800000 ] && ! swapon --show | grep -q /swapfile; then
+  fallocate -l 4G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+  grep -q '/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  echo "   4 GB swap enabled."
+fi
+
 echo "▶ Installing Docker…"
 if ! command -v docker >/dev/null 2>&1; then
   curl -fsSL https://get.docker.com | sh
