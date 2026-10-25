@@ -1,0 +1,40 @@
+# Optimas MS reverse proxy.
+# SITE_ADDRESS=ms.example.co.ke  → automatic HTTPS via Let's Encrypt (recommended)
+# SITE_ADDRESS=:80               → plain HTTP on the server IP (testing only)
+{
+	email {$ACME_EMAIL:admin@example.com}
+}
+
+{$SITE_ADDRESS::80} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# API (photos are uploaded here, so allow large bodies)
+	handle /api/* {
+		request_body {
+			max_size 12MB
+		}
+		reverse_proxy api:4000
+	}
+	handle /health {
+		reverse_proxy api:4000
+	}
+
+	# Manager web console (Expo web build, single-page app)
+	handle {
+		root * /srv/web
+		try_files {path} {path}.html /index.html
+		file_server
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

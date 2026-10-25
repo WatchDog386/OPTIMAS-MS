@@ -16,6 +16,8 @@ export default function More() {
             <ListRow icon="calendar-outline" iconTint={colors.info} title="Attendance register" subtitle="Check-in/out times, photos and absentees" onPress={() => router.push('/admin/attendance')} />
           </>
         ) : null}
+        <ListRow icon="download-outline" iconTint={colors.success} title="Reports & exports" subtitle="Attendance, jobs and reconciliation as Excel" onPress={() => router.push('/admin/reports')} />
+        <ListRow icon="notifications-outline" iconTint={colors.primary} title="Notifications" subtitle="Alerts and activity" onPress={() => router.push('/notifications')} />
         <ListRow icon="git-compare-outline" title="Stock reconciliation" subtitle="Issued vs. installed vs. in hand, per technician" onPress={() => router.push('/admin/reconciliation')} />
         <ListRow icon="list-outline" iconTint={colors.warning} title="Stock ledger" subtitle="Every movement, newest first" onPress={() => router.push('/admin/movements')} />
         <ListRow icon="search-outline" iconTint={colors.info} title="Trace a device" subtitle="Full chain of custody by serial number" onPress={() => router.push('/admin/unit')} />

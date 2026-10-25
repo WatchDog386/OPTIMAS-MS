@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import * as Notifications from 'expo-notifications';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -12,6 +13,8 @@ import {
   useFonts,
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { useAuth } from '../src/store/auth';
+import { registerForPush } from '../src/utils/push';
+import { openNotificationTarget } from '../src/utils/notifications';
 import { colors } from '../src/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -25,9 +28,25 @@ export default function RootLayout() {
     PlusJakartaSans_800ExtraBold,
   });
   const hydrated = useAuth((s) => s.hydrated);
+  const userId = useAuth((s) => s.user?.id);
 
   useEffect(() => {
     void useAuth.getState().hydrate();
+  }, []);
+
+  // Register this device for push once someone is signed in.
+  useEffect(() => {
+    if (userId) void registerForPush();
+  }, [userId]);
+
+  // Tapping a push notification opens the related screen.
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const content = response.notification.request.content;
+      const data = (content.data ?? {}) as Record<string, unknown>;
+      openNotificationTarget(String(data.type ?? ''), data);
+    });
+    return () => sub.remove();
   }, []);
 
   useEffect(() => {

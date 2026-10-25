@@ -8,6 +8,8 @@ import { ah } from '../../middleware/async';
 import { ROLES, me, requireRole } from '../../middleware/auth';
 import { parse } from '../../middleware/validate';
 import * as svc from './inventory.service';
+import { buildReconciliation } from './reconciliation';
+import { notify, notifyRoles } from '../notifications/notifications.service';
 
 export const inventoryRouter = Router();
 const store = requireRole(ROLES.STORE);
@@ -98,6 +100,12 @@ inventoryRouter.post(
       serials: b.serials?.length ? await svc.issueSerials(tx, actor, b.userId, b.serials, b.note) : undefined,
       bulk: b.itemId && b.quantity ? await svc.issueBulk(tx, actor, b.userId, b.itemId, b.quantity, b.note) : undefined,
     }));
+    const parts = [result.serials && `${result.serials.issued} device(s)`, result.bulk && `materials`].filter(Boolean).join(' and ');
+    void notify([b.userId], {
+      type: 'STOCK_ISSUED',
+      title: 'Stock issued to you',
+      body: `${parts} issued by ${me(req).name}. Confirm receipt in My stock.`,
+    });
     res.status(201).json(result);
   }),
 );
@@ -121,7 +129,11 @@ inventoryRouter.post(
   store,
   ah(async (req, res) => {
     const b = parse(z.object({ serialNumber: z.string().min(1), note: z.string().trim().min(5, 'Explain what happened') }), req.body);
-    res.json(await prisma.$transaction((tx) => svc.reportLost(tx, me(req).id, b.serialNumber, b.note)));
+    const lost = await prisma.$transaction((tx) => svc.reportLost(tx, me(req).id, b.serialNumber, b.note));
+    const msg = { type: 'UNIT_LOST' as const, title: `Device ${lost.serialNumber} reported lost`, body: b.note, data: { serialNumber: lost.serialNumber } };
+    void notify([lost.accountableUserId], msg);
+    void notifyRoles(['SUPERVISOR', 'ADMIN'], msg, me(req).id);
+    res.json(lost);
   }),
 );
 
@@ -168,7 +180,18 @@ inventoryRouter.post(
   '/stock-count',
   ah(async (req, res) => {
     const { serials } = parse(z.object({ serials: z.array(z.string()) }), req.body);
-    res.status(201).json({ count: await prisma.$transaction((tx) => svc.stockCount(tx, me(req).id, serials)) });
+    const count = await prisma.$transaction((tx) => svc.stockCount(tx, me(req).id, serials));
+    if (count.missing.length || count.unexpected.length) {
+      void notifyRoles(['STOREKEEPER', 'SUPERVISOR', 'ADMIN'], {
+        type: 'STOCK_COUNT_MISMATCH',
+        title: `Stock count mismatch — ${me(req).name}`,
+        body: [count.missing.length && `Missing: ${count.missing.join(', ')}`, count.unexpected.length && `Unexpected: ${count.unexpected.join(', ')}`]
+          .filter(Boolean)
+          .join(' · '),
+        data: { userId: me(req).id },
+      });
+    }
+    res.status(201).json({ count });
   }),
 );
 
@@ -249,48 +272,6 @@ inventoryRouter.get(
   '/reconciliation',
   store,
   ah(async (_req, res) => {
-    const techs = await prisma.user.findMany({ where: { role: 'TECHNICIAN' }, orderBy: { name: 'asc' } });
-    const [moves, held, bulk, counts] = await Promise.all([
-      prisma.stockMovement.findMany({
-        where: { serialUnitId: { not: null }, type: { in: ['ISSUE', 'INSTALL', 'RETURN', 'REPORT_FAULTY', 'REPORT_LOST'] } },
-        select: { type: true, toUserId: true, fromUserId: true },
-      }),
-      prisma.serialUnit.findMany({
-        where: { status: { in: ['IN_TRANSIT', 'WITH_TECHNICIAN'] } },
-        select: { holderId: true, serialNumber: true, status: true, heldSince: true, item: { select: { name: true } } },
-      }),
-      prisma.bulkHolding.findMany({ where: { quantity: { gt: 0 } }, include: { item: { select: { name: true, unit: true } } } }),
-      prisma.stockCount.findMany({ orderBy: { createdAt: 'desc' }, distinct: ['userId'] }),
-    ]);
-
-    const alertBefore = Date.now() - env.CUSTODY_AGE_ALERT_DAYS * DAY_MS;
-    const report = techs.map((t) => {
-      const tally = (type: string, dir: 'to' | 'from') =>
-        moves.filter((m) => m.type === type && (dir === 'to' ? m.toUserId : m.fromUserId) === t.id).length;
-      const inHand = held.filter((h) => h.holderId === t.id);
-      const overdue = inHand.filter((h) => h.heldSince && h.heldSince.getTime() < alertBefore);
-      const lastCount = counts.find((c) => c.userId === t.id);
-      return {
-        technician: { id: t.id, name: t.name, staffNo: t.staffNo },
-        serialised: {
-          issued: tally('ISSUE', 'to'),
-          installed: tally('INSTALL', 'from'),
-          returned: tally('RETURN', 'from') + tally('REPORT_FAULTY', 'from'),
-          lost: tally('REPORT_LOST', 'from'),
-          inHand: inHand.length,
-          pendingAcceptance: inHand.filter((h) => h.status === 'IN_TRANSIT').length,
-          overdue: overdue.map((o) => ({ serialNumber: o.serialNumber, name: o.item.name, heldSince: o.heldSince })),
-        },
-        bulkInHand: bulk
-          .filter((b) => b.userId === t.id)
-          .map((b) => ({ name: b.item.name, unit: b.item.unit, quantity: b.quantity })),
-        lastCount: lastCount
-          ? { at: lastCount.createdAt, missing: lastCount.missing, unexpected: lastCount.unexpected }
-          : null,
-        risk:
-          overdue.length > 0 || (lastCount?.missing.length ?? 0) > 0 || tally('REPORT_LOST', 'from') > 0 ? 'HIGH' : inHand.length ? 'NORMAL' : 'CLEAR',
-      };
-    });
-    res.json({ generatedAt: new Date(), ageAlertDays: env.CUSTODY_AGE_ALERT_DAYS, technicians: report });
+    res.json(await buildReconciliation());
   }),
 );

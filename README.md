@@ -10,6 +10,10 @@ what materials they used — and, crucially, **where every router is at all time
 |---|---|---|
 | ![](docs/screenshots/technician-app.png) | ![](docs/screenshots/jobs-and-overview.png) | ![](docs/screenshots/store-and-reconciliation.png) |
 
+**Phase 2 — notifications, Excel exports and customer sign-off**
+
+![](docs/screenshots/phase2-notifications-reports-signature.png)
+
 ---
 
 ## Features
@@ -32,6 +36,15 @@ what materials they used — and, crucially, **where every router is at all time
 - **Reconciliation** — per technician: Issued = Installed + Returned + Lost + In hand; overdue devices; last stock-count discrepancies.
 - **Trace a device** — complete chain of custody for any serial number; report lost.
 
+### 🔔 Phase 2 additions
+- **Notifications** — in-app inbox with unread badge + phone push notifications (Expo): job assigned / verified / rejected / cancelled,
+  stock issued, dress code rejected; supervisors are alerted to late or off-site check-ins, completed jobs, stock-count mismatches and lost devices.
+- **Customer sign-off** — the customer signs on the technician's phone when the job is finished (mandatory for installations); the signature is shown on the job record.
+- **Excel exports** — attendance & hours (with payroll summary), jobs & materials, and stock reconciliation with every device's location.
+- **Manager web console** — the same app served in the browser from the server, for office use.
+- **Production hosting kit** for the company's Proxmox server: Docker Compose, automatic HTTPS (Caddy), daily backups, restore script, firewall hardening.
+- **Hardening** — login rate limiting, proxy-aware logging.
+
 ### 🔐 How the router-accountability problem is solved
 1. Every router/ONT is registered by **serial number** on arrival.
 2. Issuing requires the **technician to confirm receipt** in-app (two-party handover).
@@ -50,8 +63,9 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full design.
 OPTIMAS-MS/
 ├── backend/   Node.js + Express + TypeScript + Prisma (PostgreSQL) REST API
 ├── mobile/    Expo (React Native) app — technician & supervisor experiences
-├── docs/      Architecture, API reference, roadmap, screenshots
-└── docker-compose.yml
+├── deploy/    Production stack for the Proxmox VM (Compose, Caddy, backups, scripts)
+├── docs/      Architecture, API reference, deployment guide, roadmap, screenshots
+└── docker-compose.yml   (local development database)
 ```
 
 ## Quick start
@@ -107,14 +121,26 @@ npx expo start                # scan the QR code with Expo Go
 | `MAX_ROUTERS_IN_CUSTODY` | `5` | Max un-installed routers/ONTs a technician may hold |
 | `CUSTODY_AGE_ALERT_DAYS` | `3` | Devices held longer are flagged |
 
+## Production hosting (Proxmox)
+
+The system is self-hosted on Optimas' Proxmox server. Full step-by-step guide: **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
+
+```bash
+sudo bash deploy/install.sh        # once, on a fresh Ubuntu VM
+cp deploy/.env.example deploy/.env # set domain, secrets, office location
+sudo bash deploy/deploy.sh         # build + start (also used for every update)
+```
+
 ## Building the app for staff phones
 ```bash
 cd mobile
 npm install -g eas-cli
-eas build -p android --profile preview   # produces an installable APK
+eas init                                 # once — links the project (needed for push notifications)
+eas build -p android --profile preview   # produces an installable APK (API URL is set in eas.json)
 ```
 
 ## Documentation
 - [Architecture & design](docs/ARCHITECTURE.md)
 - [API reference](docs/API.md)
+- [Deployment on Proxmox](docs/DEPLOYMENT.md)
 - [Roadmap](docs/ROADMAP.md)

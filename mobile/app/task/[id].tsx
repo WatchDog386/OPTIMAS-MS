@@ -4,7 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api, ApiError } from '../../src/api/client';
 import type { PhotoRef, Task } from '../../src/api/types';
-import { AuthImage, Badge, Button, Card, Input, Loading, Screen, ScreenHeader, SectionHeader, Text } from '../../src/components';
+import { AuthImage, Badge, Button, Card, Input, Loading, Screen, ScreenHeader, SectionHeader, SignatureView, Text } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { isManager, useAuth } from '../../src/store/auth';
 import { requestCapture } from '../../src/store/bridge';
@@ -169,6 +169,18 @@ export default function TaskDetail() {
                 </Text>
               </View>
             ) : null}
+          </Card>
+        </>
+      ) : null}
+
+      {task.customerSignature ? (
+        <>
+          <SectionHeader title="Customer sign-off" />
+          <Card style={{ gap: space.sm }}>
+            <SignatureView path={task.customerSignature} />
+            <Text variant="bodySm" color={colors.textMuted}>
+              Signed by <Text variant="bodySm">{task.signedByName}</Text> · {dateTime(task.signedAt)}
+            </Text>
           </Card>
         </>
       ) : null}

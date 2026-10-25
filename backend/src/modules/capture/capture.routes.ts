@@ -20,7 +20,10 @@ const upload = multer({
 
 const challengeSchema = z.object({
   purpose: z.enum(CapturePurpose),
-  taskId: z.string().optional(),
+  taskId: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? undefined),
 });
 
 captureRouter.post(

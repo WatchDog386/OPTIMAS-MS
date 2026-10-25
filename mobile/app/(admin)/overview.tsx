@@ -2,7 +2,7 @@ import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { Dashboard } from '../../src/api/types';
-import { Avatar, Card, Screen, SectionHeader, StatGrid, StatTile, Text } from '../../src/components';
+import { Avatar, NotificationBell, Card, Screen, SectionHeader, StatGrid, StatTile, Text } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { useAuth } from '../../src/store/auth';
 import { colors, radius, space } from '../../src/theme';
@@ -23,6 +23,7 @@ export default function Overview() {
           </Text>
           <Text variant="h1">{firstName(user.name)}</Text>
         </View>
+        <NotificationBell />
         <Avatar name={user.name} />
       </View>
 

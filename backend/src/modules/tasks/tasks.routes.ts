@@ -10,6 +10,7 @@ import { ROLES, me, requireRole } from '../../middleware/auth';
 import { parse } from '../../middleware/validate';
 import { consumePhoto } from '../capture/capture.service';
 import { consumeBulk, installSerial } from '../inventory/inventory.service';
+import { notify, notifyRoles } from '../notifications/notifications.service';
 
 export const tasksRouter = Router();
 const managers = requireRole(ROLES.MANAGERS);
@@ -95,6 +96,12 @@ tasksRouter.post(
     const assignee = await prisma.user.findUnique({ where: { id: body.assigneeId } });
     if (!assignee?.active || assignee.role !== 'TECHNICIAN') throw badRequest('Tasks can only be assigned to active technicians');
     const task = await prisma.task.create({ data: { ...body, code: newCode(), createdById: me(req).id }, include: detailInclude });
+    void notify([task.assigneeId], {
+      type: 'TASK_ASSIGNED',
+      title: `New ${task.priority === 'URGENT' ? 'URGENT ' : ''}job: ${task.title}`,
+      body: `${task.customerName} · ${task.address}`,
+      data: { taskId: task.id },
+    });
     res.status(201).json({ task });
   }),
 );
@@ -107,6 +114,15 @@ tasksRouter.patch(
     const task = await loadTask(req.params.id);
     if (task.status !== 'ASSIGNED') throw conflict('Only tasks that have not started can be edited or reassigned');
     const updated = await prisma.task.update({ where: { id: task.id }, data: body, include: detailInclude });
+    if (body.assigneeId && body.assigneeId !== task.assigneeId) {
+      void notify([updated.assigneeId], {
+        type: 'TASK_ASSIGNED',
+        title: `New job: ${updated.title}`,
+        body: `${updated.customerName} · ${updated.address}`,
+        data: { taskId: updated.id },
+      });
+      void notify([task.assigneeId], { type: 'TASK_CANCELLED', title: `${task.code} reassigned`, body: 'This job was moved to another technician.', data: { taskId: task.id } });
+    }
     res.json({ task: updated });
   }),
 );
@@ -118,6 +134,7 @@ tasksRouter.post(
     const task = await loadTask(req.params.id);
     if (!['ASSIGNED', 'IN_PROGRESS'].includes(task.status)) throw conflict(`A ${task.status.toLowerCase()} task cannot be cancelled`);
     const updated = await prisma.task.update({ where: { id: task.id }, data: { status: 'CANCELLED' }, include: detailInclude });
+    void notify([task.assigneeId], { type: 'TASK_CANCELLED', title: `${task.code} cancelled`, body: task.title, data: { taskId: task.id } });
     res.json({ task: updated });
   }),
 );
@@ -139,6 +156,12 @@ tasksRouter.post(
       where: { id: task.id },
       data: { status: body.decision, verifiedById: me(req).id, verifiedAt: new Date(), verificationNote: body.note },
       include: detailInclude,
+    });
+    void notify([task.assigneeId], {
+      type: body.decision === 'VERIFIED' ? 'TASK_VERIFIED' : 'TASK_REJECTED',
+      title: body.decision === 'VERIFIED' ? `${task.code} verified ✔` : `${task.code} returned for correction`,
+      body: body.note ?? task.title,
+      data: { taskId: task.id },
     });
     res.json({ task: updated });
   }),
@@ -179,6 +202,13 @@ const completeSchema = z.object({
   materials: z
     .array(z.object({ itemId: z.string().min(1), quantity: z.number().positive(), unitPrice: z.number().int().min(0).optional() }))
     .default([]),
+  signature: z
+    .object({
+      // SVG path data only (move/line/curve commands and numbers) — never markup.
+      path: z.string().min(10).max(200_000).regex(/^[MLQCZmlqcz0-9.,\s-]+$/, 'Invalid signature'),
+      signedBy: z.string().trim().min(2, 'Enter the name of the person who signed'),
+    })
+    .optional(),
 });
 
 tasksRouter.post(
@@ -191,6 +221,9 @@ tasksRouter.post(
     if (task.status !== 'IN_PROGRESS' || !task.startedAt) throw conflict('Start the task before completing it');
     if (task.type === 'INSTALLATION' && body.serials.length === 0) {
       throw badRequest('Scan the serial number of the router/ONT installed for this customer', 'SERIAL_REQUIRED');
+    }
+    if (task.type === 'INSTALLATION' && !body.signature) {
+      throw badRequest('Ask the customer to sign to confirm the installation', 'SIGNATURE_REQUIRED');
     }
 
     const customerAccount = body.customerAccount || task.customerAccount;
@@ -224,8 +257,17 @@ tasksRouter.post(
           completionNotes: body.notes,
           amountCollected: body.amountCollected,
           customerAccount,
+          customerSignature: body.signature?.path,
+          signedByName: body.signature?.signedBy,
+          signedAt: body.signature ? endedAt : undefined,
         },
       });
+    });
+    void notifyRoles(['SUPERVISOR', 'ADMIN'], {
+      type: 'TASK_COMPLETED',
+      title: `${task.code} completed by ${task.assignee.name}`,
+      body: `${task.customerName} · ${minutesBetween(task.startedAt!, endedAt)} min — awaiting verification`,
+      data: { taskId: task.id },
     });
     res.json({ task: await loadTask(task.id) });
   }),

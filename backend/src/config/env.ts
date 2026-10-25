@@ -25,6 +25,13 @@ const schema = z.object({
   OFFICE_RADIUS_M: z.coerce.number().default(300),
   MAX_ROUTERS_IN_CUSTODY: z.coerce.number().default(5),
   CUSTODY_AGE_ALERT_DAYS: z.coerce.number().default(3),
+  PUSH_ENABLED: z
+    .string()
+    .default('true')
+    .transform((v) => v === 'true'),
+  EXPO_ACCESS_TOKEN: z.string().optional(),
+  TRUST_PROXY: z.coerce.number().default(0),
+  LOGIN_RATE_LIMIT: z.coerce.number().default(10),
 });
 
 const parsed = schema.safeParse(process.env);

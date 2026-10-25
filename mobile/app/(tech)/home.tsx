@@ -2,7 +2,7 @@ import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { Attendance, Custody, SerialUnit, Task } from '../../src/api/types';
-import { Avatar, Badge, Button, Card, EmptyState, Screen, SectionHeader, StatGrid, StatTile, TaskCard, Text } from '../../src/components';
+import { Avatar, NotificationBell, Badge, Button, Card, EmptyState, Screen, SectionHeader, StatGrid, StatTile, TaskCard, Text } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { useAuth } from '../../src/store/auth';
 import { colors, radius, space } from '../../src/theme';
@@ -50,6 +50,7 @@ export default function TechHome() {
           </Text>
           <Text variant="h1">{firstName(user.name)} 👋</Text>
         </View>
+        <NotificationBell />
         <Avatar name={user.name} />
       </View>
 

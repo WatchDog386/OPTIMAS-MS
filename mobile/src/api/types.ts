@@ -96,6 +96,9 @@ export interface Task {
   completionNotes: string | null;
   amountCollected: number | null;
   verificationNote: string | null;
+  customerSignature: string | null;
+  signedByName: string | null;
+  signedAt: string | null;
   createdAt: string;
   assignee: Person;
   createdBy?: Person;

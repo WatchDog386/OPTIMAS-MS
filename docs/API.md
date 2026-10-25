@@ -48,7 +48,7 @@ A `photoId` must be used by its action within 10 minutes, once.
 | POST | `/tasks` | S A | `{ title, type, priority?, customerName, customerPhone?, customerAccount?, address, lat?, lng?, dueAt?, assigneeId, description? }` |
 | PATCH | `/tasks/:id` | S A | edit / reassign (only while `ASSIGNED`) |
 | POST | `/tasks/:id/start` | assignee | `{ photoId }` — must be checked in, one job in progress at a time |
-| POST | `/tasks/:id/complete` | assignee | `{ photoId, notes, customerAccount?, amountCollected?, serials: string[], materials: [{ itemId, quantity, unitPrice? }] }` — installations require ≥1 serial |
+| POST | `/tasks/:id/complete` | assignee | `{ photoId, notes, customerAccount?, amountCollected?, serials: string[], materials: [{ itemId, quantity, unitPrice? }], signature?: { path, signedBy } }` — installations require ≥1 serial **and** a customer signature (`path` = SVG path data on a 300×150 canvas) |
 | POST | `/tasks/:id/verify` | S A | `{ decision: VERIFIED \| REJECTED, note? }` |
 | POST | `/tasks/:id/cancel` | S A | |
 
@@ -73,3 +73,24 @@ A `photoId` must be used by its action within 10 minutes, once.
 | GET | `/reports/dashboard` | K S A | supervisor dashboard numbers |
 |---|---|---|---|
 | GET | `/reports/me` | all | technician's monthly stats |
+
+## Notifications
+| Method | Path | Who | Body / notes |
+|---|---|---|---|
+| GET | `/notifications` | all | latest 100 + `unread` count |
+| GET | `/notifications/unread-count` | all | `{ unread }` |
+| POST | `/notifications/read` | all | `{ ids? }` — mark given (or all) as read |
+| POST | `/notifications/push-token` | all | `{ token: "ExponentPushToken[…]", platform? }` — register this device |
+| DELETE | `/notifications/push-token` | all | `{ token }` — on sign-out |
+
+Types: `TASK_ASSIGNED`, `TASK_COMPLETED`, `TASK_VERIFIED`, `TASK_REJECTED`, `TASK_CANCELLED`, `STOCK_ISSUED`,
+`DRESS_REJECTED`, `LATE_CHECK_IN`, `PHOTO_FLAGGED`, `STOCK_COUNT_MISMATCH`, `UNIT_LOST`.
+
+## Exports (Excel)
+| Method | Path | Who | Notes |
+|---|---|---|---|
+| GET | `/exports/attendance.xlsx?from=YYYY-MM-DD&to=YYYY-MM-DD` | K S A | sheets: Attendance, Summary (payroll) |
+| GET | `/exports/jobs.xlsx?from=&to=` | K S A | sheets: Jobs, Materials |
+| GET | `/exports/reconciliation.xlsx` | K S A | sheets: Reconciliation, Devices |
+
+Defaults to the last 30 days; at most one year per export. `POST /auth/login` is rate-limited (10 attempts / 15 min / IP by default).

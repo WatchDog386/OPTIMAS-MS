@@ -24,12 +24,13 @@
     },
     "plugins": [
       "expo-router",
+      ["expo-notifications", { "color": "#B8F53B" }],
       "expo-secure-store",
       "expo-font",
       ["expo-camera", { "cameraPermission": "Optimas MS uses the camera for check-in photos, proof-of-work photos and scanning router serial numbers.", "recordAudioAndroid": false }],
       ["expo-location", { "locationWhenInUsePermission": "Optimas MS records your location when you check in, check out and start or finish a job." }]
     ],
     "experiments": { "typedRoutes": false },
-    "extra": { "apiUrl": "http://192.168.1.10:4000/api/v1" }
+    "extra": { "apiUrl": "http://192.168.1.10:4000/api/v1", "eas": { "projectId": "" } }
   }
 }

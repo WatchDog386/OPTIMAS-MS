@@ -2,6 +2,7 @@ import { Alert, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { useAuth } from '../store/auth';
+import { unregisterPush } from '../utils/push';
 import { colors, space } from '../theme';
 import { humanize } from '../utils/format';
 import { Avatar } from './Avatar';
@@ -20,6 +21,7 @@ export function ProfileView({ children }: { children?: ReactNode }) {
         text: 'Sign out',
         style: 'destructive',
         onPress: async () => {
+          await unregisterPush();
           await useAuth.getState().logout();
           router.replace('/login');
         },

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
 import { Alert, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { api, ApiError } from '../../src/api/client';
@@ -16,6 +17,7 @@ export default function UnitTrace() {
   const [unit, setUnit] = useState<UnitHistory | null>(null);
   const [busy, setBusy] = useState(false);
   const [lostNote, setLostNote] = useState('');
+  const params = useLocalSearchParams<{ serial?: string }>();
 
   const lookup = async (s = serial) => {
     if (!s.trim()) return;
@@ -29,6 +31,14 @@ export default function UnitTrace() {
       setBusy(false);
     }
   };
+
+  useEffect(() => {
+    if (params.serial) {
+      setSerial(params.serial);
+      void lookup(params.serial);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.serial]);
 
   const reportLost = async () => {
     if (!unit) return;

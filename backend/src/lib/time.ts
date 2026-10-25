@@ -15,3 +15,9 @@ export function shiftStartFor(workDate: Date): Date {
 }
 
 export const minutesBetween = (a: Date, b: Date) => Math.max(0, Math.round((b.getTime() - a.getTime()) / 60_000));
+
+/** HH:mm in company local time, for human-readable messages. */
+export function time(at: Date): string {
+  const local = new Date(at.getTime() + offsetMs());
+  return `${String(local.getUTCHours()).padStart(2, '0')}:${String(local.getUTCMinutes()).padStart(2, '0')}`;
+}

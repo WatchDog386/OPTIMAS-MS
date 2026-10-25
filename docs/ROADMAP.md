@@ -7,12 +7,18 @@
 - Serial-level router chain of custody, two-party handover, custody cap, ageing alerts, stock counts, reconciliation
 - Supervisor dashboard, team status, attendance register, stock ledger
 
-## 🔜 v1.1 — recommended next steps
-- **Push notifications** (Expo Notifications): new job assigned, stock issued, job rejected, late check-in alerts to supervisors
-- **Offline queue** for jobs in areas with poor coverage (capture locally, sync with original server challenge)
-- **Object storage**: swap the storage adapter to S3 / Cloudflare R2 with signed URLs
-- **Excel/PDF exports** of attendance, jobs and reconciliation for payroll and audits
-- **Customer sign-off** (signature or OTP sent to the customer's phone) on job completion
+## ✅ v1.1 — Phase 2 (this release)
+- Push notifications + in-app inbox for technicians and supervisors
+- Customer signature sign-off on job completion
+- Excel exports: attendance & payroll summary, jobs & materials, reconciliation & device locations
+- Self-hosted production stack for the Proxmox server (Docker Compose, Caddy HTTPS, backups/restore, hardening)
+- Manager web console served from the same server; login rate limiting
+
+## 🔜 v1.2 — recommended next steps
+- **Offline queue** for jobs in areas with poor coverage (server-signed capture tokens issued in advance)
+- **SMS** (Africa's Talking) — job-done OTP / receipt to the customer, SMS fallback for critical alerts
+- **Admin user management screens** (create/deactivate staff, catalogue editing) in the app
+- **Off-site backup sync** (Proxmox Backup Server or rsync/S3) and uptime monitoring
 
 ## 🔭 Later
 - Face verification on check-in selfies (match against enrolled staff photo)

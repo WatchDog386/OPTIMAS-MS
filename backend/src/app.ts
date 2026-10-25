@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
 import { env } from './config/env';
 import { requireAuth } from './middleware/auth';
 import { errorHandler, notFoundHandler } from './middleware/error';
@@ -12,10 +13,14 @@ import { attendanceRouter } from './modules/attendance/attendance.routes';
 import { tasksRouter } from './modules/tasks/tasks.routes';
 import { inventoryRouter } from './modules/inventory/inventory.routes';
 import { reportsRouter } from './modules/reports/reports.routes';
+import { notificationsRouter } from './modules/notifications/notifications.routes';
+import { exportsRouter } from './modules/exports/exports.routes';
 
 export function createApp() {
   const app = express();
   app.disable('x-powered-by');
+  // Behind Caddy/Nginx: trust the proxy so rate limiting and logs see the real client IP.
+  if (env.TRUST_PROXY) app.set('trust proxy', env.TRUST_PROXY);
   app.use(helmet());
   app.use(cors({ origin: env.CORS_ORIGIN === '*' ? true : env.CORS_ORIGIN.split(',') }));
   app.use(express.json({ limit: '1mb' }));
@@ -24,6 +29,16 @@ export function createApp() {
   app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'optimas-ms-api', time: new Date() }));
 
   const api = express.Router();
+  api.use(
+    '/auth/login',
+    rateLimit({
+      windowMs: 15 * 60_000,
+      limit: env.LOGIN_RATE_LIMIT,
+      standardHeaders: 'draft-7',
+      legacyHeaders: false,
+      message: { error: { message: 'Too many sign-in attempts. Try again in 15 minutes.', code: 'RATE_LIMITED' } },
+    }),
+  );
   api.use('/auth', authRouter);
   api.use('/users', requireAuth, usersRouter);
   api.use('/capture', requireAuth, captureRouter);
@@ -31,6 +46,8 @@ export function createApp() {
   api.use('/tasks', requireAuth, tasksRouter);
   api.use('/inventory', requireAuth, inventoryRouter);
   api.use('/reports', requireAuth, reportsRouter);
+  api.use('/notifications', requireAuth, notificationsRouter);
+  api.use('/exports', requireAuth, exportsRouter);
   app.use('/api/v1', api);
 
   app.use(notFoundHandler);

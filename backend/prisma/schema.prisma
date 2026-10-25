@@ -45,6 +45,8 @@ model User {
   movementsTo     StockMovement[]     @relation("MovementTo")
   movementsActed  StockMovement[]     @relation("MovementActor")
   stockCounts     StockCount[]
+  notifications   Notification[]
+  pushTokens      PushToken[]
 }
 
 // ─────────────────────────── Photo integrity ──────────────────────────
@@ -193,6 +195,9 @@ model Task {
   verifiedById     String?
   verifiedAt       DateTime?
   verificationNote String?
+  customerSignature String? // SVG path data drawn by the customer on the technician's phone
+  signedByName      String?
+  signedAt          DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -350,4 +355,46 @@ model StockCount {
   createdAt  DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
+}
+
+// ─────────────────────────── Notifications ───────────────────────────
+
+enum NotificationType {
+  TASK_ASSIGNED
+  TASK_COMPLETED
+  TASK_VERIFIED
+  TASK_REJECTED
+  TASK_CANCELLED
+  STOCK_ISSUED
+  DRESS_REJECTED
+  LATE_CHECK_IN
+  PHOTO_FLAGGED
+  STOCK_COUNT_MISMATCH
+  UNIT_LOST
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+}
+
+model PushToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  platform  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

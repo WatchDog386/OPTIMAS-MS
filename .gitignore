@@ -16,3 +16,7 @@ mobile/android/
 *.p12
 *.key
 *.mobileprovision
+
+# Production secrets & backups
+deploy/.env
+deploy/backups/

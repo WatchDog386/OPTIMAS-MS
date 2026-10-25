@@ -4,7 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api, ApiError } from '../../src/api/client';
 import type { BulkHolding, SerialUnit, Task } from '../../src/api/types';
-import { Button, Card, Input, ListRow, Loading, Screen, ScreenHeader, SectionHeader, Text } from '../../src/components';
+import { Button, Card, Input, ListRow, Loading, Screen, ScreenHeader, SectionHeader, SignaturePad, Text } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { requestCapture, requestScan } from '../../src/store/bridge';
 import { colors, fonts, radius, space } from '../../src/theme';
@@ -20,6 +20,9 @@ export default function CompleteTask() {
   const [account, setAccount] = useState<string | null>(null);
   const [collected, setCollected] = useState('');
   const [busy, setBusy] = useState(false);
+  const [signature, setSignature] = useState<string | null>(null);
+  const [signedBy, setSignedBy] = useState('');
+  const [drawing, setDrawing] = useState(false);
 
   const units = stock.data?.units ?? [];
   const bulk = stock.data?.bulk ?? [];
@@ -44,6 +47,8 @@ export default function CompleteTask() {
 
   const submit = async () => {
     if (needsSerial && !serials.length) return Alert.alert('Device required', 'Scan the serial number of the router/ONT you installed.');
+    if (needsSerial && !signature) return Alert.alert('Customer signature required', 'Ask the customer to sign to confirm the installation.');
+    if (signature && signedBy.trim().length < 2) return Alert.alert('Who signed?', 'Enter the name of the person who signed.');
     if (notes.trim().length < 5) return Alert.alert('Add notes', 'Briefly describe the work done.');
     const over = materials.find((m) => m.quantity > m.holding.quantity);
     if (over) return Alert.alert('Not enough stock', `You only hold ${over.holding.quantity} ${over.holding.item.unit} of ${over.holding.item.name}.`);
@@ -60,6 +65,7 @@ export default function CompleteTask() {
           amountCollected: collected ? Number(collected) : undefined,
           serials,
           materials: materials.map((m) => ({ itemId: m.holding.item.id, quantity: m.quantity })),
+          signature: signature ? { path: signature, signedBy: signedBy.trim() } : undefined,
         },
       });
       Alert.alert('Job completed', 'Your report has been sent for verification.');
@@ -72,7 +78,7 @@ export default function CompleteTask() {
   };
 
   return (
-    <Screen footer={<Button label="Take completion photo & submit" icon="camera" size="lg" loading={busy} onPress={submit} />}>
+    <Screen scrollEnabled={!drawing} footer={<Button label="Take completion photo & submit" icon="camera" size="lg" loading={busy} onPress={submit} />}>
       <ScreenHeader title="Complete job" subtitle={`${t.code} · ${t.customerName}`} />
 
       <SectionHeader title={needsSerial ? 'Installed device (required)' : 'Devices installed'} />
@@ -149,6 +155,13 @@ export default function CompleteTask() {
       <Input label="Customer account no." icon="person-outline" value={account ?? t.customerAccount ?? ''} onChangeText={setAccount} autoCapitalize="characters" />
       <Input label="Amount collected (KES, if any)" icon="cash-outline" keyboardType="number-pad" value={collected} onChangeText={(v) => setCollected(v.replace(/\D/g, ''))} placeholder="0" />
       <Input label="Work done" multiline value={notes} onChangeText={setNotes} placeholder="e.g. Ran 45m drop cable from FAT, terminated SC/APC, configured Wi-Fi, speed test 21 Mbps" />
+
+      <SectionHeader title={needsSerial ? 'Customer sign-off (required)' : 'Customer sign-off'} />
+      <Text variant="bodySm" color={colors.textMuted}>
+        Hand the phone to the customer to confirm the work was done to their satisfaction.
+      </Text>
+      <Input label="Signed by" icon="person-circle-outline" value={signedBy} onChangeText={setSignedBy} placeholder={t.customerName} />
+      <SignaturePad onChange={setSignature} onDrawingChange={setDrawing} />
     </Screen>
   );
 }

@@ -11,9 +11,10 @@ interface Props {
   edges?: Edge[];
   contentStyle?: ViewStyle;
   footer?: ReactNode;
+  scrollEnabled?: boolean;
 }
 
-export function Screen({ children, scroll = true, refreshing, onRefresh, edges = ['top'], contentStyle, footer }: Props) {
+export function Screen({ children, scroll = true, refreshing, onRefresh, edges = ['top'], contentStyle, footer, scrollEnabled = true }: Props) {
   return (
     <SafeAreaView style={styles.root} edges={edges}>
       {scroll ? (
@@ -21,6 +22,7 @@ export function Screen({ children, scroll = true, refreshing, onRefresh, edges =
           contentContainerStyle={[styles.content, contentStyle]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          scrollEnabled={scrollEnabled}
           refreshControl={
             onRefresh ? (
               <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />

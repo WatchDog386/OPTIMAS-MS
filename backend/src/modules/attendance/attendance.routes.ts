@@ -9,6 +9,8 @@ import { ah } from '../../middleware/async';
 import { ROLES, me, requireRole } from '../../middleware/auth';
 import { parse } from '../../middleware/validate';
 import { consumePhoto } from '../capture/capture.service';
+import { notify, notifyRoles } from '../notifications/notifications.service';
+import { time as fmtTime } from '../../lib/time';
 
 export const attendanceRouter = Router();
 
@@ -87,6 +89,19 @@ attendanceRouter.post(
         include: { checkInPhoto: photoSelect },
       });
     });
+    const who = me(req).name;
+    if (record.status === 'LATE') {
+      void notifyRoles(['SUPERVISOR', 'ADMIN'], { type: 'LATE_CHECK_IN', title: `${who} checked in late`, body: `Checked in at ${fmtTime(record.checkInAt)}`, data: { attendanceId: record.id } });
+    }
+    const flags = record.checkInPhoto.flags.filter((f) => f === 'OUTSIDE_GEOFENCE' || f === 'NO_LOCATION');
+    if (flags.length) {
+      void notifyRoles(['SUPERVISOR', 'ADMIN'], {
+        type: 'PHOTO_FLAGGED',
+        title: `Check-in flagged — ${who}`,
+        body: flags.includes('OUTSIDE_GEOFENCE') ? 'Checked in away from the office.' : 'Checked in without GPS location.',
+        data: { attendanceId: record.id },
+      });
+    }
     res.status(201).json({ record });
   }),
 );
@@ -182,6 +197,14 @@ attendanceRouter.post(
       where: { id: existing.id },
       data: { dressReview: body.decision, reviewNote: body.note, reviewedById: me(req).id, reviewedAt: new Date() },
     });
+    if (body.decision === 'REJECTED') {
+      void notify([record.userId], {
+        type: 'DRESS_REJECTED',
+        title: 'Dress code not met',
+        body: body.note ?? 'Your check-in photo did not meet the company dress code. See your supervisor.',
+        data: { attendanceId: record.id },
+      });
+    }
     res.json({ record });
   }),
 );
