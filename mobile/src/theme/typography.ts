@@ -1,25 +1,25 @@
 import type { TextStyle } from 'react-native';
 
-/** Roboto — the native Android typeface, bundled so iOS renders identically. */
+/** Figtree — open, rounded lettering close to the Safaricom app (same as the Business-SME app). */
 export const fonts = {
-  regular: 'Roboto_400Regular',
-  medium: 'Roboto_500Medium',
-  semibold: 'Roboto_600SemiBold',
-  bold: 'Roboto_700Bold',
-  extrabold: 'Roboto_800ExtraBold',
+  regular: 'Figtree_400Regular',
+  medium: 'Figtree_500Medium',
+  semibold: 'Figtree_600SemiBold',
+  bold: 'Figtree_700Bold',
+  extrabold: 'Figtree_800ExtraBold',
 } as const;
 
-/** Material 3 type scale, mapped to the names the app already uses. */
+/** Phone proportions from the Business-SME app. */
 export const type = {
-  display: { fontFamily: fonts.bold, fontSize: 32, lineHeight: 40, letterSpacing: -0.5 }, // display-small
-  h1: { fontFamily: fonts.bold, fontSize: 26, lineHeight: 32, letterSpacing: -0.3 }, // headline-medium
-  h2: { fontFamily: fonts.semibold, fontSize: 20, lineHeight: 26, letterSpacing: -0.1 }, // title-large
-  title: { fontFamily: fonts.medium, fontSize: 16, lineHeight: 22, letterSpacing: 0.1 }, // title-medium
-  body: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, letterSpacing: 0.15 }, // body-large
-  bodySm: { fontFamily: fonts.regular, fontSize: 13.5, lineHeight: 19, letterSpacing: 0.2 }, // body-medium
-  label: { fontFamily: fonts.medium, fontSize: 12, lineHeight: 16, letterSpacing: 0.4 }, // label-medium
-  overline: { fontFamily: fonts.semibold, fontSize: 11, lineHeight: 14, letterSpacing: 1.1, textTransform: 'uppercase' },
-  stat: { fontFamily: fonts.bold, fontSize: 28, lineHeight: 34, letterSpacing: -0.4 },
+  display: { fontFamily: fonts.semibold, fontSize: 32, lineHeight: 36, letterSpacing: -0.6 },
+  h1: { fontFamily: fonts.semibold, fontSize: 24, lineHeight: 30, letterSpacing: -0.4 },
+  h2: { fontFamily: fonts.semibold, fontSize: 17, lineHeight: 22, letterSpacing: -0.2 },
+  title: { fontFamily: fonts.semibold, fontSize: 14.5, lineHeight: 20 },
+  body: { fontFamily: fonts.regular, fontSize: 14.5, lineHeight: 21 },
+  bodySm: { fontFamily: fonts.regular, fontSize: 12.5, lineHeight: 17 },
+  label: { fontFamily: fonts.medium, fontSize: 12, lineHeight: 16 },
+  overline: { fontFamily: fonts.medium, fontSize: 12, lineHeight: 16 },
+  stat: { fontFamily: fonts.semibold, fontSize: 26, lineHeight: 30, letterSpacing: -0.4 },
 } satisfies Record<string, TextStyle>;
 
 export type TypeVariant = keyof typeof type;

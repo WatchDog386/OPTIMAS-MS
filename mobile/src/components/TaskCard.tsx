@@ -55,7 +55,7 @@ function Meta({ icon, text }: { icon: keyof typeof Ionicons.glyphMap; text: stri
 
 const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  icon: { width: 42, height: 42, borderRadius: radius.sm + 2, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  icon: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
   meta: { gap: 6, marginTop: space.md },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   bottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: space.md, paddingTop: space.md, borderTopWidth: 1, borderTopColor: colors.border },

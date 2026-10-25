@@ -24,14 +24,14 @@ interface Props {
 /** Material 3 buttons: filled (primary), outlined (secondary), text (ghost), and tonal danger. */
 const light: Record<Variant, { bg: string; fg: string; border?: string }> = {
   primary: { bg: colors.primary, fg: colors.onPrimary },
-  secondary: { bg: colors.surfaceAlt, fg: colors.primary, border: colors.surfaceAlt },
+  secondary: { bg: colors.surfaceAlt, fg: colors.text, border: colors.surfaceAlt },
   ghost: { bg: 'transparent', fg: colors.primary },
   danger: { bg: colors.dangerSoft, fg: colors.danger },
 };
 
 /** On navy hero cards the primary action becomes the lime brand button. */
 const inverse: Record<Variant, { bg: string; fg: string; border?: string }> = {
-  primary: { bg: colors.white, fg: colors.primary },
+  primary: { bg: colors.white, fg: colors.charcoal },
   secondary: { bg: colors.heroInset, fg: colors.onHero, border: colors.heroBorder },
   ghost: { bg: 'transparent', fg: colors.onHero },
   danger: { bg: colors.dangerSoft, fg: colors.danger },
@@ -69,7 +69,7 @@ export function Button({ label, onPress, variant = 'primary', icon, trailingIcon
           <Text
             variant="title"
             color={p.fg}
-            style={[{ fontSize: size === 'lg' ? 16 : 15 }, caps && { textTransform: 'uppercase', fontFamily: fonts.extrabold, letterSpacing: 0.4 }]}
+            style={[{ fontSize: size === 'lg' ? 16 : 15 }, caps && { fontFamily: fonts.bold }]}
           >
             {label}
           </Text>
@@ -82,7 +82,7 @@ export function Button({ label, onPress, variant = 'primary', icon, trailingIcon
 
 const styles = StyleSheet.create({
   base: {
-    height: 48,
+    height: 46,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -90,6 +90,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
   },
-  lg: { height: 56 },
+  lg: { height: 52 },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
 });

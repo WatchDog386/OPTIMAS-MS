@@ -39,7 +39,7 @@ spreadsheet stock books with one auditable system.
 | Layer | Choice | Why |
 |---|---|---|
 | Mobile | Expo SDK 52, React Native, TypeScript, expo-router | One codebase for Android & iOS, OTA updates, first-class camera/location APIs |
-| UI | Custom design system: Roboto, white canvas, ink-black pills, coral-red accent, charcoal hero cards | Native Android typography with a bold editorial layout (uppercase headlines, diagonal brand shapes) |
+| UI | Design system shared with the Optimas Business-SME app: Figtree, Safaricom green, bank-card hero cards, lime floating tab bar | One consistent look across Optimas products |
 | State | Zustand + AsyncStorage/SecureStore | Small, predictable, no boilerplate |
 | API | Node.js 20+, Express, Zod validation | Simple, well-understood, easy to hire for |
 | ORM / DB | Prisma + PostgreSQL 16 | Strong typing, migrations, transactional stock ledger |

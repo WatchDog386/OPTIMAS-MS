@@ -56,5 +56,5 @@ const styles = StyleSheet.create({
   outline: { borderWidth: 1, borderColor: colors.border },
   tonal: { backgroundColor: colors.surfaceAlt },
   heroBorder: { borderWidth: 1, borderColor: colors.heroBorder },
-  pressed: { opacity: 0.92, transform: [{ scale: 0.99 }] },
+  pressed: { opacity: 0.94, transform: [{ scale: 0.985 }] },
 });

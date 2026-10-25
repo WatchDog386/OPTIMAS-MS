@@ -13,20 +13,20 @@ interface Props extends TextInputProps {
 /** Material 3 outlined text field with focus and error states. */
 export function Input({ label, icon, error, style, multiline, onFocus, onBlur, ...rest }: Props) {
   const [focused, setFocused] = useState(false);
-  const borderColor = error ? colors.danger : focused ? colors.primary : colors.borderStrong;
+  const borderColor = error ? colors.danger : focused ? colors.borderStrong : colors.border;
   return (
     <View style={{ gap: 6 }}>
       {label ? (
-        <Text variant="label" color={focused ? colors.primary : colors.textMuted}>
+        <Text variant="label" color={colors.textMuted} style={{ marginLeft: 4 }}>
           {label}
         </Text>
       ) : null}
-      <View style={[styles.field, multiline && styles.multi, { borderColor, borderWidth: focused || error ? 2 : 1 }]}>
-        {icon ? <Ionicons name={icon} size={20} color={focused ? colors.primary : colors.textDim} /> : null}
+      <View style={[styles.field, multiline && styles.multi, { borderColor, borderWidth: 1 }]}>
+        {icon ? <Ionicons name={icon} size={20} color={colors.textDim} /> : null}
         <TextInput
           placeholderTextColor={colors.textDim}
           selectionColor={colors.primary}
-          cursorColor={colors.primary}
+          cursorColor={colors.text}
           multiline={multiline}
           onFocus={(e) => {
             setFocused(true);
@@ -54,11 +54,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
-    minHeight: 54,
-    paddingHorizontal: space.lg,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
+    minHeight: 48,
+    paddingHorizontal: space.lg + 2,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceAlt,
   },
-  multi: { alignItems: 'flex-start', paddingVertical: space.md },
-  input: { flex: 1, color: colors.text, fontFamily: fonts.regular, fontSize: 16, paddingVertical: 0 },
+  multi: { alignItems: 'flex-start', paddingVertical: space.md, borderRadius: radius.lg },
+  input: { flex: 1, color: colors.text, fontFamily: fonts.regular, fontSize: 14.5, paddingVertical: 0 },
 });

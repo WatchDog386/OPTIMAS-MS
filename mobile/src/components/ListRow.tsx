@@ -57,5 +57,5 @@ const styles = StyleSheet.create({
     padding: space.md + 2,
     overflow: 'hidden',
   },
-  icon: { width: 42, height: 42, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  icon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
 });

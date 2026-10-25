@@ -50,7 +50,7 @@ export default function Login() {
                     <Ionicons name="flash" size={24} color={colors.onBrand} />
                   </LinearGradient>
                   <Text variant="h2">
-                    Optimas <Text variant="h2" color={colors.brand}>MS</Text>
+                    Optimas <Text variant="h2" color={colors.lime}>MS</Text>
                   </Text>
                 </View>
                 <View style={{ gap: 6 }}>
@@ -62,7 +62,7 @@ export default function Login() {
                 <View style={styles.chips}>
                   {HIGHLIGHTS.map((h) => (
                     <View key={h.label} style={styles.chip}>
-                      <Ionicons name={h.icon} size={14} color={colors.brand} />
+                      <Ionicons name={h.icon} size={14} color={colors.lime} />
                       <Text variant="label">{h.label}</Text>
                     </View>
                   ))}

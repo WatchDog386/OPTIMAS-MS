@@ -87,7 +87,7 @@ export default function CheckIn() {
       {isIn ? (
         <>
           <Card variant="hero" style={{ gap: space.sm }}>
-            <Ionicons name="shield-checkmark" size={26} color={colors.brand} />
+            <Ionicons name="shield-checkmark" size={26} color={colors.white} />
             <Text variant="title">Dress code check</Text>
             <Text variant="bodySm" color={colors.textMuted}>
               Your photo is reviewed by your supervisor. Make sure your uniform and staff ID are clearly visible.

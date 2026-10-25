@@ -5,13 +5,13 @@ import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
-  Roboto_400Regular,
-  Roboto_500Medium,
-  Roboto_600SemiBold,
-  Roboto_700Bold,
-  Roboto_800ExtraBold,
+  Figtree_400Regular,
+  Figtree_500Medium,
+  Figtree_600SemiBold,
+  Figtree_700Bold,
+  Figtree_800ExtraBold,
   useFonts,
-} from '@expo-google-fonts/roboto';
+} from '@expo-google-fonts/figtree';
 import { useAuth } from '../src/store/auth';
 import { registerForPush } from '../src/utils/push';
 import { openNotificationTarget } from '../src/utils/notifications';
@@ -21,11 +21,11 @@ SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    Roboto_400Regular,
-    Roboto_500Medium,
-    Roboto_600SemiBold,
-    Roboto_700Bold,
-    Roboto_800ExtraBold,
+    Figtree_400Regular,
+    Figtree_500Medium,
+    Figtree_600SemiBold,
+    Figtree_700Bold,
+    Figtree_800ExtraBold,
   });
   const hydrated = useAuth((s) => s.hydrated);
   const userId = useAuth((s) => s.user?.id);

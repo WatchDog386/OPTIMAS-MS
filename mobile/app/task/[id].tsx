@@ -76,7 +76,7 @@ export default function TaskDetail() {
       <Card variant="hero" style={{ gap: space.md, padding: space.xl }}>
         <View style={styles.row}>
           <View style={styles.typeIcon}>
-            <Ionicons name={taskTypeIcon[task.type]} size={22} color={colors.brand} />
+            <Ionicons name={taskTypeIcon[task.type]} size={22} color={colors.white} />
           </View>
           <Badge label={`${humanize(task.priority)} priority`} tone={priorityTone[task.priority]} />
         </View>

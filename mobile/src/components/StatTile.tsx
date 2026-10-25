@@ -46,5 +46,5 @@ const styles = StyleSheet.create({
     padding: space.lg,
     gap: 2,
   },
-  icon: { width: 36, height: 36, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', marginBottom: space.sm },
+  icon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginBottom: space.sm },
 });

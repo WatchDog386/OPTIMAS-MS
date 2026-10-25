@@ -6,23 +6,21 @@ Optimas MS gives management a digital, auditable view of every field employee: w
 when (with a dress-code photo), what job they are on, how long it took (with before/after proof photos),
 what materials they used — and, crucially, **where every router is at all times**.
 
-**Technician home (off duty, scrolled, on duty) and sign-in**
+**Technician home — off duty, scrolled, on duty**
 ![](docs/screenshots/technician-app.png)
 
-**Supervisor overview, job detail, my stock, dress-code check-in**
+**Sign-in, supervisor overview, overview scrolled**
 ![](docs/screenshots/jobs-and-overview.png)
 
-**Store, reports & exports, customer sign-off, router accountability**
+**Job detail, my stock, dress-code check-in**
 ![](docs/screenshots/store-and-reconciliation.png)
 
-**Sign-in, new job, notifications, controls**
-![](docs/screenshots/phase2-notifications-reports-signature.png)
-
 ### Design system
-Editorial light theme: **Roboto** (native Android typeface, bundled for iOS), white canvas, **ink-black** pill
-actions, **coral-red** brand accent with signature diagonal shapes, and charcoal "hero" cards (`mobile/src/theme`,
-`mobile/src/components/Editorial.tsx`).
-Components automatically switch to their on-dark variants inside hero cards (`SurfaceContext`).
+Shared with the Optimas **Business-SME** app: **Figtree** typeface, Safaricom-green actions, green-grey ink text,
+grey-green pill fields, a soft sky glow behind headers, swipeable **bank-card hero cards** (teal / charcoal / garnet /
+amethyst, silver chip and contactless mark, action pill cut into the corner), a round-icon **Quick Actions** grid,
+section blocks with tinted round icons, and a floating **lime tab bar** whose active tab rides in a raised black bubble
+(`mobile/src/theme`, `mobile/src/components`).
 
 ---
 

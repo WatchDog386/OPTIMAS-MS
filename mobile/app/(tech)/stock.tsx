@@ -66,7 +66,7 @@ export default function MyStock() {
           </Text>
         </View>
         <View style={styles.heroIcon}>
-          <Ionicons name="wifi" size={34} color={colors.brand} />
+          <Ionicons name="wifi" size={34} color={colors.white} />
         </View>
       </Card>
 

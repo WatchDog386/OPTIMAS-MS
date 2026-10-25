@@ -27,6 +27,6 @@ export function Segmented<T extends string>({ options, value, onChange }: Props<
 
 const styles = StyleSheet.create({
   row: { gap: space.sm },
-  chip: { paddingHorizontal: space.lg, paddingVertical: space.sm + 1, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.surfaceAlt },
+  chip: { paddingHorizontal: space.lg, paddingVertical: space.sm + 2, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.surfaceAlt },
   active: { backgroundColor: colors.primary, borderColor: colors.primary },
 });
