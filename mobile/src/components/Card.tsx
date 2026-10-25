@@ -30,7 +30,7 @@ export function Card({ children, onPress, variant = 'default', style, padded = t
         end={{ x: 1, y: 1 }}
         style={[inner, isHero && styles.heroBorder]}
       >
-        {isHero ? <SurfaceContext.Provider value={{ inverse: true }}>{children}</SurfaceContext.Provider> : children}
+        <SurfaceContext.Provider value={{ inverse: true }}>{children}</SurfaceContext.Provider>
       </LinearGradient>
     ) : (
       <View style={inner}>{children}</View>

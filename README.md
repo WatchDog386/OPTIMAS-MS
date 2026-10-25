@@ -6,10 +6,10 @@ Optimas MS gives management a digital, auditable view of every field employee: w
 when (with a dress-code photo), what job they are on, how long it took (with before/after proof photos),
 what materials they used — and, crucially, **where every router is at all times**.
 
-**Sign-in, technician home, dress-code check-in, custody**
+**Technician home (off duty, scrolled, on duty) and sign-in**
 ![](docs/screenshots/technician-app.png)
 
-**Job detail, technician jobs, supervisor overview, team**
+**Supervisor overview, job detail, my stock, dress-code check-in**
 ![](docs/screenshots/jobs-and-overview.png)
 
 **Store, reports & exports, customer sign-off, router accountability**
@@ -19,8 +19,9 @@ what materials they used — and, crucially, **where every router is at all time
 ![](docs/screenshots/phase2-notifications-reports-signature.png)
 
 ### Design system
-Material 3–inspired light theme: **Roboto** type scale (the native Android typeface, bundled for iOS), white canvas,
-slate text, **navy** primary actions, and the **lime** Optimas accent on navy "hero" cards (`mobile/src/theme`).
+Editorial light theme: **Roboto** (native Android typeface, bundled for iOS), white canvas, **ink-black** pill
+actions, **coral-red** brand accent with signature diagonal shapes, and charcoal "hero" cards (`mobile/src/theme`,
+`mobile/src/components/Editorial.tsx`).
 Components automatically switch to their on-dark variants inside hero cards (`SurfaceContext`).
 
 ---

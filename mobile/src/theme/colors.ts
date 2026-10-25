@@ -1,61 +1,61 @@
 /**
- * Optimas MS — light theme (Material 3 inspired).
- * White canvas, slate typography, deep navy as the interactive primary,
- * and the electric-lime brand accent reserved for highlights on navy "hero" surfaces.
+ * Optimas MS — light theme.
+ * White canvas, near-black ink for actions and pills, coral-red brand accent,
+ * and charcoal "hero" cards (inspired by bold editorial course-app layouts).
  */
 export const colors = {
   // Canvas & surfaces
   bg: '#FFFFFF',
   surface: '#FFFFFF',
-  surfaceAlt: '#F4F6FA',
-  surfaceHigh: '#EBEFF5',
-  border: '#E3E8EF',
-  borderStrong: '#CBD3DF',
+  surfaceAlt: '#F3F3F4',
+  surfaceHigh: '#E9E9EB',
+  border: '#ECECEE',
+  borderStrong: '#D4D4D8',
 
-  // Interactive primary (navy)
-  primary: '#13265C',
-  primaryPressed: '#0C1A42',
+  // Interactive primary (ink black)
+  primary: '#111111',
+  primaryPressed: '#000000',
   onPrimary: '#FFFFFF',
-  primarySoft: '#E9EEF8',
+  primarySoft: '#F0F0F1',
 
-  // Brand accent (Optimas lime) — use on navy, or as a fill with navy text
-  brand: '#B8F53B',
-  onBrand: '#0C1A42',
-  brandSoft: '#F2FBDF',
+  // Brand accent (coral red)
+  brand: '#F2453D',
+  onBrand: '#FFFFFF',
+  brandSoft: '#FDECEA',
 
-  accent: '#0E9F9A',
-  accentSoft: '#E3F6F5',
+  accent: '#FF7A45',
+  accentSoft: '#FFF1EA',
 
   // Text
-  text: '#0F172A',
-  textMuted: '#5B6577',
-  textDim: '#8E97A8',
+  text: '#111111',
+  textMuted: '#5F6068',
+  textDim: '#9A9BA3',
 
   // Semantic
-  success: '#15803D',
-  successSoft: '#E7F6EC',
-  warning: '#B45309',
-  warningSoft: '#FEF3E2',
-  danger: '#DC2626',
-  dangerSoft: '#FDECEC',
-  info: '#1D4ED8',
+  success: '#16A34A',
+  successSoft: '#E8F7EE',
+  warning: '#C2410C',
+  warningSoft: '#FFF2E8',
+  danger: '#D92D20',
+  dangerSoft: '#FDECEA',
+  info: '#2563EB',
   infoSoft: '#EAF0FE',
 
-  // Navy hero surfaces
-  hero: '#13265C',
+  // Charcoal hero surfaces
+  hero: '#161616',
   onHero: '#FFFFFF',
-  onHeroMuted: '#B9C4DE',
-  onHeroDim: '#8090B5',
-  heroInset: 'rgba(255,255,255,0.08)',
-  heroBorder: 'rgba(255,255,255,0.10)',
+  onHeroMuted: '#B5B5BB',
+  onHeroDim: '#7C7C84',
+  heroInset: 'rgba(255,255,255,0.10)',
+  heroBorder: 'rgba(255,255,255,0.08)',
 
-  overlay: 'rgba(8, 15, 35, 0.66)',
+  overlay: 'rgba(10, 10, 10, 0.66)',
   scrim: 'rgba(0,0,0,0.45)',
   white: '#FFFFFF',
   black: '#000000',
 } as const;
 
 export const gradients = {
-  hero: ['#1B3577', '#0F1F4D'] as const,
-  brand: ['#C9FF52', '#A3E635'] as const,
+  hero: ['#262626', '#0F0F0F'] as const,
+  brand: ['#FF6A4D', '#E8322A'] as const,
 };

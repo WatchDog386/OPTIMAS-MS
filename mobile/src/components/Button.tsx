@@ -1,7 +1,7 @@
 import { ActivityIndicator, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { colors, radius, shadow, space, useInverse } from '../theme';
+import { colors, fonts, radius, shadow, space, useInverse } from '../theme';
 import { Text } from './Text';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -14,26 +14,30 @@ interface Props {
   loading?: boolean;
   disabled?: boolean;
   size?: 'md' | 'lg';
+  /** Icon shown after the label (e.g. the circled arrow on "MORE ⊕" style buttons). */
+  trailingIcon?: keyof typeof Ionicons.glyphMap;
+  /** Uppercase, heavier label for editorial call-to-actions. */
+  caps?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
 /** Material 3 buttons: filled (primary), outlined (secondary), text (ghost), and tonal danger. */
 const light: Record<Variant, { bg: string; fg: string; border?: string }> = {
   primary: { bg: colors.primary, fg: colors.onPrimary },
-  secondary: { bg: colors.surface, fg: colors.primary, border: colors.borderStrong },
+  secondary: { bg: colors.surfaceAlt, fg: colors.primary, border: colors.surfaceAlt },
   ghost: { bg: 'transparent', fg: colors.primary },
   danger: { bg: colors.dangerSoft, fg: colors.danger },
 };
 
 /** On navy hero cards the primary action becomes the lime brand button. */
 const inverse: Record<Variant, { bg: string; fg: string; border?: string }> = {
-  primary: { bg: colors.brand, fg: colors.onBrand },
+  primary: { bg: colors.white, fg: colors.primary },
   secondary: { bg: colors.heroInset, fg: colors.onHero, border: colors.heroBorder },
-  ghost: { bg: 'transparent', fg: colors.brand },
+  ghost: { bg: 'transparent', fg: colors.onHero },
   danger: { bg: colors.dangerSoft, fg: colors.danger },
 };
 
-export function Button({ label, onPress, variant = 'primary', icon, loading, disabled, size = 'md', style }: Props) {
+export function Button({ label, onPress, variant = 'primary', icon, trailingIcon, caps, loading, disabled, size = 'md', style }: Props) {
   const p = (useInverse() ? inverse : light)[variant];
   const inactive = disabled || loading;
   return (
@@ -62,9 +66,14 @@ export function Button({ label, onPress, variant = 'primary', icon, loading, dis
       ) : (
         <View style={styles.row}>
           {icon ? <Ionicons name={icon} size={size === 'lg' ? 20 : 18} color={p.fg} /> : null}
-          <Text variant="title" color={p.fg} style={{ fontSize: size === 'lg' ? 16 : 15 }}>
+          <Text
+            variant="title"
+            color={p.fg}
+            style={[{ fontSize: size === 'lg' ? 16 : 15 }, caps && { textTransform: 'uppercase', fontFamily: fonts.extrabold, letterSpacing: 0.4 }]}
+          >
             {label}
           </Text>
+          {trailingIcon ? <Ionicons name={trailingIcon} size={size === 'lg' ? 20 : 18} color={p.fg} /> : null}
         </View>
       )}
     </Pressable>

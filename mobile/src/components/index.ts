@@ -18,3 +18,4 @@ export * from './ProfileView';
 export * from './TechPicker';
 export * from './NotificationBell';
 export * from './SignaturePad';
+export * from './Editorial';

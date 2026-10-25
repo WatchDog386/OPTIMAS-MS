@@ -10,12 +10,12 @@ const tones: Record<Tone, { bg: string; fg: string }> = {
   danger: { bg: colors.dangerSoft, fg: colors.danger },
   info: { bg: colors.infoSoft, fg: colors.info },
   neutral: { bg: colors.surfaceHigh, fg: colors.textMuted },
-  brand: { bg: colors.primarySoft, fg: colors.primary },
+  brand: { bg: colors.brandSoft, fg: colors.brand },
 };
 
 export function Badge({ label, tone = 'neutral', dot = true }: { label: string; tone?: Tone; dot?: boolean }) {
   const inverse = useInverse();
-  const t = inverse && (tone === 'neutral' || tone === 'brand') ? { bg: colors.heroInset, fg: tone === 'brand' ? colors.brand : colors.onHeroMuted } : tones[tone];
+  const t = inverse && (tone === 'neutral' || tone === 'brand') ? { bg: colors.heroInset, fg: tone === 'brand' ? colors.onHero : colors.onHeroMuted } : tones[tone];
   return (
     <View style={[styles.base, { backgroundColor: t.bg }]}>
       {dot ? <View style={[styles.dot, { backgroundColor: t.fg }]} /> : null}
