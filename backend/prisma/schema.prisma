@@ -1,0 +1,353 @@
+// Optimas MS — database schema
+// Source of truth for all persisted data. Run `npm run db:migrate` after changes.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────── People ───────────────────────────────
+
+enum Role {
+  ADMIN
+  SUPERVISOR
+  STOREKEEPER
+  TECHNICIAN
+}
+
+model User {
+  id           String   @id @default(cuid())
+  staffNo      String   @unique
+  name         String
+  email        String?  @unique
+  phone        String?
+  passwordHash String
+  role         Role     @default(TECHNICIAN)
+  region       String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  photos          Photo[]
+  challenges      CaptureChallenge[]
+  attendance      Attendance[]        @relation("AttendanceUser")
+  reviewedAttend  Attendance[]        @relation("AttendanceReviewer")
+  tasksAssigned   Task[]              @relation("TaskAssignee")
+  tasksCreated    Task[]              @relation("TaskCreator")
+  tasksVerified   Task[]              @relation("TaskVerifier")
+  unitsHeld       SerialUnit[]
+  bulkHoldings    BulkHolding[]
+  movementsFrom   StockMovement[]     @relation("MovementFrom")
+  movementsTo     StockMovement[]     @relation("MovementTo")
+  movementsActed  StockMovement[]     @relation("MovementActor")
+  stockCounts     StockCount[]
+}
+
+// ─────────────────────────── Photo integrity ──────────────────────────
+
+enum CapturePurpose {
+  CHECK_IN
+  CHECK_OUT
+  TASK_START
+  TASK_END
+}
+
+model CaptureChallenge {
+  id        String         @id @default(cuid())
+  userId    String
+  purpose   CapturePurpose
+  taskId    String?
+  nonce     String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime       @default(now())
+
+  user  User   @relation(fields: [userId], references: [id])
+  photo Photo?
+
+  @@index([userId, purpose])
+}
+
+model Photo {
+  id          String         @id @default(cuid())
+  userId      String
+  purpose     CapturePurpose
+  challengeId String         @unique
+  storageKey  String
+  sha256      String         @unique
+  sizeBytes   Int
+  lat         Float?
+  lng         Float?
+  accuracyM   Float?
+  deviceId    String?
+  deviceTime  DateTime?
+  receivedAt  DateTime       @default(now())
+  flags       String[]
+  consumedAt  DateTime?
+
+  user      User             @relation(fields: [userId], references: [id])
+  challenge CaptureChallenge @relation(fields: [challengeId], references: [id])
+
+  attendanceIn  Attendance? @relation("CheckInPhoto")
+  attendanceOut Attendance? @relation("CheckOutPhoto")
+  taskStart     Task?       @relation("TaskStartPhoto")
+  taskEnd       Task?       @relation("TaskEndPhoto")
+
+  @@index([userId, receivedAt])
+}
+
+// ───────────────────────────── Attendance ─────────────────────────────
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Attendance {
+  id              String           @id @default(cuid())
+  userId          String
+  workDate        DateTime         @db.Date
+  status          AttendanceStatus
+  checkInAt       DateTime
+  checkInPhotoId  String           @unique
+  checkOutAt      DateTime?
+  checkOutPhotoId String?          @unique
+  workedMinutes   Int?
+  dressChecklist  Json?
+  dressReview     ReviewStatus     @default(PENDING)
+  reviewNote      String?
+  reviewedById    String?
+  reviewedAt      DateTime?
+
+  user          User   @relation("AttendanceUser", fields: [userId], references: [id])
+  reviewedBy    User?  @relation("AttendanceReviewer", fields: [reviewedById], references: [id])
+  checkInPhoto  Photo  @relation("CheckInPhoto", fields: [checkInPhotoId], references: [id])
+  checkOutPhoto Photo? @relation("CheckOutPhoto", fields: [checkOutPhotoId], references: [id])
+
+  @@unique([userId, workDate])
+  @@index([workDate])
+}
+
+// ──────────────────────────────── Tasks ───────────────────────────────
+
+enum TaskType {
+  INSTALLATION
+  REPAIR
+  MAINTENANCE
+  RELOCATION
+  SURVEY
+}
+
+enum TaskPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  VERIFIED
+  REJECTED
+  CANCELLED
+}
+
+model Task {
+  id              String       @id @default(cuid())
+  code            String       @unique
+  title           String
+  description     String?
+  type            TaskType
+  priority        TaskPriority @default(NORMAL)
+  status          TaskStatus   @default(ASSIGNED)
+  customerName    String
+  customerPhone   String?
+  customerAccount String?
+  address         String
+  lat             Float?
+  lng             Float?
+  dueAt           DateTime?
+
+  assigneeId  String
+  createdById String
+
+  startedAt        DateTime?
+  startPhotoId     String?   @unique
+  endedAt          DateTime?
+  endPhotoId       String?   @unique
+  durationMinutes  Int?
+  completionNotes  String?
+  amountCollected  Int?
+  verifiedById     String?
+  verifiedAt       DateTime?
+  verificationNote String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignee   User           @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdBy  User           @relation("TaskCreator", fields: [createdById], references: [id])
+  verifiedBy User?          @relation("TaskVerifier", fields: [verifiedById], references: [id])
+  startPhoto Photo?         @relation("TaskStartPhoto", fields: [startPhotoId], references: [id])
+  endPhoto   Photo?         @relation("TaskEndPhoto", fields: [endPhotoId], references: [id])
+  materials  TaskMaterial[]
+  units      SerialUnit[]
+  movements  StockMovement[]
+
+  @@index([assigneeId, status])
+}
+
+model TaskMaterial {
+  id           String  @id @default(cuid())
+  taskId       String
+  itemId       String
+  serialUnitId String? @unique
+  quantity     Float
+  unitPrice    Int     @default(0)
+  amount       Int     @default(0)
+
+  task Task          @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  item InventoryItem @relation(fields: [itemId], references: [id])
+  unit SerialUnit?   @relation(fields: [serialUnitId], references: [id])
+}
+
+// ────────────────────────────── Inventory ─────────────────────────────
+
+enum ItemCategory {
+  ROUTER
+  ONT
+  CABLE
+  CONNECTOR
+  ACCESSORY
+  TOOL
+}
+
+enum TrackingMode {
+  SERIALIZED
+  BULK
+}
+
+model InventoryItem {
+  id            String       @id @default(cuid())
+  sku           String       @unique
+  name          String
+  category      ItemCategory
+  tracking      TrackingMode
+  unit          String       @default("pcs")
+  unitPrice     Int          @default(0)
+  storeQuantity Float        @default(0) // BULK only; SERIALIZED counts come from SerialUnit
+  reorderLevel  Float        @default(0)
+  active        Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+
+  units     SerialUnit[]
+  holdings  BulkHolding[]
+  movements StockMovement[]
+  materials TaskMaterial[]
+}
+
+enum UnitStatus {
+  IN_STORE
+  IN_TRANSIT
+  WITH_TECHNICIAN
+  INSTALLED
+  FAULTY
+  LOST
+}
+
+model SerialUnit {
+  id              String     @id @default(cuid())
+  itemId          String
+  serialNumber    String     @unique
+  macAddress      String?
+  status          UnitStatus @default(IN_STORE)
+  holderId        String?
+  heldSince       DateTime?
+  taskId          String?
+  customerAccount String?
+  installedAt     DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  item      InventoryItem   @relation(fields: [itemId], references: [id])
+  holder    User?           @relation(fields: [holderId], references: [id])
+  task      Task?           @relation(fields: [taskId], references: [id])
+  movements StockMovement[]
+  material  TaskMaterial?
+
+  @@index([holderId, status])
+}
+
+model BulkHolding {
+  id       String @id @default(cuid())
+  itemId   String
+  userId   String
+  quantity Float  @default(0)
+
+  item InventoryItem @relation(fields: [itemId], references: [id])
+  user User          @relation(fields: [userId], references: [id])
+
+  @@unique([itemId, userId])
+}
+
+enum MovementType {
+  RECEIVE // supplier → store
+  ISSUE // store → technician
+  ACCEPT // technician confirms receipt
+  RETURN // technician → store
+  CONSUME // bulk used on a task
+  INSTALL // serial installed at customer
+  REPORT_LOST
+  REPORT_FAULTY
+  ADJUST
+}
+
+// Immutable ledger: rows are only ever inserted.
+model StockMovement {
+  id           String       @id @default(cuid())
+  type         MovementType
+  itemId       String
+  serialUnitId String?
+  quantity     Float
+  fromUserId   String?
+  toUserId     String?
+  actorId      String
+  taskId       String?
+  note         String?
+  createdAt    DateTime     @default(now())
+
+  item     InventoryItem @relation(fields: [itemId], references: [id])
+  unit     SerialUnit?   @relation(fields: [serialUnitId], references: [id])
+  fromUser User?         @relation("MovementFrom", fields: [fromUserId], references: [id])
+  toUser   User?         @relation("MovementTo", fields: [toUserId], references: [id])
+  actor    User          @relation("MovementActor", fields: [actorId], references: [id])
+  task     Task?         @relation(fields: [taskId], references: [id])
+
+  @@index([itemId, createdAt])
+  @@index([toUserId])
+  @@index([fromUserId])
+}
+
+model StockCount {
+  id         String   @id @default(cuid())
+  userId     String
+  expected   String[]
+  scanned    String[]
+  missing    String[]
+  unexpected String[]
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
