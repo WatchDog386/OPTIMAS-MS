@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient as SvgGradient, Path, Stop } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabBarProps, BottomTabNavigationOptions } from 'expo-router/js-tabs';
-import { colors, fonts, shadow } from '../theme';
+import { colors, fonts } from '../theme';
 import { Text } from './Text';
 
 /*
@@ -80,10 +80,12 @@ export function FloatingTabBar({ state, descriptors, navigateToTab }: BottomTabB
   const activeIcon = active?.tabBarIcon as IconFn | undefined;
 
   return (
-    <View pointerEvents="box-none" style={[styles.wrap, { bottom: 16 + insets.bottom }]}>
-      <View style={[styles.bar, shadow.bar]} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+    <View pointerEvents="box-none" style={[styles.wrap, { bottom: 18 + insets.bottom }]}>
+      <View style={styles.bar} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
         {width > 0 && cx > 0 ? (
           <>
+            {/* Rounded shadow caster under the body of the bar (below the notch) so no square edges show */}
+            <View pointerEvents="none" style={styles.shadowLayer} />
             <Svg width={width} height={BAR_HEIGHT} style={StyleSheet.absoluteFill}>
               <Defs>
                 <SvgGradient id="navfill" x1="0" y1="0" x2="0" y2="1">
@@ -142,7 +144,22 @@ export const tabIcon =
 
 const styles = StyleSheet.create({
   wrap: { position: 'absolute', left: 16, right: 16, alignItems: 'center' },
-  bar: { width: '100%', maxWidth: 448, height: BAR_HEIGHT },
+  bar: { width: '100%', maxWidth: 448, height: BAR_HEIGHT, backgroundColor: 'transparent' },
+  shadowLayer: {
+    position: 'absolute',
+    left: 2,
+    right: 2,
+    top: NOTCH_DEPTH,
+    bottom: 0,
+    borderBottomLeftRadius: RADIUS,
+    borderBottomRightRadius: RADIUS,
+    backgroundColor: '#E2EA2C',
+    shadowColor: '#1C1D1F',
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 10,
+  },
   bubble: {
     position: 'absolute',
     width: BUBBLE,

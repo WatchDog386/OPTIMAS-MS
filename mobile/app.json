@@ -72,7 +72,7 @@
       "favicon": "./public/favicon.png",
       "name": "Optimas MS",
       "shortName": "Optimas MS",
-      "themeColor": "#ECF23A",
+      "themeColor": "#F3F3F3",
       "backgroundColor": "#F3F3F3"
     }
   }

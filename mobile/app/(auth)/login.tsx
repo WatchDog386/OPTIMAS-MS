@@ -60,7 +60,6 @@ export default function Login() {
           {/* Diagonal hero */}
           <View style={styles.hero}>
             <LinearGradient colors={['#2C2D30', '#121314']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.diamondDark} />
-            <LinearGradient colors={gradients.lime} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.diamondBright} />
             <View style={styles.diamondOutline} />
             <SafeAreaView edges={['top']} style={styles.heroInner}>
               <View style={styles.brand}>
@@ -72,7 +71,7 @@ export default function Login() {
                 </Text>
               </View>
               <View style={styles.heroIcon}>
-                <Ionicons name={s.icon} size={64} color={colors.white} />
+                <Ionicons name={s.icon} size={52} color={colors.white} />
               </View>
             </SafeAreaView>
           </View>
@@ -89,7 +88,7 @@ export default function Login() {
             </Text>
             <View style={styles.kicker}>
               <View style={styles.triangle} />
-              <Text variant="title" style={{ fontFamily: fonts.bold }}>
+              <Text variant="bodySm" style={{ fontFamily: fonts.semibold }}>
                 {s.kicker}
               </Text>
             </View>
@@ -155,19 +154,18 @@ export default function Login() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgBottom },
-  hero: { height: 270, overflow: 'hidden' },
+  hero: { height: 230, overflow: 'hidden' },
   // Big rotated squares make the diagonal edge, like the reference's cut image
   diamondDark: { position: 'absolute', width: 460, height: 460, top: -250, right: -170, borderRadius: 56, transform: [{ rotate: '45deg' }] },
-  diamondBright: { position: 'absolute', width: 170, height: 170, top: 120, right: -40, borderRadius: 36, transform: [{ rotate: '45deg' }] },
   diamondOutline: { position: 'absolute', width: 380, height: 380, top: -170, right: -40, borderRadius: 52, borderWidth: 1.5, borderColor: 'rgba(28,29,31,0.08)', transform: [{ rotate: '45deg' }] },
   heroInner: { flex: 1, paddingHorizontal: space.lg },
   brand: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.lg },
   logo: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  heroIcon: { position: 'absolute', right: 70, top: 70 },
+  heroIcon: { position: 'absolute', right: 64, top: 64 },
   body: { flex: 1, paddingHorizontal: space.lg, paddingBottom: space.xl, gap: space.md },
   tag: { alignSelf: 'flex-start', backgroundColor: colors.charcoal, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
   tagText: { fontFamily: fonts.bold, letterSpacing: 0.8, textTransform: 'uppercase', fontSize: 11 },
-  headline: { fontFamily: fonts.extrabold, fontSize: 38, lineHeight: 40, letterSpacing: -1, textTransform: 'uppercase' },
+  headline: { fontFamily: fonts.extrabold, fontSize: 27, lineHeight: 30, letterSpacing: -0.5, textTransform: 'uppercase' },
   kicker: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   triangle: {
     width: 0,
