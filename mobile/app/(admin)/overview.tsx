@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
-import type { Attendance, Dashboard, Task } from '../../src/api/types';
+import type { Dashboard, Task } from '../../src/api/types';
 import {
   AdminHero,
   BrandFooter,
-  AttendanceCard,
-  JobsWeekCard,
-  type AttendancePerson,
+  Glass,
+  GlassLink,
+  GlassStatCard,
+  NotchCard,
   lastDays,
   Pill,
+  PillChart,
   QuickActions,
   Screen,
   Section,
@@ -21,7 +23,7 @@ import {
 import { useApi } from '../../src/hooks/useApi';
 import { useAuth } from '../../src/store/auth';
 import { requestScan } from '../../src/store/bridge';
-import { colors } from '../../src/theme';
+import { colors, fonts } from '../../src/theme';
 import { duration, firstName } from '../../src/utils/format';
 
 export default function Overview() {
@@ -33,11 +35,6 @@ export default function Overview() {
   const [tab, setTab] = useState<0 | 1>(managers ? 0 : 1);
 
   const techs = d?.attendance.technicians ?? 0;
-  const register = useApi<{ records: Attendance[]; absent: { id: string; name: string }[] }>(managers ? '/attendance' : null, { poll: 60_000 });
-  const people: AttendancePerson[] = [
-    ...(register.data?.records ?? []).map((r) => ({ id: r.userId, name: r.user?.name ?? '', state: r.status === 'LATE' ? ('late' as const) : ('in' as const) })),
-    ...(register.data?.absent ?? []).map((a) => ({ id: a.id, name: a.name, state: 'absent' as const })),
-  ];
   const inField = d ? d.routers.withTechnicians + d.routers.inTransit : 0;
   const flagged = d ? d.routers.overdueInCustody + d.routers.missingInSpotCounts + d.routers.lostLast30Days : 0;
   const week = lastDays(done.data?.tasks ?? [], (t) => t.endedAt);
@@ -320,7 +317,23 @@ export default function Overview() {
         />
       </View>
 
-      <JobsWeekCard week={week} open={d ? d.tasks.assigned + d.tasks.inProgress : 0} verifying={d?.tasks.awaitingVerification ?? 0} onAll={() => router.push('/board')} />
+      <NotchCard onTab={() => router.push('/board')} tabLabel="All jobs">
+        <View style={{ gap: 14 }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+            }}
+          >
+            <Text variant="h1" style={{ fontFamily: fonts.medium, fontSize: 24, lineHeight: 29 }}>
+              {'Jobs done\nThis week'}
+            </Text>
+            <GlassLink label="All jobs" onPress={() => router.push('/board')} />
+          </View>
+          <PillChart data={week} activeIndex={week.length - 1} format={(n) => `${n} ${n === 1 ? 'job' : 'jobs'}`} />
+        </View>
+      </NotchCard>
 
       <QuickActions items={actions} />
 
@@ -346,16 +359,18 @@ export default function Overview() {
       </Section>
 
       {managers ? (
-        <AttendanceCard
-          checkedIn={d?.attendance.checkedIn ?? 0}
-          total={techs}
-          late={d?.attendance.late ?? 0}
-          absent={d?.attendance.absent ?? 0}
-          checkedOut={d?.attendance.checkedOut ?? 0}
-          people={people}
-          pendingReviews={d?.attendance.pendingDressReviews ?? 0}
-          onRegister={() => router.push('/admin/attendance')}
-          onReviews={() => router.push('/admin/reviews')}
+        <GlassStatCard
+          notched
+          onTab={() => router.push('/admin/attendance')}
+          title={'Attendance\nToday'}
+          value={`${d?.attendance.checkedIn ?? 0}/${techs}`}
+          progress={techs ? (d?.attendance.checkedIn ?? 0) / techs : 0}
+          caption="Late · absent · checked out"
+          footer={`${d?.attendance.late ?? 0} · ${d?.attendance.absent ?? 0} · ${d?.attendance.checkedOut ?? 0}`}
+          secondaryIcon="shirt-outline"
+          onSecondary={() => router.push('/admin/reviews')}
+          icon="calendar-outline"
+          onAction={() => router.push('/admin/attendance')}
         />
       ) : (
         <Section

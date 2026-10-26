@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts } from '../theme';
 import { Glass, GlassCircle, Hatch } from './Glass';
+import { NotchCard } from './NotchCards';
 import { Text } from './Text';
 
 /** Yellow pill progress bar on a hatched track, with the percentage inside (reference "Wallet 74%"). */
@@ -12,7 +13,7 @@ export function HatchedProgress({ value, label, height = 56 }: { value: number; 
     <View style={{ height, borderRadius: height / 2, overflow: 'hidden' }}>
       <Hatch radius={height / 2} />
       {pct > 0 ? (
-        <View style={[styles.fill, { width: `${Math.max(pct * 100, (height / 3.2))}%`, borderRadius: height / 2 }]}>
+        <View style={[styles.fill, { width: `${Math.max(pct * 100, height / 3.2)}%`, borderRadius: height / 2 }]}>
           <Text variant="title" color={colors.onHighlight} fixedColor style={{ fontFamily: fonts.semibold, fontSize: 15 }}>
             {label ?? `${Math.round(pct * 100)}%`}
           </Text>
@@ -75,6 +76,8 @@ export function GlassStatCard({
   secondaryIcon,
   onSecondary,
   onPress,
+  notched,
+  onTab,
 }: {
   title: string;
   value?: string | number;
@@ -87,9 +90,13 @@ export function GlassStatCard({
   secondaryIcon?: keyof typeof Ionicons.glyphMap;
   onSecondary?: () => void;
   onPress?: () => void;
+  /** Use the notched card shape (chevron tab in the top edge) instead of the plain frosted card. */
+  notched?: boolean;
+  onTab?: () => void;
 }) {
+  const Shell = notched ? NotchShell : PlainShell;
   return (
-    <Glass strong onPress={onPress} style={{ gap: 16 }}>
+    <Shell onPress={onPress} onTab={onTab}>
       <View style={styles.top}>
         <Text variant="h1" style={styles.title}>
           {title}
@@ -127,24 +134,30 @@ export function GlassStatCard({
           ) : null}
         </View>
       ) : null}
+    </Shell>
+  );
+}
+
+/** Frosted card (the default shape). */
+function PlainShell({ children, onPress }: { children: ReactNode; onPress?: () => void; onTab?: () => void }) {
+  return (
+    <Glass strong onPress={onPress} style={{ gap: 16 }}>
+      {children}
     </Glass>
   );
 }
 
+/** Notched card shape with the same inner spacing. */
+function NotchShell({ children, onTab }: { children: ReactNode; onPress?: () => void; onTab?: () => void }) {
+  return (
+    <NotchCard onTab={onTab} tabLabel="Open">
+      <View style={{ gap: 16 }}>{children}</View>
+    </NotchCard>
+  );
+}
+
 /** Big two-line name, yellow-check role chip and a key figure, with a portrait on the right (reference profile header). */
-export function ProfileHero({
-  name,
-  role,
-  stat,
-  statLabel,
-  portrait,
-}: {
-  name: string;
-  role: string;
-  stat: string | number;
-  statLabel: string;
-  portrait: React.ReactNode;
-}) {
+export function ProfileHero({ name, role, stat, statLabel, portrait }: { name: string; role: string; stat: string | number; statLabel: string; portrait: React.ReactNode }) {
   const [first, ...rest] = name.split(' ');
   return (
     <View style={styles.hero}>
