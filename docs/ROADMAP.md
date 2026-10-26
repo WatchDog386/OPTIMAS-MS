@@ -7,17 +7,24 @@
 - Serial-level router chain of custody, two-party handover, custody cap, ageing alerts, stock counts, reconciliation
 - Supervisor dashboard, team status, attendance register, stock ledger
 
-## ✅ v1.1 — Phase 2 (this release)
+## ✅ v1.1 — Phase 2
 - Push notifications + in-app inbox for technicians and supervisors
 - Customer signature sign-off on job completion
 - Excel exports: attendance & payroll summary, jobs & materials, reconciliation & device locations
 - Self-hosted production stack for the Proxmox server (Docker Compose, Caddy HTTPS, backups/restore, hardening)
 - Manager web console served from the same server; login rate limiting
 
-## 🔜 v1.2 — recommended next steps
+## ✅ v1.2 — Phase 3 (this release)
+- Customer portal (account-number sign-in, live job progress, service requests → jobs)
+- Admin console: people management with one-time passwords, staff profiles, catalogue editing, stock-take adjustments
+- Job edit / reassign, global search, attendance by date, admin audit log
+- Password policy, forced password change, deactivated-account lock-out, management guard rails
+- Installable PWA, glass design system, operations hero dashboard
+- API test suite (vitest + supertest on Postgres) and GitHub Actions CI
+
+## 🔜 v1.3 — recommended next steps
 - **Offline queue** for jobs in areas with poor coverage (server-signed capture tokens issued in advance)
 - **SMS** (Africa's Talking) — job-done OTP / receipt to the customer, SMS fallback for critical alerts
-- **Admin user management screens** (create/deactivate staff, catalogue editing) in the app
 - **Off-site backup sync** (Proxmox Backup Server or rsync/S3) and uptime monitoring
 
 ## 🔭 Later

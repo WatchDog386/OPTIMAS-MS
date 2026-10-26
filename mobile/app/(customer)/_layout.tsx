@@ -6,6 +6,7 @@ import { homeFor, useAuth } from '../../src/store/auth';
 export default function CustomerLayout() {
   const user = useAuth((s) => s.user);
   if (!user) return <Redirect href="/login" />;
+  if (user.mustChangePassword) return <Redirect href="/change-password?forced=1" />;
   if (user.role !== 'CUSTOMER') return <Redirect href={homeFor(user.role)} />;
   return (
     <Tabs screenOptions={tabScreenOptions} tabBar={(props) => <FloatingTabBar {...props} />}>

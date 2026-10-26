@@ -17,6 +17,9 @@ export interface User {
   customerAccount?: string | null;
   address?: string | null;
   active: boolean;
+  mustChangePassword?: boolean;
+  lastLoginAt?: string | null;
+  createdAt?: string;
 }
 
 export interface PhotoRef {

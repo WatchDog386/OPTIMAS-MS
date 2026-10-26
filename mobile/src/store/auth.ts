@@ -11,6 +11,8 @@ interface AuthState {
   hydrate: () => Promise<void>;
   setSession: (token: string, user: User) => Promise<void>;
   logout: () => Promise<void>;
+  /** Replace the stored user (e.g. after changing password). */
+  updateUser: (user: User) => Promise<void>;
 }
 
 export const useAuth = create<AuthState>((set) => ({
@@ -32,6 +34,11 @@ export const useAuth = create<AuthState>((set) => ({
     set({ token, user });
     await secureStorage.set(KEY, JSON.stringify({ token, user }));
   },
+  updateUser: async (user) => {
+    const token = useAuth.getState().token;
+    set({ user });
+    if (token) await secureStorage.set(KEY, JSON.stringify({ token, user }));
+  },
   logout: async () => {
     set({ token: null, user: null });
     await secureStorage.remove(KEY);
@@ -43,3 +50,6 @@ export const isCustomer = (role?: Role) => role === 'CUSTOMER';
 
 /** Landing route for each kind of user. */
 export const homeFor = (role?: Role) => (role === 'CUSTOMER' ? '/portal' : isManager(role) ? '/overview' : '/home');
+
+/** Where to go right after signing in: a forced password change comes first. */
+export const afterLogin = (user: User) => (user.mustChangePassword ? '/change-password?forced=1' : homeFor(user.role));

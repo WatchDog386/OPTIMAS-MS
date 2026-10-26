@@ -65,7 +65,12 @@ export default function TaskDetail() {
           <Button label="Verify" icon="shield-checkmark" loading={busy} onPress={() => verify('VERIFIED')} style={{ flex: 1.4 }} />
         </View>
       </View>
-    ) : manager && (task.status === 'ASSIGNED' || task.status === 'IN_PROGRESS') ? (
+    ) : manager && task.status === 'ASSIGNED' ? (
+      <View style={{ flexDirection: 'row', gap: space.sm }}>
+        <Button label="Cancel" variant="danger" icon="close-circle-outline" loading={busy} onPress={cancel} style={{ flex: 1 }} />
+        <Button label="Edit / reassign" icon="create-outline" onPress={() => router.push(`/admin/task-edit?id=${task.id}`)} style={{ flex: 1.4 }} />
+      </View>
+    ) : manager && task.status === 'IN_PROGRESS' ? (
       <Button label="Cancel job" variant="danger" icon="close-circle-outline" loading={busy} onPress={cancel} />
     ) : undefined;
 

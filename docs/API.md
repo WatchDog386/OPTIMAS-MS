@@ -10,13 +10,25 @@ Roles: **T** technician · **K** storekeeper · **S** supervisor · **A** admin.
 |---|---|---|---|
 | POST | `/auth/login` | all | `{ identifier: staffNo \| email, password }` → `{ token, user }` |
 | GET | `/auth/me` | all | current user |
-| POST | `/auth/change-password` | all | `{ currentPassword, newPassword }` |
+| POST | `/auth/change-password` | all | `{ currentPassword, newPassword }` — min 8 chars with a letter and a digit, must differ; clears `mustChangePassword` |
+
+Deactivated accounts cannot sign in. `user.mustChangePassword` is `true` after an admin creates or resets an
+account; the app forces the password-change screen until it is cleared.
 
 ## Users
-| GET | `/users?role=TECHNICIAN` | K S A | team list + today's attendance, open jobs, devices held |
+| Method | Path | Who | Body / notes |
 |---|---|---|---|
-| POST | `/users` | A | `{ staffNo, name, email?, phone?, role, region?, password }` |
-| PATCH | `/users/:id` | A | any of the above + `active` |
+| GET | `/users?role=&q=&active=` | K S A | team list + today's attendance, open jobs, devices held. Customers only for S A |
+| GET | `/users/:id` | S A | profile: 30-day attendance and job stats, recent jobs, devices / materials in custody, last stock count |
+| POST | `/users` | S A | `{ staffNo, name, email?, phone?, role, region?, password?, customerAccount?, address? }` — no password → a one-time temporary password is returned as `temporaryPassword`. Customers sign in with `customerAccount`. Supervisors cannot create admins |
+| PATCH | `/users/:id` | S A | profile fields, `role`, `active`. Refuses: changing your own role or deactivating yourself, removing the last active admin, deactivating someone still holding devices (`HOLDS_DEVICES`), converting staff ↔ customer |
+| POST | `/users/:id/reset-password` | S A | → `{ temporaryPassword }`; the user must set a new one at next sign-in |
+
+## Search & audit
+| Method | Path | Who | Body / notes |
+|---|---|---|---|
+| GET | `/search?q=` | staff | jobs, devices, people (store roles+), customers & requests (S A). Technicians only see their own jobs and devices |
+| GET | `/audit?entity=&entityId=&before=&limit=` | A | append-only audit trail: user created/updated/password reset, item changes, stock adjustments, lost devices, job cancel/reassign/verify, request closed |
 
 ## Photo capture (camera-only proof)
 | Method | Path | Who | Body / notes |
@@ -57,6 +69,8 @@ A `photoId` must be used by its action within 10 minutes, once.
 |---|---|---|---|
 | GET | `/inventory/items` | all | catalogue with store / field quantities and low-stock flag |
 | POST | `/inventory/items` | K S A | `{ sku, name, category, tracking: SERIALIZED \| BULK, unit, unitPrice, reorderLevel }` |
+| PATCH | `/inventory/items/:id` | K S A | `{ name?, unit?, unitPrice?, reorderLevel?, active? }` — cannot archive while stock is in the field (`ITEM_IN_FIELD`) |
+| POST | `/inventory/adjust` | K S A | `{ itemId, quantity: ±n, reason }` — bulk items only, store stock cannot go negative; written to the ledger as `ADJUST` |
 | POST | `/inventory/receive` | K S A | `{ itemId, serials?: [{ serialNumber, macAddress? }], quantity?, note? }` |
 | POST | `/inventory/issue` | K S A | `{ userId, serials?: string[], itemId?, quantity?, note? }` — enforces custody cap |
 | POST | `/inventory/return` | K S A | `{ userId, serials?, itemId?, quantity?, condition: GOOD \| FAULTY, note? }` |

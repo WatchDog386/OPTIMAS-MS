@@ -15,3 +15,9 @@ export function confirmAction(title: string, message: string, confirmLabel: stri
     ], { cancelable: true, onDismiss: () => resolve(false) }),
   );
 }
+
+/** Cross-platform simple message. */
+export function notice(title: string, message: string) {
+  if (Platform.OS === 'web') window.alert(`${title}\n\n${message}`);
+  else Alert.alert(title, message);
+}

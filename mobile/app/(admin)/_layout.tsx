@@ -6,6 +6,7 @@ import { isManager, useAuth } from '../../src/store/auth';
 export default function AdminLayout() {
   const user = useAuth((s) => s.user);
   if (!user) return <Redirect href="/login" />;
+  if (user.mustChangePassword) return <Redirect href="/change-password?forced=1" />;
   if (user.role === 'CUSTOMER') return <Redirect href="/portal" />;
   if (!isManager(user.role)) return <Redirect href="/home" />;
   const storeOnly = user.role === 'STOREKEEPER';

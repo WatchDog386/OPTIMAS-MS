@@ -72,3 +72,18 @@ describe('role-based access', () => {
     expect((await api().get('/api/v1/audit').set(auth(sup))).status).toBe(403);
   });
 });
+
+describe('customer account edits', () => {
+  it('moves the login id with the account number and refuses duplicates', async () => {
+    const sup = (await login('OPT-SUP-001')).token;
+    const a = await api().post('/api/v1/users').set(auth(sup)).send({ name: 'Edit Me', role: 'CUSTOMER', customerAccount: 'OPT-CUS-70001', password: 'Cust-pass-1' });
+    await api().post('/api/v1/users').set(auth(sup)).send({ name: 'Taken', role: 'CUSTOMER', customerAccount: 'OPT-CUS-70002', password: 'Cust-pass-1' });
+    const moved = await api().patch(`/api/v1/users/${a.body.user.id}`).set(auth(sup)).send({ customerAccount: 'opt-cus-70003' });
+    expect(moved.body.user.staffNo).toBe('OPT-CUS-70003');
+    expect((await login('OPT-CUS-70003', 'Cust-pass-1')).user.role).toBe('CUSTOMER');
+    const dup = await api().patch(`/api/v1/users/${a.body.user.id}`).set(auth(sup)).send({ customerAccount: 'OPT-CUS-70002' });
+    expect(dup.status).toBe(409);
+    const blank = await api().patch(`/api/v1/users/${a.body.user.id}`).set(auth(sup)).send({ customerAccount: '' });
+    expect(blank.status).toBe(400);
+  });
+});

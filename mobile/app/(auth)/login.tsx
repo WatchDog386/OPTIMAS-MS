@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { api, ApiError } from '../../src/api/client';
 import type { User } from '../../src/api/types';
 import { Button, GlassBackground, InstallPill, Input, Text } from '../../src/components';
-import { homeFor, useAuth } from '../../src/store/auth';
+import { afterLogin, useAuth } from '../../src/store/auth';
 import { colors, fonts, gradients, radius, space } from '../../src/theme';
 
 /** Rotating headline slides (editorial onboarding layout). */
@@ -36,7 +36,7 @@ export default function Login() {
     try {
       const { token, user } = await api<{ token: string; user: User }>('/auth/login', { body: { identifier, password } });
       await useAuth.getState().setSession(token, user);
-      router.replace(homeFor(user.role));
+      router.replace(afterLogin(user) as never);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Unable to sign in');
     } finally {

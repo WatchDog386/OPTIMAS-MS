@@ -216,7 +216,12 @@ const updateSchema = z.object({
   phone: baseSchema.phone,
   region: baseSchema.region,
   address: baseSchema.address,
-  customerAccount: baseSchema.customerAccount,
+  customerAccount: z
+    .string()
+    .trim()
+    .min(3, 'Enter the account number')
+    .transform((s) => s.toUpperCase())
+    .optional(),
   role: z.enum(Role).optional(),
   active: z.boolean().optional(),
 });
@@ -250,7 +255,16 @@ usersRouter.patch(
       const admins = await prisma.user.count({ where: { role: 'ADMIN', active: true } });
       if (admins <= 1) throw badRequest('There must always be at least one active administrator');
     }
-    const user = await prisma.user.update({ where: { id: target.id }, data: body });
+    if (body.customerAccount && target.role !== 'CUSTOMER') throw badRequest('Only customer accounts have an account number');
+    // Customers sign in with their account number, so it doubles as their login id.
+    const loginChange = target.role === 'CUSTOMER' && body.customerAccount && body.customerAccount !== target.customerAccount ? { staffNo: body.customerAccount } : {};
+    let user: User;
+    try {
+      user = await prisma.user.update({ where: { id: target.id }, data: { ...body, ...loginChange } });
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') throw conflict('That email or account number is already used by another account', 'DUPLICATE');
+      throw e;
+    }
     const changes = Object.keys(body).join(', ');
     await audit(actor.id, body.active === false ? 'USER_DEACTIVATED' : body.active === true ? 'USER_REACTIVATED' : 'USER_UPDATED', 'User', user.id, `Updated ${user.name}: ${changes}`, body as Prisma.InputJsonObject);
     res.json({ user: publicUser(user) });

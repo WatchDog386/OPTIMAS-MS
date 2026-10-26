@@ -1,82 +1,123 @@
+import { useState } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
 import type { Dashboard, Task } from '../../src/api/types';
 import {
+  AdminHero,
   BrandFooter,
   Glass,
   GlassLink,
-  GlassStatCard,
-  GlassTopBar,
   lastDays,
   Pill,
   PillChart,
-  Portrait,
-  ProfileHero,
   QuickActions,
   Screen,
   Section,
   SectionRow,
   Text,
+  type HeroStat,
   type QuickAction,
 } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { useAuth } from '../../src/store/auth';
+import { requestScan } from '../../src/store/bridge';
 import { colors, fonts } from '../../src/theme';
-import { humanize } from '../../src/utils/format';
+import { duration, firstName } from '../../src/utils/format';
 
 export default function Overview() {
   const user = useAuth((s) => s.user)!;
+  const managers = user.role === 'ADMIN' || user.role === 'SUPERVISOR';
   const { data: d, refresh, refreshing } = useApi<Dashboard>('/reports/dashboard');
   const done = useApi<{ tasks: Task[] }>('/tasks?status=COMPLETED,VERIFIED');
-  const managers = user.role === 'ADMIN' || user.role === 'SUPERVISOR';
+  const unread = useApi<{ unread: number }>('/notifications/unread-count');
+  const [tab, setTab] = useState<0 | 1>(managers ? 0 : 1);
+
   const inField = d ? d.routers.withTechnicians + d.routers.inTransit : 0;
-  const risk = d ? d.routers.overdueInCustody + d.routers.missingInSpotCounts + d.routers.lostLast30Days : 0;
+  const flagged = d ? d.routers.overdueInCustody + d.routers.missingInSpotCounts + d.routers.lostLast30Days : 0;
   const week = lastDays(done.data?.tasks ?? [], (t) => t.endedAt);
-  const techs = d?.attendance.technicians ?? 0;
+  const kes = (n?: number) => (n ?? 0).toLocaleString('en-KE');
+
+  const opsStats: HeroStat[] = [
+    ...(managers
+      ? [
+          { key: 'att', label: 'Checked in today', value: `${d?.attendance.checkedIn ?? 0}/${d?.attendance.technicians ?? 0}`, sub: `${d?.attendance.late ?? 0} late · ${d?.attendance.absent ?? 0} absent`, icon: 'people' as const, onPress: () => router.push('/admin/attendance') },
+          { key: 'ver', label: 'Jobs to verify', value: d?.tasks.awaitingVerification ?? 0, sub: 'Proof photos waiting', icon: 'shield-checkmark' as const, alert: !!d?.tasks.awaitingVerification, onPress: () => router.push('/board?status=COMPLETED') },
+          { key: 'req', label: 'Customer requests', value: d?.requests?.open ?? 0, sub: 'New, not yet assigned', icon: 'chatbubbles' as const, alert: !!d?.requests?.open, onPress: () => router.push('/admin/requests') },
+        ]
+      : []),
+    { key: 'open', label: 'Open jobs', value: d ? d.tasks.assigned + d.tasks.inProgress : 0, sub: `${d?.tasks.inProgress ?? 0} in progress`, icon: 'briefcase', onPress: () => router.push('/board') },
+    ...(managers ? [{ key: 'dress', label: 'Dress reviews', value: d?.attendance.pendingDressReviews ?? 0, sub: 'Check-in photos', icon: 'shirt' as const, onPress: () => router.push('/admin/reviews') }] : []),
+    { key: 'cash', label: 'Collected · 7 days', value: kes(d?.tasks.amountCollectedLast7Days), sub: `KES · ${d?.tasks.completedLast7Days ?? 0} jobs · avg ${duration(d?.tasks.avgDurationMinutes)}`, icon: 'cash', onPress: () => router.push('/admin/reports') },
+  ];
+  const stockStats: HeroStat[] = [
+    { key: 'store', label: 'Routers in store', value: d?.routers.inStore ?? 0, sub: 'Ready to issue', icon: 'cube', onPress: () => router.push('/store') },
+    { key: 'field', label: 'With technicians', value: inField, sub: `${d?.routers.inTransit ?? 0} not yet confirmed`, icon: 'person', onPress: () => router.push('/admin/reconciliation') },
+    { key: 'inst', label: 'Installed', value: d?.routers.installed ?? 0, sub: 'At customer premises', icon: 'home', onPress: () => router.push('/admin/unit') },
+    { key: 'flag', label: 'Flagged devices', value: flagged, sub: flagged ? 'Overdue · missing · lost' : 'All accounted for', icon: 'warning', alert: flagged > 0, onPress: () => router.push('/admin/reconciliation') },
+    { key: 'low', label: 'Low-stock items', value: d?.lowStockItems ?? 0, sub: 'Below reorder level', icon: 'trending-down', alert: !!d?.lowStockItems, onPress: () => router.push('/admin/items') },
+  ];
 
   const all: (QuickAction | false)[] = [
     managers && { label: 'New job', icon: 'add-circle-outline', onPress: () => router.push('/admin/task-new') },
     managers && { label: 'Requests', icon: 'chatbubbles-outline', onPress: () => router.push('/admin/requests'), badge: d?.requests?.open },
+    managers && { label: 'People', icon: 'people-outline', onPress: () => router.push('/admin/users') },
     { label: 'Issue stock', icon: 'arrow-up-circle-outline', onPress: () => router.push('/admin/transfer?direction=issue') },
-    managers && { label: 'Dress code', icon: 'shirt-outline', onPress: () => router.push('/admin/reviews'), badge: d?.attendance.pendingDressReviews },
-    { label: 'Reports', icon: 'document-text-outline', onPress: () => router.push('/admin/reports') },
     { label: 'Receive', icon: 'download-outline', onPress: () => router.push('/admin/receive') },
-    { label: 'Returns', icon: 'arrow-down-circle-outline', onPress: () => router.push('/admin/transfer?direction=return') },
+    { label: 'Catalogue', icon: 'pricetags-outline', onPress: () => router.push('/admin/items') },
     { label: 'Reconcile', icon: 'git-compare-outline', onPress: () => router.push('/admin/reconciliation') },
+    { label: 'Reports', icon: 'document-text-outline', onPress: () => router.push('/admin/reports') },
+    { label: 'Returns', icon: 'arrow-down-circle-outline', onPress: () => router.push('/admin/transfer?direction=return') },
     { label: 'Trace device', icon: 'search-outline', onPress: () => router.push('/admin/unit') },
   ];
   const actions = all.filter((a): a is QuickAction => !!a).slice(0, 8);
 
   const attention = [
-    managers && d?.requests?.open
-      ? { key: 'req', icon: 'chatbubbles-outline' as const, title: 'Customer requests', sub: 'Turn them into jobs or close them', n: d.requests.open, go: '/admin/requests' }
-      : null,
-    managers && d?.attendance.pendingDressReviews
-      ? { key: 'dress', icon: 'shirt-outline' as const, title: 'Dress-code photos to review', sub: 'Approve or reject check-in selfies', n: d.attendance.pendingDressReviews, go: '/admin/reviews' }
-      : null,
-    managers && d?.tasks.awaitingVerification
-      ? { key: 'verify', icon: 'shield-checkmark-outline' as const, title: 'Jobs awaiting verification', sub: 'Check proof photos and materials', n: d.tasks.awaitingVerification, go: '/board?status=COMPLETED' }
-      : null,
-    d?.routers.overdueInCustody
-      ? { key: 'overdue', icon: 'time-outline' as const, title: 'Devices held too long', sub: 'In a technician’s hands past the limit', n: d.routers.overdueInCustody, go: '/admin/reconciliation' }
-      : null,
-    d?.routers.missingInSpotCounts
-      ? { key: 'missing', icon: 'alert-circle-outline' as const, title: 'Missing in stock counts', sub: 'Last 7 days', n: d.routers.missingInSpotCounts, go: '/admin/reconciliation' }
-      : null,
-    d?.lowStockItems ? { key: 'low', icon: 'trending-down-outline' as const, title: 'Items below reorder level', sub: 'Restock the store', n: d.lowStockItems, go: '/store' } : null,
+    managers && d?.requests?.open ? { key: 'req', icon: 'chatbubbles-outline' as const, title: 'Customer requests', sub: 'Turn them into jobs or close them', n: d.requests.open, go: '/admin/requests' } : null,
+    managers && d?.attendance.pendingDressReviews ? { key: 'dress', icon: 'shirt-outline' as const, title: 'Dress-code photos to review', sub: 'Approve or reject check-in selfies', n: d.attendance.pendingDressReviews, go: '/admin/reviews' } : null,
+    managers && d?.tasks.awaitingVerification ? { key: 'verify', icon: 'shield-checkmark-outline' as const, title: 'Jobs awaiting verification', sub: 'Check proof photos and materials', n: d.tasks.awaitingVerification, go: '/board?status=COMPLETED' } : null,
+    d?.routers.overdueInCustody ? { key: 'overdue', icon: 'time-outline' as const, title: 'Devices held too long', sub: 'In a technician’s hands past the limit', n: d.routers.overdueInCustody, go: '/admin/reconciliation' } : null,
+    d?.routers.missingInSpotCounts ? { key: 'missing', icon: 'alert-circle-outline' as const, title: 'Missing in stock counts', sub: 'Last 7 days', n: d.routers.missingInSpotCounts, go: '/admin/reconciliation' } : null,
+    d?.lowStockItems ? { key: 'low', icon: 'trending-down-outline' as const, title: 'Items below reorder level', sub: 'Restock the store', n: d.lowStockItems, go: '/admin/items' } : null,
   ].filter((x): x is NonNullable<typeof x> => x !== null);
 
-  return (
-    <Screen refreshing={refreshing} onRefresh={() => { refresh(); done.refresh(); }} contentStyle={{ gap: 18 }}>
-      <GlassTopBar profileHref="/more" calendarHref={managers ? '/admin/attendance' : '/store'} />
+  const scan = async () => {
+    const r = await requestScan({ title: 'Scan a device' });
+    if (r?.[0]) router.push(`/admin/unit?serial=${encodeURIComponent(r[0])}`);
+  };
 
-      <ProfileHero
-        name={user.name}
-        role={humanize(user.role)}
-        stat={managers ? `${d?.attendance.checkedIn ?? 0}/${techs}` : inField}
-        statLabel={managers ? 'Technicians checked in' : 'Devices in the field'}
-        portrait={<Portrait name={user.name} />}
-      />
+  return (
+    <Screen
+      edges={[]}
+      refreshing={refreshing}
+      onRefresh={() => {
+        refresh();
+        done.refresh();
+        unread.refresh();
+      }}
+      contentStyle={{ gap: 18, paddingTop: 0 }}
+    >
+      <View style={{ marginHorizontal: -16 }}>
+        <AdminHero
+          firstName={firstName(user.name)}
+          unread={unread.data?.unread}
+          onAvatar={() => router.push('/more')}
+          onSearch={() => router.push('/search')}
+          onScan={scan}
+          onBell={() => router.push('/notifications')}
+          tabs={['Operations', 'Inventory']}
+          tab={tab}
+          onTab={setTab}
+          link={
+            tab === 0
+              ? managers
+                ? { label: 'New Job', icon: 'add-circle-outline', onPress: () => router.push('/admin/task-new') }
+                : { label: 'Open jobs', icon: 'briefcase-outline', onPress: () => router.push('/board') }
+              : { label: 'Issue Stock', icon: 'arrow-up-circle-outline', onPress: () => router.push('/admin/transfer?direction=issue') }
+          }
+          onViewAll={() => router.push(tab === 0 ? '/board' : '/store')}
+          stats={tab === 0 ? opsStats : stockStats}
+        />
+      </View>
 
       <Glass strong style={{ gap: 14 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -87,42 +128,6 @@ export default function Overview() {
         </View>
         <PillChart data={week} activeIndex={week.length - 1} format={(n) => `${n} ${n === 1 ? 'job' : 'jobs'}`} />
       </Glass>
-
-      {managers ? (
-        <GlassStatCard
-          title={'Attendance\nToday'}
-          value={`${d?.attendance.checkedIn ?? 0}/${techs}`}
-          progress={techs ? (d?.attendance.checkedIn ?? 0) / techs : 0}
-          caption="Late · absent · checked out"
-          footer={`${d?.attendance.late ?? 0} · ${d?.attendance.absent ?? 0} · ${d?.attendance.checkedOut ?? 0}`}
-          secondaryIcon="shirt-outline"
-          onSecondary={() => router.push('/admin/reviews')}
-          icon="calendar-outline"
-          onAction={() => router.push('/admin/attendance')}
-        />
-      ) : null}
-
-      <GlassStatCard
-        title={'Routers\nAccounted for'}
-        value={inField}
-        progress={inField + (d?.routers.installed ?? 0) ? (d?.routers.installed ?? 0) / (inField + (d?.routers.installed ?? 0)) : 0}
-        progressLabel={`${d?.routers.installed ?? 0} installed`}
-        caption={risk ? 'Flagged devices' : 'Status'}
-        footer={risk ? `${risk} flagged` : 'All accounted'}
-        secondaryIcon="search-outline"
-        onSecondary={() => router.push('/admin/unit')}
-        icon="git-compare-outline"
-        onAction={() => router.push('/admin/reconciliation')}
-      />
-
-      <GlassStatCard
-        title={'Collected\nLast 7 days'}
-        value={`${d?.tasks.completedLast7Days ?? 0} jobs`}
-        caption="Cash collected (KES)"
-        footer={(d?.tasks.amountCollectedLast7Days ?? 0).toLocaleString('en-KE')}
-        icon="document-text-outline"
-        onAction={() => router.push('/admin/reports')}
-      />
 
       <QuickActions items={actions} />
 
@@ -136,6 +141,13 @@ export default function Overview() {
             <SectionRow key={a.key} icon={a.icon} tint={colors.text} tintBg={colors.highlight} title={a.title} subtitle={a.sub} right={<Pill label={String(a.n)} tone="danger" />} onPress={() => router.push(a.go as never)} />
           ))
         )}
+      </Section>
+
+      <Section title="Router accountability" subtitle="Where every serialised device is now" action={{ label: 'Reconcile', onPress: () => router.push('/admin/reconciliation') }}>
+        <SectionRow icon="cube-outline" title="In store" subtitle="Ready to issue" right={<Pill label={String(d?.routers.inStore ?? 0)} tone="neutral" />} />
+        <SectionRow icon="person-outline" title="With technicians" subtitle={`${d?.routers.inTransit ?? 0} not yet confirmed`} right={<Pill label={String(inField)} tone="warning" />} />
+        <SectionRow icon="home-outline" tint={colors.success} tintBg={colors.successSoft} title="Installed at customers" right={<Pill label={String(d?.routers.installed ?? 0)} tone="success" />} />
+        <SectionRow icon="warning-outline" tint={colors.danger} tintBg={colors.dangerSoft} title="Faulty or lost" subtitle={`${d?.routers.lostLast30Days ?? 0} lost in the last 30 days`} right={<Pill label={String((d?.routers.faulty ?? 0) + (d?.routers.lost ?? 0))} tone="danger" />} />
       </Section>
 
       <BrandFooter />

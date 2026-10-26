@@ -25,3 +25,5 @@ export * from './Glass';
 export * from './GlassWidgets';
 export * from './GlassTopBar';
 export * from './InstallPrompt';
+export * from './AdminHero';
+export * from './TempPasswordCard';

@@ -12,6 +12,7 @@ const ACTIONS = [
   { icon: 'arrow-down-circle', label: 'Return', href: '/admin/transfer?direction=return', tint: colors.accent },
   { icon: 'add-circle', label: 'Receive', href: '/admin/receive', tint: colors.info },
   { icon: 'search', label: 'Find unit', href: '/admin/unit', tint: colors.warning },
+  { icon: 'list', label: 'Ledger', href: '/admin/movements', tint: colors.text },
 ] as const;
 
 const categoryIcon: Record<Item['category'], keyof typeof Ionicons.glyphMap> = {
@@ -48,9 +49,9 @@ export default function Store() {
         ))}
       </View>
 
-      <SectionHeader title="Inventory" action="Ledger" onAction={() => router.push('/admin/movements')} />
+      <SectionHeader title="Inventory" action="Catalogue" onAction={() => router.push('/admin/items')} />
       {data?.items.map((item) => (
-        <Card key={item.id} style={styles.item}>
+        <Card key={item.id} style={styles.item} onPress={() => router.push(`/admin/item/${item.id}`)}>
           <View style={styles.itemIcon}>
             <Ionicons name={categoryIcon[item.category]} size={20} color={colors.primary} />
           </View>

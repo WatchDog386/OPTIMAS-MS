@@ -76,6 +76,19 @@ Customer logins can only reach their own account (`/customer/*`) — every staff
 Customer requests land in the supervisor's **Customer requests** inbox and become jobs in one tap; the customer is
 notified when a technician is assigned, starts, and completes the work.
 
+### 🛡️ Administration (phase 3)
+- **Operations hero** on the admin dashboard: greeting, search, scan and notifications, with an *Operations / Inventory* switch over live KPI cards.
+- **People** — create staff and customer accounts with one-time passwords (shared from the phone), edit, change role, reset password, deactivate. Built-in guards: you cannot remove the last admin, lock yourself out, or deactivate someone who still holds routers.
+- **Staff profile** — 30-day attendance, job stats, devices and materials in custody, last stock count, recent jobs.
+- **Catalogue** — add and edit items, prices and reorder levels; stock-take adjustments with a reason; archive items not in the field.
+- **Job edit / reassign** before work starts; both technicians are notified.
+- **Global search** across jobs, devices, people, customers and requests (scoped by role).
+- **Audit log** (admins) — append-only record of every administrative change.
+- **Attendance register** by day, with previous / next navigation.
+- **Forced password change** after a temporary password; password policy (8+ characters, letters and numbers).
+- **Error boundary** so a broken screen offers *Try again* instead of a blank page.
+- **Automated tests** (`cd backend && npm test`, 32 API tests on a real Postgres) and **CI** on every push.
+
 ### 📲 Install the app
 The web console is an installable **PWA** (manifest, service worker, app icons). Phones get an install card
 (Android: one-tap **Install**; iPhone: Share → *Add to Home Screen* steps), and an install button sits on the sign-in

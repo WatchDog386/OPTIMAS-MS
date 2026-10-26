@@ -1,6 +1,10 @@
 import { useEffect } from 'react';
 import * as Notifications from 'expo-notifications';
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
+import { View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Button } from '../src/components/Button';
+import { Text } from '../src/components/Text';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -20,6 +24,23 @@ import { InstallPrompt } from '../src/components/InstallPrompt';
 import { colors } from '../src/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
+
+/** Shown instead of a white screen if any page crashes. */
+export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Promise<void> }) {
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28, gap: 14, backgroundColor: colors.bgTop }}>
+      <Ionicons name="warning-outline" size={44} color={colors.text} />
+      <Text variant="h2" align="center">
+        Something went wrong on this screen
+      </Text>
+      <Text variant="bodySm" color={colors.textMuted} align="center">
+        {error.message}
+      </Text>
+      <Button label="Try again" icon="refresh" onPress={() => void retry()} />
+      <Button label="Go to home" variant="ghost" onPress={() => router.replace('/')} />
+    </View>
+  );
+}
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({

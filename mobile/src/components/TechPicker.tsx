@@ -26,7 +26,7 @@ export function TechPicker({ value, onChange }: { value: string | null; onChange
                 {firstName(u.name)}
               </Text>
               <Text variant="label" color={colors.textDim}>
-                {u.openTasks} jobs · {u.unitsInCustody} dev
+                {u.openTasks} {u.openTasks === 1 ? 'job' : 'jobs'} · {u.unitsInCustody} dev
               </Text>
             </Pressable>
           );
