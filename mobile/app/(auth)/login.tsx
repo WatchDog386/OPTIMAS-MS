@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useEffect, useRef, useState, type ComponentRef } from 'react';
+import { Animated, Easing, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,26 +11,33 @@ import { alertDialog } from '../../src/store/feedback';
 import { colors, fonts, radius, space } from '../../src/theme';
 
 const MAX_W = 480;
+/** Corner radius shared by the fields and the Sign in button */
+const CORNER = 14;
 const HERO = require('../../assets/login-fiber.webp');
-const HERO_RATIO = 892 / 900; // width / height of assets/login-fiber.webp
+const HERO_RATIO = 900 / 793; // width / height of assets/login-fiber.webp
 
 /** Sign-in: brand, a short welcome and one frosted card with the form, on the dashboards' own backdrop. */
 export default function Login() {
   const insets = useSafeAreaInsets();
   const { width: winW, height: winH } = useWindowDimensions();
   const W = Math.min(winW, MAX_W);
-  // The image gets the height left after the brand bar and the form (~510 px), within limits
-
   // Free space between the top bar and the form; the picture is sized to fit it exactly (never larger)
   const [area, setArea] = useState({ w: 0, h: 0 });
   const heroH = Math.max(0, Math.min(area.h - 16, area.w / HERO_RATIO));
   const heroW = heroH * HERO_RATIO;
+  const heroIn = useRef(new Animated.Value(0)).current;
+  const passwordRef = useRef<ComponentRef<typeof TextInput>>(null);
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signedIn, setSignedIn] = useState<User | null>(null);
+
+  // The picture eases in once, as soon as its space is known
+  useEffect(() => {
+    if (area.h > 0) Animated.timing(heroIn, { toValue: 1, duration: 520, easing: Easing.out(Easing.cubic), useNativeDriver: Platform.OS !== 'web' }).start();
+  }, [area.h > 0, heroIn]);
 
   const submit = async () => {
     if (!identifier.trim() || !password) {
@@ -74,9 +81,9 @@ export default function Login() {
             {/* The Fiber-to-the-Home picture, as is — no frame, no mask; it fills the space above the form */}
             <View style={styles.heroArea} onLayout={(e) => setArea({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
               {area.h > 0 ? (
-                <View style={styles.heroCenter} pointerEvents="none">
+                <Animated.View style={[styles.heroCenter, { opacity: heroIn, transform: [{ translateY: heroIn.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }]} pointerEvents="none">
                   <Image source={HERO} style={{ width: heroW, height: heroH }} resizeMode="contain" accessibilityLabel="Fiber to the home" />
-                </View>
+                </Animated.View>
               ) : null}
             </View>
 
@@ -97,8 +104,12 @@ export default function Login() {
                   placeholder="e.g. OPT-TEC-001"
                   autoCapitalize="characters"
                   autoCorrect={false}
+                  autoComplete="username"
+                  textContentType="username"
                   value={identifier}
                   onChangeText={onChange(setIdentifier)}
+                  onSubmitEditing={() => passwordRef.current?.focus()}
+                  blurOnSubmit={false}
                   returnKeyType="next"
                   fieldStyle={styles.field}
                 />
@@ -107,7 +118,12 @@ export default function Login() {
                     label="Password"
                     icon="lock-closed-outline"
                     placeholder="Your password"
+                    ref={passwordRef}
                     secureTextEntry={!showPassword}
+                    autoComplete="current-password"
+                    textContentType="password"
+                    autoCapitalize="none"
+                    autoCorrect={false}
                     value={password}
                     onChangeText={onChange(setPassword)}
                     onSubmitEditing={submit}
@@ -128,7 +144,7 @@ export default function Login() {
                   </View>
                 ) : null}
 
-                <Button label="Sign in" size="lg" trailingIcon="arrow-forward-circle-outline" loading={loading} onPress={submit} />
+                <Button label="Sign in" size="lg" trailingIcon="arrow-forward-circle-outline" loading={loading} onPress={submit} style={styles.signIn} />
               </View>
 
               <Pressable onPress={help} hitSlop={8} style={styles.help} accessibilityRole="button">
@@ -169,7 +185,9 @@ const styles = StyleSheet.create({
   heroArea: { flex: 1, minHeight: 170 },
   heroCenter: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, alignItems: 'center', justifyContent: 'center' },
   card: { gap: 14 },
-  field: { backgroundColor: '#FFFFFF', minHeight: 56 },
+  // Soft, slightly rounded corners (not pills) with a fine edge so white fields read on the grey page
+  field: { backgroundColor: '#FFFFFF', minHeight: 56, borderRadius: CORNER, shadowColor: '#1C1D1F', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
+  signIn: { borderRadius: CORNER, marginTop: 4 },
   eye: { position: 'absolute', right: space.lg, bottom: 18 },
   error: { flexDirection: 'row', gap: space.sm, alignItems: 'center', backgroundColor: colors.dangerSoft, padding: space.md, borderRadius: radius.md },
   help: { alignSelf: 'center' },

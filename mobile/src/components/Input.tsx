@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ComponentRef, type Ref } from 'react';
 import { Platform, StyleSheet, TextInput, View, type StyleProp, type TextInputProps, type TextStyle, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, radius, space } from '../theme';
@@ -8,6 +8,7 @@ interface Props extends TextInputProps {
   label?: string;
   icon?: keyof typeof Ionicons.glyphMap;
   error?: string;
+  ref?: Ref<ComponentRef<typeof TextInput>>;
   /** Extra style for the pill field (e.g. a solid fill on plain white pages). */
   fieldStyle?: StyleProp<ViewStyle>;
 }
