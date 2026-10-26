@@ -17,6 +17,8 @@ import { notificationsRouter } from './modules/notifications/notifications.route
 import { exportsRouter } from './modules/exports/exports.routes';
 import { customerRouter } from './modules/customer/customer.routes';
 import { requestsRouter } from './modules/requests/requests.routes';
+import { searchRouter } from './modules/search/search.routes';
+import { auditRouter } from './modules/audit/audit.routes';
 
 export function createApp() {
   const app = express();
@@ -53,6 +55,8 @@ export function createApp() {
   api.use('/notifications', requireAuth, notificationsRouter);
   api.use('/exports', requireAuth, staff, exportsRouter);
   api.use('/requests', requireAuth, requireRole(ROLES.MANAGERS), requestsRouter);
+  api.use('/search', requireAuth, staff, searchRouter);
+  api.use('/audit', requireAuth, requireRole(ROLES.ADMIN), auditRouter);
   api.use('/customer', requireAuth, requireRole(ROLES.CUSTOMER), customerRouter);
   app.use('/api/v1', api);
 

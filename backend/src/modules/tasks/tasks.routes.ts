@@ -12,6 +12,7 @@ import { consumePhoto } from '../capture/capture.service';
 import { consumeBulk, installSerial } from '../inventory/inventory.service';
 import { notify, notifyRoles } from '../notifications/notifications.service';
 import { notifyCustomer } from '../customer/customer.service';
+import { audit } from '../../lib/audit';
 
 export const tasksRouter = Router();
 const managers = requireRole(ROLES.MANAGERS);
@@ -126,11 +127,17 @@ tasksRouter.patch(
   '/:id',
   managers,
   ah(async (req, res) => {
-    const body = parse(taskSchema.partial(), req.body);
+    // Linking to a customer request is only allowed at creation, where it is validated.
+    const body = parse(taskSchema.omit({ requestId: true }).partial(), req.body);
     const task = await loadTask(req.params.id);
     if (task.status !== 'ASSIGNED') throw conflict('Only tasks that have not started can be edited or reassigned');
+    if (body.assigneeId && body.assigneeId !== task.assigneeId) {
+      const assignee = await prisma.user.findUnique({ where: { id: body.assigneeId } });
+      if (!assignee?.active || assignee.role !== 'TECHNICIAN') throw badRequest('Tasks can only be assigned to active technicians');
+    }
     const updated = await prisma.task.update({ where: { id: task.id }, data: body, include: detailInclude });
     if (body.assigneeId && body.assigneeId !== task.assigneeId) {
+      await audit(me(req).id, 'TASK_REASSIGNED', 'Task', task.id, `Reassigned ${task.code} from ${task.assignee.name} to ${updated.assignee.name}`);
       void notify([updated.assigneeId], {
         type: 'TASK_ASSIGNED',
         title: `New job: ${updated.title}`,
@@ -155,6 +162,7 @@ tasksRouter.post(
       return tx.task.update({ where: { id: task.id }, data: { status: 'CANCELLED', requestId: null }, include: detailInclude });
     });
     void notify([task.assigneeId], { type: 'TASK_CANCELLED', title: `${task.code} cancelled`, body: task.title, data: { taskId: task.id } });
+    await audit(me(req).id, 'TASK_CANCELLED', 'Task', task.id, `Cancelled ${task.code} (${task.title})`);
     res.json({ task: updated });
   }),
 );
@@ -177,6 +185,7 @@ tasksRouter.post(
       data: { status: body.decision, verifiedById: me(req).id, verifiedAt: new Date(), verificationNote: body.note },
       include: detailInclude,
     });
+    await audit(me(req).id, `TASK_${body.decision}`, 'Task', task.id, `${body.decision === 'VERIFIED' ? 'Verified' : 'Rejected'} ${task.code}${body.note ? `: ${body.note}` : ''}`);
     void notify([task.assigneeId], {
       type: body.decision === 'VERIFIED' ? 'TASK_VERIFIED' : 'TASK_REJECTED',
       title: body.decision === 'VERIFIED' ? `${task.code} verified ✔` : `${task.code} returned for correction`,

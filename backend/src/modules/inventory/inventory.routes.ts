@@ -10,6 +10,7 @@ import { parse } from '../../middleware/validate';
 import * as svc from './inventory.service';
 import { buildReconciliation } from './reconciliation';
 import { notify, notifyRoles } from '../notifications/notifications.service';
+import { audit } from '../../lib/audit';
 
 export const inventoryRouter = Router();
 const store = requireRole(ROLES.STORE);
@@ -58,7 +59,68 @@ inventoryRouter.post(
   store,
   ah(async (req, res) => {
     const item = await prisma.inventoryItem.create({ data: parse(itemSchema, req.body) });
+    await audit(me(req).id, 'ITEM_CREATED', 'InventoryItem', item.id, `Added ${item.name} (${item.sku}) to the catalogue`);
     res.status(201).json({ item });
+  }),
+);
+
+const itemUpdateSchema = z.object({
+  name: z.string().trim().min(2).optional(),
+  unit: z.string().trim().min(1).optional(),
+  unitPrice: z.number().int().min(0).optional(),
+  reorderLevel: z.number().min(0).optional(),
+  active: z.boolean().optional(),
+});
+
+/** Edit catalogue details. SKU, category and tracking mode are fixed once stock exists. */
+inventoryRouter.patch(
+  '/items/:id',
+  store,
+  ah(async (req, res) => {
+    const body = parse(itemUpdateSchema, req.body);
+    const existing = await prisma.inventoryItem.findUnique({ where: { id: req.params.id } });
+    if (!existing) throw badRequest('Item not found', 'NOT_FOUND');
+    if (body.active === false) {
+      const [inField, held] = await Promise.all([
+        prisma.serialUnit.count({ where: { itemId: existing.id, status: { in: ['IN_TRANSIT', 'WITH_TECHNICIAN'] } } }),
+        prisma.bulkHolding.aggregate({ where: { itemId: existing.id }, _sum: { quantity: true } }),
+      ]);
+      if (inField || (held._sum.quantity ?? 0) > 0) throw badRequest('This item is still with technicians. Recover it before archiving.', 'ITEM_IN_FIELD');
+    }
+    const item = await prisma.inventoryItem.update({ where: { id: existing.id }, data: body });
+    const changes = Object.entries(body)
+      .map(([k, v]) => `${k}: ${String((existing as Record<string, unknown>)[k])} → ${String(v)}`)
+      .join('; ');
+    await audit(me(req).id, 'ITEM_UPDATED', 'InventoryItem', item.id, `${item.name}: ${changes}`);
+    res.json({ item });
+  }),
+);
+
+const adjustSchema = z.object({
+  itemId: z.string().min(1),
+  /** Positive to add (found / correction), negative to remove (damaged / count shortfall). */
+  quantity: z.number().refine((n) => n !== 0, 'Quantity cannot be zero'),
+  reason: z.string().trim().min(5, 'Explain the adjustment').max(300),
+});
+
+/** Store stock-take correction for BULK items, recorded in the ledger as ADJUST. */
+inventoryRouter.post(
+  '/adjust',
+  store,
+  ah(async (req, res) => {
+    const body = parse(adjustSchema, req.body);
+    const actor = me(req).id;
+    const item = await prisma.$transaction(async (tx) => {
+      const it = await tx.inventoryItem.findUnique({ where: { id: body.itemId } });
+      if (!it) throw badRequest('Item not found', 'NOT_FOUND');
+      if (it.tracking !== 'BULK') throw badRequest('Serialised devices are adjusted by marking units faulty or lost, not by quantity');
+      if (it.storeQuantity + body.quantity < 0) throw badRequest(`Only ${it.storeQuantity} ${it.unit} in store`, 'INSUFFICIENT_STOCK');
+      const updated = await tx.inventoryItem.update({ where: { id: it.id }, data: { storeQuantity: { increment: body.quantity } } });
+      await tx.stockMovement.create({ data: { type: 'ADJUST', itemId: it.id, quantity: body.quantity, actorId: actor, note: body.reason } });
+      return updated;
+    });
+    await audit(actor, 'STOCK_ADJUSTED', 'InventoryItem', item.id, `${body.quantity > 0 ? '+' : ''}${body.quantity} ${item.unit} ${item.name}: ${body.reason}`);
+    res.json({ item });
   }),
 );
 
@@ -130,6 +192,7 @@ inventoryRouter.post(
   ah(async (req, res) => {
     const b = parse(z.object({ serialNumber: z.string().min(1), note: z.string().trim().min(5, 'Explain what happened') }), req.body);
     const lost = await prisma.$transaction((tx) => svc.reportLost(tx, me(req).id, b.serialNumber, b.note));
+    await audit(me(req).id, 'UNIT_LOST', 'SerialUnit', lost.serialNumber, `Reported ${lost.serialNumber} lost: ${b.note}`);
     const msg = { type: 'UNIT_LOST' as const, title: `Device ${lost.serialNumber} reported lost`, body: b.note, data: { serialNumber: lost.serialNumber } };
     void notify([lost.accountableUserId], msg);
     void notifyRoles(['SUPERVISOR', 'ADMIN'], msg, me(req).id);

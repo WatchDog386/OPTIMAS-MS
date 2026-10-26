@@ -20,3 +20,4 @@ mobile/android/
 # Production secrets & backups
 deploy/.env
 deploy/backups/
+backend/uploads-test/
