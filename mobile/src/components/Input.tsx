@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
+import { StyleSheet, TextInput, View, type StyleProp, type TextInputProps, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, radius, space } from '../theme';
 import { Text } from './Text';
@@ -8,10 +8,12 @@ interface Props extends TextInputProps {
   label?: string;
   icon?: keyof typeof Ionicons.glyphMap;
   error?: string;
+  /** Extra style for the pill field (e.g. a solid fill on plain white pages). */
+  fieldStyle?: StyleProp<ViewStyle>;
 }
 
 /** Material 3 outlined text field with focus and error states. */
-export function Input({ label, icon, error, style, multiline, onFocus, onBlur, ...rest }: Props) {
+export function Input({ label, icon, error, style, fieldStyle, multiline, onFocus, onBlur, ...rest }: Props) {
   const [focused, setFocused] = useState(false);
   const borderColor = error ? colors.danger : focused ? 'rgba(28,29,31,0.25)' : colors.glassBorder;
   return (
@@ -21,7 +23,7 @@ export function Input({ label, icon, error, style, multiline, onFocus, onBlur, .
           {label}
         </Text>
       ) : null}
-      <View style={[styles.field, multiline && styles.multi, { borderColor, borderWidth: 1 }]}>
+      <View style={[styles.field, multiline && styles.multi, fieldStyle, { borderColor, borderWidth: 1 }]}>
         {icon ? <Ionicons name={icon} size={20} color={colors.textDim} /> : null}
         <TextInput
           placeholderTextColor={colors.textDim}

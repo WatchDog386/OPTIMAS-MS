@@ -16,6 +16,7 @@ import {
   Figtree_800ExtraBold,
   useFonts,
 } from '@expo-google-fonts/figtree';
+import { BebasNeue_400Regular } from '@expo-google-fonts/bebas-neue';
 import { useAuth } from '../src/store/auth';
 import { registerForPush } from '../src/utils/push';
 import { openNotificationTarget } from '../src/utils/notifications';
@@ -50,6 +51,7 @@ export default function RootLayout() {
     Figtree_600SemiBold,
     Figtree_700Bold,
     Figtree_800ExtraBold,
+    BebasNeue_400Regular,
   });
   const hydrated = useAuth((s) => s.hydrated);
   const [splashDone, setSplashDone] = useState(false);
