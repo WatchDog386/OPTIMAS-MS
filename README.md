@@ -6,6 +6,9 @@ Optimas MS gives management a digital, auditable view of every field employee: w
 when (with a dress-code photo), what job they are on, how long it took (with before/after proof photos),
 what materials they used — and, crucially, **where every router is at all times**.
 
+**Sign-in (rotating slides) and dashboards with the unmasked user portrait**
+![](docs/screenshots/login-and-dashboards.png)
+
 **Technician home — off duty, scrolled, on duty**
 ![](docs/screenshots/technician-app.png)
 

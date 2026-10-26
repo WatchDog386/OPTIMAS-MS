@@ -205,21 +205,15 @@ const styles = StyleSheet.create({
   portrait: { width: 150, alignItems: 'center', justifyContent: 'flex-end' },
 });
 
-/** Portrait for the profile hero: today's check-in selfie if there is one, otherwise a monogram. */
-export function Portrait({ name, photo }: { name: string; photo?: React.ReactNode }) {
+/**
+ * Portrait for the profile hero, unmasked like a cut-out: today's check-in selfie if there is one,
+ * otherwise a large free-standing user icon.
+ */
+export function Portrait({ photo }: { name?: string; photo?: React.ReactNode }) {
   if (photo) return <View style={portrait.photo}>{photo}</View>;
-  const initials = name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase())
-    .join('');
   return (
-    <View style={portrait.ring}>
-      <View style={portrait.mono}>
-        <Text variant="display" color={colors.white} fixedColor style={{ fontFamily: fonts.semibold, fontSize: 44, lineHeight: 50 }}>
-          {initials}
-        </Text>
-      </View>
+    <View style={portrait.wrap}>
+      <Ionicons name="person" size={168} color={colors.charcoal} style={portrait.icon} />
     </View>
   );
 }
@@ -245,7 +239,7 @@ export function lastDays<T>(items: T[], at: (t: T) => string | null | undefined,
 }
 
 const portrait = StyleSheet.create({
-  photo: { width: 150, height: 200, borderTopLeftRadius: 75, borderTopRightRadius: 75, borderBottomLeftRadius: 28, borderBottomRightRadius: 28, overflow: 'hidden' },
-  ring: { width: 150, height: 150, borderRadius: 75, borderWidth: 6, borderColor: colors.highlight, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-  mono: { width: 126, height: 126, borderRadius: 63, backgroundColor: colors.charcoal, alignItems: 'center', justifyContent: 'center' },
+  photo: { width: 150, height: 200, overflow: 'hidden' },
+  wrap: { width: 160, height: 200, alignItems: 'center', justifyContent: 'flex-end' },
+  icon: { marginBottom: -12, textShadowColor: 'rgba(0,0,0,0.12)', textShadowRadius: 18, textShadowOffset: { width: 0, height: 10 } },
 });
