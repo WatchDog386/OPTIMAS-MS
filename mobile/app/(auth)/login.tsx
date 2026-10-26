@@ -74,11 +74,8 @@ export default function Login() {
         <ScrollView contentContainerStyle={[styles.scroll, { minHeight: winH }]} keyboardShouldPersistTaps="handled" bounces={false} showsVerticalScrollIndicator={false}>
           <View style={[styles.column, { width: W, paddingTop: insets.top + 16, paddingBottom: insets.bottom + space.lg }]}>
             <View style={styles.topBar}>
-              <Text variant="title" style={styles.brandText}>
-                Optimas{' '}
-                <Text variant="title" color={colors.textMuted} style={styles.brandText}>
-                  MS
-                </Text>
+              <Text variant="title" color={colors.navy} style={styles.brandText}>
+                Optimas Networks
               </Text>
               <InstallButton />
             </View>

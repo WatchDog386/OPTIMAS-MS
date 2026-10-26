@@ -8,7 +8,7 @@ import { colors, fonts } from '../theme';
 import { Text } from './Text';
 
 /*
- * Floating lime tab bar with a smooth dip that follows the active tab, whose icon
+ * Floating navy tab bar with a smooth dip that follows the active tab, whose icon
  * rides in a raised black bubble — the Business-SME mobile navigation.
  */
 const BAR_HEIGHT = 64;
@@ -18,7 +18,7 @@ const NOTCH_DEPTH = 38;
 const NOTCH_HALF = 42;
 const BUBBLE = 46;
 const BUBBLE_GAP = 6;
-const MUTED = 'rgba(28,31,27,0.72)';
+const MUTED = 'rgba(255,255,255,0.72)';
 
 function barPath(w: number, cx: number, depth: number) {
   const h = BAR_HEIGHT;
@@ -89,14 +89,14 @@ export function FloatingTabBar({ state, descriptors, navigateToTab }: BottomTabB
             <Svg width={width} height={BAR_HEIGHT} style={StyleSheet.absoluteFill}>
               <Defs>
                 <SvgGradient id="navfill" x1="0" y1="0" x2="0" y2="1">
-                  <Stop offset="0" stopColor="#F2F65A" />
-                  <Stop offset="1" stopColor="#E2EA2C" />
+                  <Stop offset="0" stopColor="#0A2C80" />
+                  <Stop offset="1" stopColor="#002170" />
                 </SvgGradient>
               </Defs>
               <Path d={barPath(width, cx, NOTCH_DEPTH)} fill="url(#navfill)" />
             </Svg>
             <View style={[styles.bubble, { left: cx - BUBBLE / 2, top: NOTCH_DEPTH - BUBBLE_GAP - BUBBLE }]}>
-              {activeIcon ? activeIcon({ focused: true, color: colors.white, size: 22 }) : null}
+              {activeIcon ? activeIcon({ focused: true, color: colors.navy, size: 22 }) : null}
             </View>
           </>
         ) : null}
@@ -119,7 +119,7 @@ export function FloatingTabBar({ state, descriptors, navigateToTab }: BottomTabB
                 <View style={{ opacity: isActive ? 0 : 1 }}>{icon ? icon({ focused: false, color: MUTED, size: 22 }) : null}</View>
                 <Text
                   variant="label"
-                  color={isActive ? colors.charcoal : MUTED}
+                  color={isActive ? colors.white : MUTED}
                   style={[{ fontSize: 10, lineHeight: 12, fontFamily: isActive ? fonts.semibold : fonts.medium }, isActive && styles.activeLabel]}
                 >
                   {label}
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     borderBottomLeftRadius: RADIUS,
     borderBottomRightRadius: RADIUS,
-    backgroundColor: '#E2EA2C',
+    backgroundColor: colors.navy,
     shadowColor: '#1C1D1F',
     shadowOpacity: 0.22,
     shadowRadius: 18,
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     width: BUBBLE,
     height: BUBBLE,
     borderRadius: BUBBLE / 2,
-    backgroundColor: colors.charcoal,
+    backgroundColor: colors.highlight,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
