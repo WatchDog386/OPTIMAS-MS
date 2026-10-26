@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Alert, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { api, ApiError } from '../../src/api/client';
 import type { Task, TaskPriority, TaskType } from '../../src/api/types';
 import { Button, Input, Screen, ScreenHeader, SectionHeader, Segmented, TechPicker, Text } from '../../src/components';
@@ -37,11 +37,20 @@ const dueDate = (v: string) => {
 };
 
 export default function NewTask() {
+  // Optional pre-fill when turning a customer request into a job.
+  const p = useLocalSearchParams<{ requestId?: string; type?: TaskType; title?: string; description?: string; customerName?: string; customerPhone?: string; customerAccount?: string; address?: string }>();
   const [assigneeId, setAssignee] = useState<string | null>(null);
-  const [type, setType] = useState<TaskType>('INSTALLATION');
+  const [type, setType] = useState<TaskType>(p.type ?? 'INSTALLATION');
   const [priority, setPriority] = useState<TaskPriority>('NORMAL');
   const [due, setDue] = useState('eod');
-  const [form, setForm] = useState({ title: '', description: '', customerName: '', customerPhone: '', customerAccount: '', address: '' });
+  const [form, setForm] = useState({
+    title: p.title ?? '',
+    description: p.description ?? '',
+    customerName: p.customerName ?? '',
+    customerPhone: p.customerPhone ?? '',
+    customerAccount: p.customerAccount ?? '',
+    address: p.address ?? '',
+  });
   const [busy, setBusy] = useState(false);
   const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -55,6 +64,7 @@ export default function NewTask() {
           type,
           priority,
           assigneeId,
+          requestId: p.requestId || undefined,
           dueAt: dueDate(due),
         },
       });
@@ -68,7 +78,7 @@ export default function NewTask() {
 
   return (
     <Screen footer={<Button label="Create & assign job" icon="send" size="lg" loading={busy} onPress={submit} />}>
-      <ScreenHeader title="New job" subtitle="The technician is notified in their app" />
+      <ScreenHeader title="New job" subtitle={p.requestId ? 'From a customer request · the customer is notified too' : 'The technician is notified in their app'} />
       <SectionHeader title="Assign to" />
       <TechPicker value={assigneeId} onChange={setAssignee} />
       <SectionHeader title="Job" />

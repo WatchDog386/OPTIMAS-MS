@@ -15,6 +15,15 @@ what materials they used — and, crucially, **where every router is at all time
 **Job detail, my stock, dress-code check-in**
 ![](docs/screenshots/store-and-reconciliation.png)
 
+**Customer app — home, home scrolled, my requests**
+![](docs/screenshots/customer-app.png)
+
+**Visit details, request service, supervisor request inbox**
+![](docs/screenshots/customer-requests-and-inbox.png)
+
+**Pre-filled job from a request, install button, install card**
+![](docs/screenshots/install-app.png)
+
 ### Design system
 "Glass" light theme: a soft grey **frosted backdrop** with diffused light, **translucent white cards** with bright
 edges and large radii, ink-black actions, a **yellow highlight** for active states, **hatched** inactive bars, a
@@ -52,6 +61,22 @@ Typography (**Figtree**) and the quick-action / section patterns are shared with
 - **Manager web console** — the same app served in the browser from the server, for office use.
 - **Production hosting kit** for the company's Proxmox server: Docker Compose, automatic HTTPS (Caddy), daily backups, restore script, firewall hardening.
 - **Hardening** — login rate limiting, proxy-aware logging.
+
+### 🏠 Three dashboards
+| Who | Signs in with | Dashboard |
+|---|---|---|
+| **Technician (employee)** | staff number | Today's shift, devices in custody, weekly jobs chart, today's jobs |
+| **Supervisor / admin / storekeeper** | staff number | Attendance, jobs to verify, routers accounted for, cash collected, customer requests |
+| **Customer** | Optimas account number | Their technician & live job progress, devices at their premises, past visits (with sign-off), request a repair / router move, call or WhatsApp support |
+
+Customer logins can only reach their own account (`/customer/*`) — every staff endpoint returns 403.
+Customer requests land in the supervisor's **Customer requests** inbox and become jobs in one tap; the customer is
+notified when a technician is assigned, starts, and completes the work.
+
+### 📲 Install the app
+The web console is an installable **PWA** (manifest, service worker, app icons). Phones get an install card
+(Android: one-tap **Install**; iPhone: Share → *Add to Home Screen* steps), and an install button sits on the sign-in
+page and dashboard top bars. Staff can also install the native APK (see *Building the app for staff phones*).
 
 ### 🔐 How the router-accountability problem is solved
 1. Every router/ONT is registered by **serial number** on arrival.
@@ -116,6 +141,7 @@ npx expo start                # scan the QR code with Expo Go
 | `OPT-TEC-001` | Technician | Brian Kiprono |
 | `OPT-TEC-002` | Technician | Kevin Mwangi |
 | `OPT-TEC-003` | Technician | Faith Njeri |
+| `OPT-CUS-10421` | Customer | Amani Apartments B4 |
 
 ## Configuration (backend `.env`)
 

@@ -94,3 +94,22 @@ Types: `TASK_ASSIGNED`, `TASK_COMPLETED`, `TASK_VERIFIED`, `TASK_REJECTED`, `TAS
 | GET | `/exports/reconciliation.xlsx` | K S A | sheets: Reconciliation, Devices |
 
 Defaults to the last 30 days; at most one year per export. `POST /auth/login` is rate-limited (10 attempts / 15 min / IP by default).
+
+## Customer portal (role `CUSTOMER` only)
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/customer/overview` | account, active visits (with technician name & phone), past visits, installed devices, requests, support contacts |
+| GET | `/customer/jobs/:id` | one visit on the customer's own account (404 otherwise) |
+| POST | `/customer/requests` | `{ type: REPAIR \| RELOCATION \| INSTALLATION \| MAINTENANCE, description, phone?, address? }` — notifies supervisors |
+| GET | `/customer/requests` | the customer's requests with linked job |
+
+Customers are refused (403) on every staff endpoint (`/users`, `/capture`, `/attendance`, `/tasks`, `/inventory`, `/reports`, `/exports`).
+
+## Customer requests (supervisors / admins)
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/requests?status=OPEN\|SCHEDULED\|CLOSED` | inbox |
+| POST | `/requests/:id/close` | `{ note }` — the customer is notified |
+| POST | `/tasks` with `requestId` | turns a request into a job (request → `SCHEDULED`; a cancelled job reopens it) |
+
+Customers receive `JOB_UPDATE` notifications when a technician is assigned, starts, and completes their job.

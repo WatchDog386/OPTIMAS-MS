@@ -1,6 +1,7 @@
 import type { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { colors } from '../theme';
+import { useAuth } from '../store/auth';
 
 export interface AppNotification {
   id: string;
@@ -24,10 +25,18 @@ export const notificationStyle: Record<string, { icon: keyof typeof Ionicons.gly
   PHOTO_FLAGGED: { icon: 'location', tint: colors.warning },
   STOCK_COUNT_MISMATCH: { icon: 'git-compare', tint: colors.danger },
   UNIT_LOST: { icon: 'warning', tint: colors.danger },
+  SERVICE_REQUEST: { icon: 'chatbubbles', tint: colors.info },
+  JOB_UPDATE: { icon: 'construct', tint: colors.success },
 };
 
 /** Where tapping a notification (in the inbox or from a push) should take the user. */
 export function openNotificationTarget(type: string, data?: Record<string, unknown> | null) {
+  const customer = useAuth.getState().user?.role === 'CUSTOMER';
+  if (customer) {
+    if (typeof data?.taskId === 'string') return router.push(`/visit/${data.taskId}`);
+    return router.push('/requests');
+  }
+  if (type === 'SERVICE_REQUEST') return router.push('/admin/requests');
   if (typeof data?.taskId === 'string') return router.push(`/task/${data.taskId}`);
   if (type === 'STOCK_ISSUED') return router.push('/stock');
   if (type === 'LATE_CHECK_IN' || type === 'PHOTO_FLAGGED') return router.push('/admin/attendance');

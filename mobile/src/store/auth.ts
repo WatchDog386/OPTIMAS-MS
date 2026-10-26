@@ -39,3 +39,7 @@ export const useAuth = create<AuthState>((set) => ({
 }));
 
 export const isManager = (role?: Role) => role === 'ADMIN' || role === 'SUPERVISOR' || role === 'STOREKEEPER';
+export const isCustomer = (role?: Role) => role === 'CUSTOMER';
+
+/** Landing route for each kind of user. */
+export const homeFor = (role?: Role) => (role === 'CUSTOMER' ? '/portal' : isManager(role) ? '/overview' : '/home');

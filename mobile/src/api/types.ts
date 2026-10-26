@@ -1,4 +1,4 @@
-export type Role = 'ADMIN' | 'SUPERVISOR' | 'STOREKEEPER' | 'TECHNICIAN';
+export type Role = 'ADMIN' | 'SUPERVISOR' | 'STOREKEEPER' | 'TECHNICIAN' | 'CUSTOMER';
 export type CapturePurpose = 'CHECK_IN' | 'CHECK_OUT' | 'TASK_START' | 'TASK_END';
 export type TaskStatus = 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'VERIFIED' | 'REJECTED' | 'CANCELLED';
 export type TaskType = 'INSTALLATION' | 'REPAIR' | 'MAINTENANCE' | 'RELOCATION' | 'SURVEY';
@@ -14,6 +14,8 @@ export interface User {
   phone: string | null;
   role: Role;
   region: string | null;
+  customerAccount?: string | null;
+  address?: string | null;
   active: boolean;
 }
 
@@ -162,6 +164,7 @@ export interface Dashboard {
     missingInSpotCounts: number;
   };
   lowStockItems: number;
+  requests?: { open: number };
 }
 
 export interface Reconciliation {
@@ -196,4 +199,47 @@ export interface Movement {
   fromUser: { name: string } | null;
   toUser: { name: string } | null;
   task: { code: string } | null;
+}
+
+export type RequestStatus = 'OPEN' | 'SCHEDULED' | 'CLOSED';
+
+export interface ServiceRequest {
+  id: string;
+  type: TaskType;
+  description: string;
+  phone: string | null;
+  address: string | null;
+  status: RequestStatus;
+  closedNote: string | null;
+  createdAt: string;
+  customerAccount?: string | null;
+  customer?: { id: string; name: string; phone: string | null; customerAccount: string | null; address: string | null };
+  task?: { id: string; code: string; status: TaskStatus; assignee?: { name: string; phone?: string | null } } | null;
+}
+
+export interface CustomerJob {
+  id: string;
+  code: string;
+  title: string;
+  type: TaskType;
+  status: TaskStatus;
+  address: string;
+  dueAt: string | null;
+  startedAt: string | null;
+  endedAt: string | null;
+  durationMinutes: number | null;
+  signedByName: string | null;
+  createdAt: string;
+  assignee: { name: string; phone: string | null };
+  completionNotes?: string | null;
+  materials?: { quantity: number; item: { name: string; unit: string }; unit: { serialNumber: string } | null }[];
+}
+
+export interface CustomerOverview {
+  customer: { name: string; account: string | null; phone: string | null; address: string | null; email: string | null };
+  active: CustomerJob[];
+  history: CustomerJob[];
+  devices: { serialNumber: string; installedAt: string | null; item: { name: string; category: string } }[];
+  requests: ServiceRequest[];
+  support: { phone: string; whatsapp: string };
 }

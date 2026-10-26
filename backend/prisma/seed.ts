@@ -18,6 +18,21 @@ async function main() {
     { staffNo: 'OPT-TEC-003', name: 'Faith Njeri', email: 'faith@optimas.co.ke', role: 'TECHNICIAN', region: 'Kasarani', phone: '+254700000013' },
   ];
   const users: Record<string, string> = {};
+  // A demo customer login (Amani Apartments, account OPT-CUS-10421)
+  await prisma.user.upsert({
+    where: { staffNo: 'OPT-CUS-10421' },
+    update: {},
+    create: {
+      staffNo: 'OPT-CUS-10421',
+      name: 'Amani Apartments B4',
+      email: 'amani.b4@example.com',
+      phone: '+254711222333',
+      role: 'CUSTOMER',
+      customerAccount: 'OPT-CUS-10421',
+      address: 'Ring Rd Kilimani, Nairobi',
+      passwordHash,
+    },
+  });
   for (const p of people) {
     const u = await prisma.user.upsert({ where: { staffNo: p.staffNo }, update: {}, create: { ...p, passwordHash } });
     users[p.staffNo] = u.id;
@@ -90,7 +105,7 @@ async function main() {
     }
   }
 
-  console.log('✅ Seed complete. Log in with any staff number (e.g. OPT-TEC-001 / OPT-SUP-001) and password Optimas@2026');
+  console.log('✅ Seed complete. Log in with a staff number (e.g. OPT-TEC-001 / OPT-SUP-001) or the customer account OPT-CUS-10421; password Optimas@2026');
 }
 
 main()

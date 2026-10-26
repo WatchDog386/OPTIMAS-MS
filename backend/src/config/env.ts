@@ -32,6 +32,8 @@ const schema = z.object({
   EXPO_ACCESS_TOKEN: z.string().optional(),
   TRUST_PROXY: z.coerce.number().default(0),
   LOGIN_RATE_LIMIT: z.coerce.number().default(10),
+  SUPPORT_PHONE: z.string().default('+254700000000'),
+  SUPPORT_WHATSAPP: z.string().default('254700000000'),
 });
 
 const parsed = schema.safeParse(process.env);

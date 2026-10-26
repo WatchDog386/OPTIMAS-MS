@@ -12,6 +12,7 @@ export default function More() {
         <SectionHeader title="Controls" />
         {managers ? (
           <>
+            <ListRow icon="chatbubbles-outline" iconTint={colors.info} title="Customer requests" subtitle="Visits customers asked for" onPress={() => router.push('/admin/requests')} />
             <ListRow icon="shirt-outline" iconTint={colors.accent} title="Dress-code reviews" subtitle="Approve check-in photos" onPress={() => router.push('/admin/reviews')} />
             <ListRow icon="calendar-outline" iconTint={colors.info} title="Attendance register" subtitle="Check-in/out times, photos and absentees" onPress={() => router.push('/admin/attendance')} />
           </>

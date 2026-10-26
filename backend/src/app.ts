@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import { env } from './config/env';
-import { requireAuth } from './middleware/auth';
+import { ROLES, requireAuth, requireRole } from './middleware/auth';
 import { errorHandler, notFoundHandler } from './middleware/error';
 import { authRouter } from './modules/auth/auth.routes';
 import { usersRouter } from './modules/users/users.routes';
@@ -15,6 +15,8 @@ import { inventoryRouter } from './modules/inventory/inventory.routes';
 import { reportsRouter } from './modules/reports/reports.routes';
 import { notificationsRouter } from './modules/notifications/notifications.routes';
 import { exportsRouter } from './modules/exports/exports.routes';
+import { customerRouter } from './modules/customer/customer.routes';
+import { requestsRouter } from './modules/requests/requests.routes';
 
 export function createApp() {
   const app = express();
@@ -29,6 +31,8 @@ export function createApp() {
   app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'optimas-ms-api', time: new Date() }));
 
   const api = express.Router();
+  // Customer logins can only reach /customer and /notifications.
+  const staff = requireRole(ROLES.STAFF);
   api.use(
     '/auth/login',
     rateLimit({
@@ -40,14 +44,16 @@ export function createApp() {
     }),
   );
   api.use('/auth', authRouter);
-  api.use('/users', requireAuth, usersRouter);
-  api.use('/capture', requireAuth, captureRouter);
-  api.use('/attendance', requireAuth, attendanceRouter);
-  api.use('/tasks', requireAuth, tasksRouter);
-  api.use('/inventory', requireAuth, inventoryRouter);
-  api.use('/reports', requireAuth, reportsRouter);
+  api.use('/users', requireAuth, staff, usersRouter);
+  api.use('/capture', requireAuth, staff, captureRouter);
+  api.use('/attendance', requireAuth, staff, attendanceRouter);
+  api.use('/tasks', requireAuth, staff, tasksRouter);
+  api.use('/inventory', requireAuth, staff, inventoryRouter);
+  api.use('/reports', requireAuth, staff, reportsRouter);
   api.use('/notifications', requireAuth, notificationsRouter);
-  api.use('/exports', requireAuth, exportsRouter);
+  api.use('/exports', requireAuth, staff, exportsRouter);
+  api.use('/requests', requireAuth, requireRole(ROLES.MANAGERS), requestsRouter);
+  api.use('/customer', requireAuth, requireRole(ROLES.CUSTOMER), customerRouter);
   app.use('/api/v1', api);
 
   app.use(notFoundHandler);

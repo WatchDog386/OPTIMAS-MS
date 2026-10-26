@@ -24,3 +24,4 @@ export * from './DashboardHeader';
 export * from './Glass';
 export * from './GlassWidgets';
 export * from './GlassTopBar';
+export * from './InstallPrompt';

@@ -48,6 +48,8 @@ services:
       PUSH_ENABLED: ${PUSH_ENABLED:-true}
       EXPO_ACCESS_TOKEN: ${EXPO_ACCESS_TOKEN:-}
       LOGIN_RATE_LIMIT: ${LOGIN_RATE_LIMIT:-10}
+      SUPPORT_PHONE: ${SUPPORT_PHONE:-+254700000000}
+      SUPPORT_WHATSAPP: ${SUPPORT_WHATSAPP:-254700000000}
     volumes:
       - uploads:/app/uploads
     networks: [internal]

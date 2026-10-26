@@ -11,6 +11,7 @@ import { parse } from '../../middleware/validate';
 import { consumePhoto } from '../capture/capture.service';
 import { consumeBulk, installSerial } from '../inventory/inventory.service';
 import { notify, notifyRoles } from '../notifications/notifications.service';
+import { notifyCustomer } from '../customer/customer.service';
 
 export const tasksRouter = Router();
 const managers = requireRole(ROLES.MANAGERS);
@@ -86,6 +87,8 @@ const taskSchema = z.object({
   lng: z.number().min(-180).max(180).optional(),
   dueAt: z.coerce.date().optional(),
   assigneeId: z.string().min(1),
+  /** Customer service request this job fulfils. */
+  requestId: z.string().optional(),
 });
 
 tasksRouter.post(
@@ -95,7 +98,20 @@ tasksRouter.post(
     const body = parse(taskSchema, req.body);
     const assignee = await prisma.user.findUnique({ where: { id: body.assigneeId } });
     if (!assignee?.active || assignee.role !== 'TECHNICIAN') throw badRequest('Tasks can only be assigned to active technicians');
-    const task = await prisma.task.create({ data: { ...body, code: newCode(), createdById: me(req).id }, include: detailInclude });
+    if (body.requestId) {
+      const request = await prisma.serviceRequest.findUnique({ where: { id: body.requestId }, include: { task: true } });
+      if (!request) throw badRequest('Service request not found');
+      if (request.status === 'CLOSED' || request.task) throw conflict('This request already has a job or was closed');
+    }
+    const task = await prisma.$transaction(async (tx) => {
+      const created = await tx.task.create({ data: { ...body, code: newCode(), createdById: me(req).id }, include: detailInclude });
+      if (body.requestId) await tx.serviceRequest.update({ where: { id: body.requestId }, data: { status: 'SCHEDULED' } });
+      return created;
+    });
+    void notifyCustomer(task, {
+      title: 'A technician has been assigned',
+      body: `${task.assignee.name} will handle "${task.title}"${task.dueAt ? ` · due ${task.dueAt.toLocaleString('en-KE', { timeZone: 'Africa/Nairobi', hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}` : ''}.`,
+    });
     void notify([task.assigneeId], {
       type: 'TASK_ASSIGNED',
       title: `New ${task.priority === 'URGENT' ? 'URGENT ' : ''}job: ${task.title}`,
@@ -133,7 +149,11 @@ tasksRouter.post(
   ah(async (req, res) => {
     const task = await loadTask(req.params.id);
     if (!['ASSIGNED', 'IN_PROGRESS'].includes(task.status)) throw conflict(`A ${task.status.toLowerCase()} task cannot be cancelled`);
-    const updated = await prisma.task.update({ where: { id: task.id }, data: { status: 'CANCELLED' }, include: detailInclude });
+    const updated = await prisma.$transaction(async (tx) => {
+      // A cancelled job releases its customer request so it can be rescheduled.
+      if (task.requestId) await tx.serviceRequest.update({ where: { id: task.requestId }, data: { status: 'OPEN' } });
+      return tx.task.update({ where: { id: task.id }, data: { status: 'CANCELLED', requestId: null }, include: detailInclude });
+    });
     void notify([task.assigneeId], { type: 'TASK_CANCELLED', title: `${task.code} cancelled`, body: task.title, data: { taskId: task.id } });
     res.json({ task: updated });
   }),
@@ -189,6 +209,7 @@ tasksRouter.post(
       await consumePhoto(tx, photoId, userId, 'TASK_START', task.id);
       await tx.task.update({ where: { id: task.id }, data: { status: 'IN_PROGRESS', startedAt: new Date(), startPhotoId: photoId } });
     });
+    void notifyCustomer(task, { title: 'Your technician has started', body: `${task.assignee.name} is now working on "${task.title}".` });
     res.json({ task: await loadTask(task.id) });
   }),
 );
@@ -263,6 +284,7 @@ tasksRouter.post(
         },
       });
     });
+    void notifyCustomer(task, { title: 'Job completed', body: `"${task.title}" was completed by ${task.assignee.name}. Thank you for choosing Optimas.` });
     void notifyRoles(['SUPERVISOR', 'ADMIN'], {
       type: 'TASK_COMPLETED',
       title: `${task.code} completed by ${task.assignee.name}`,

@@ -7,7 +7,9 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "backgroundColor": "#FFFFFF",
-    "splash": { "backgroundColor": "#FFFFFF" },
+    "splash": {
+      "backgroundColor": "#FFFFFF"
+    },
     "ios": {
       "bundleIdentifier": "ke.co.optimas.ms",
       "supportsTablet": false,
@@ -18,19 +20,60 @@
     },
     "android": {
       "package": "ke.co.optimas.ms",
-      "adaptiveIcon": { "backgroundColor": "#FFFFFF" },
-      "permissions": ["CAMERA", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
-      "blockedPermissions": ["READ_MEDIA_IMAGES", "READ_EXTERNAL_STORAGE"]
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1C1D1F"
+      },
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
+      "blockedPermissions": [
+        "READ_MEDIA_IMAGES",
+        "READ_EXTERNAL_STORAGE"
+      ]
     },
     "plugins": [
       "expo-router",
-      ["expo-notifications", { "color": "#13265C" }],
+      [
+        "expo-notifications",
+        {
+          "color": "#13265C"
+        }
+      ],
       "expo-secure-store",
       "expo-font",
-      ["expo-camera", { "cameraPermission": "Optimas MS uses the camera for check-in photos, proof-of-work photos and scanning router serial numbers.", "recordAudioAndroid": false }],
-      ["expo-location", { "locationWhenInUsePermission": "Optimas MS records your location when you check in, check out and start or finish a job." }]
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Optimas MS uses the camera for check-in photos, proof-of-work photos and scanning router serial numbers.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Optimas MS records your location when you check in, check out and start or finish a job."
+        }
+      ]
     ],
-    "experiments": { "typedRoutes": false },
-    "extra": { "apiUrl": "http://192.168.1.10:4000/api/v1", "eas": { "projectId": "" } }
+    "experiments": {
+      "typedRoutes": false
+    },
+    "extra": {
+      "apiUrl": "http://192.168.1.10:4000/api/v1",
+      "eas": {
+        "projectId": ""
+      }
+    },
+    "icon": "./assets/icon.png",
+    "web": {
+      "favicon": "./public/favicon.png",
+      "name": "Optimas MS",
+      "shortName": "Optimas MS",
+      "themeColor": "#ECF23A",
+      "backgroundColor": "#F3F3F3"
+    }
   }
 }

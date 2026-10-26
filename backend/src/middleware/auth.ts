@@ -26,6 +26,8 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
 
 /** Role groups used across modules. */
 export const ROLES = {
+  STAFF: ['ADMIN', 'SUPERVISOR', 'STOREKEEPER', 'TECHNICIAN'] as Role[],
+  CUSTOMER: ['CUSTOMER'] as Role[],
   MANAGERS: ['ADMIN', 'SUPERVISOR'] as Role[],
   STORE: ['ADMIN', 'SUPERVISOR', 'STOREKEEPER'] as Role[],
   ADMIN: ['ADMIN'] as Role[],

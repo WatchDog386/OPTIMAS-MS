@@ -17,6 +17,7 @@ enum Role {
   SUPERVISOR
   STOREKEEPER
   TECHNICIAN
+  CUSTOMER
 }
 
 model User {
@@ -28,6 +29,9 @@ model User {
   passwordHash String
   role         Role     @default(TECHNICIAN)
   region       String?
+  /// CUSTOMER accounts only: the ISP account number this login belongs to.
+  customerAccount String?
+  address      String?
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -47,6 +51,9 @@ model User {
   stockCounts     StockCount[]
   notifications   Notification[]
   pushTokens      PushToken[]
+  requests        ServiceRequest[]
+
+  @@index([customerAccount])
 }
 
 // ─────────────────────────── Photo integrity ──────────────────────────
@@ -192,6 +199,7 @@ model Task {
   durationMinutes  Int?
   completionNotes  String?
   amountCollected  Int?
+  requestId        String?   @unique
   verifiedById     String?
   verifiedAt       DateTime?
   verificationNote String?
@@ -205,6 +213,7 @@ model Task {
   assignee   User           @relation("TaskAssignee", fields: [assigneeId], references: [id])
   createdBy  User           @relation("TaskCreator", fields: [createdById], references: [id])
   verifiedBy User?          @relation("TaskVerifier", fields: [verifiedById], references: [id])
+  request    ServiceRequest? @relation(fields: [requestId], references: [id])
   startPhoto Photo?         @relation("TaskStartPhoto", fields: [startPhotoId], references: [id])
   endPhoto   Photo?         @relation("TaskEndPhoto", fields: [endPhotoId], references: [id])
   materials  TaskMaterial[]
@@ -371,6 +380,8 @@ enum NotificationType {
   PHOTO_FLAGGED
   STOCK_COUNT_MISMATCH
   UNIT_LOST
+  SERVICE_REQUEST
+  JOB_UPDATE
 }
 
 model Notification {
@@ -397,4 +408,32 @@ model PushToken {
   updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─────────────────────────── Customer requests ──────────────────────
+
+enum RequestStatus {
+  OPEN
+  SCHEDULED
+  CLOSED
+}
+
+/// A customer asking for a visit; supervisors turn it into a Task.
+model ServiceRequest {
+  id              String        @id @default(cuid())
+  customerId      String
+  customerAccount String?
+  type            TaskType
+  description     String
+  phone           String?
+  address         String?
+  status          RequestStatus @default(OPEN)
+  closedNote      String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  customer User  @relation(fields: [customerId], references: [id])
+  task     Task?
+
+  @@index([status, createdAt])
 }

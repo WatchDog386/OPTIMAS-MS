@@ -15,6 +15,8 @@ import {
 import { useAuth } from '../src/store/auth';
 import { registerForPush } from '../src/utils/push';
 import { openNotificationTarget } from '../src/utils/notifications';
+import { setupPwa } from '../src/utils/install';
+import { InstallPrompt } from '../src/components/InstallPrompt';
 import { colors } from '../src/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -32,6 +34,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     void useAuth.getState().hydrate();
+    setupPwa();
   }, []);
 
   // Register this device for push once someone is signed in.
@@ -62,6 +65,7 @@ export default function RootLayout() {
         <Stack.Screen name="capture" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
         <Stack.Screen name="scan" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
       </Stack>
+      <InstallPrompt />
     </SafeAreaProvider>
   );
 }

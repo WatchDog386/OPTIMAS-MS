@@ -17,7 +17,7 @@ reportsRouter.get(
     const weekAgo = new Date(Date.now() - 7 * DAY_MS);
     const alertBefore = new Date(Date.now() - env.CUSTODY_AGE_ALERT_DAYS * DAY_MS);
 
-    const [staff, attendance, taskGroups, completedWeek, unitGroups, overdueUnits, pendingReviews, lowStock, recentLost, countsWithMissing] =
+    const [staff, attendance, taskGroups, completedWeek, unitGroups, overdueUnits, pendingReviews, lowStock, recentLost, countsWithMissing, openRequests] =
       await Promise.all([
         prisma.user.count({ where: { active: true, role: 'TECHNICIAN' } }),
         prisma.attendance.findMany({ where: { workDate: today }, select: { status: true, checkOutAt: true } }),
@@ -34,6 +34,7 @@ reportsRouter.get(
         prisma.inventoryItem.findMany({ where: { active: true, tracking: 'BULK' }, select: { storeQuantity: true, reorderLevel: true } }),
         prisma.serialUnit.count({ where: { status: 'LOST', updatedAt: { gte: new Date(Date.now() - 30 * DAY_MS) } } }),
         prisma.stockCount.findMany({ where: { createdAt: { gte: weekAgo } }, select: { missing: true } }),
+        prisma.serviceRequest.count({ where: { status: 'OPEN' } }),
       ]);
 
     const tasks = Object.fromEntries(taskGroups.map((g) => [g.status, g._count._all]));
@@ -70,6 +71,7 @@ reportsRouter.get(
         missingInSpotCounts: countsWithMissing.reduce((n, c) => n + c.missing.length, 0),
       },
       lowStockItems: lowStock.filter((i) => i.storeQuantity <= i.reorderLevel).length,
+      requests: { open: openRequests },
     });
   }),
 );

@@ -6,8 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api, ApiError } from '../../src/api/client';
 import type { User } from '../../src/api/types';
-import { Button, Input, Text } from '../../src/components';
-import { isManager, useAuth } from '../../src/store/auth';
+import { Button, InstallPill, Input, Text } from '../../src/components';
+import { homeFor, useAuth } from '../../src/store/auth';
 import { colors, gradients, radius, space, SurfaceContext } from '../../src/theme';
 
 const HIGHLIGHTS: { icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
@@ -29,7 +29,7 @@ export default function Login() {
     try {
       const { token, user } = await api<{ token: string; user: User }>('/auth/login', { body: { identifier, password } });
       await useAuth.getState().setSession(token, user);
-      router.replace(isManager(user.role) ? '/overview' : '/home');
+      router.replace(homeFor(user.role));
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Unable to sign in');
     } finally {
@@ -46,23 +46,23 @@ export default function Login() {
             <SurfaceContext.Provider value={{ inverse: true }}>
               <SafeAreaView edges={['top']} style={{ gap: space.lg }}>
                 <View style={styles.logoRow}>
-                  <LinearGradient colors={gradients.brand} style={styles.logo}>
-                    <Ionicons name="flash" size={24} color={colors.onBrand} />
+                  <LinearGradient colors={gradients.lime} style={styles.logo}>
+                    <Ionicons name="flash" size={24} color={colors.onHighlight} />
                   </LinearGradient>
                   <Text variant="h2">
-                    Optimas <Text variant="h2" color={colors.lime}>MS</Text>
+                    Optimas <Text variant="h2" color={colors.highlight}>MS</Text>
                   </Text>
                 </View>
                 <View style={{ gap: 6 }}>
                   <Text variant="h1">Field operations, simplified.</Text>
                   <Text variant="body" color={colors.textMuted}>
-                    Attendance, jobs and stock for the Optimas team.
+                    Jobs, attendance and stock for the Optimas team — and live service updates for our customers.
                   </Text>
                 </View>
                 <View style={styles.chips}>
                   {HIGHLIGHTS.map((h) => (
                     <View key={h.label} style={styles.chip}>
-                      <Ionicons name={h.icon} size={14} color={colors.lime} />
+                      <Ionicons name={h.icon} size={14} color={colors.highlight} />
                       <Text variant="label">{h.label}</Text>
                     </View>
                   ))}
@@ -76,12 +76,12 @@ export default function Login() {
             <View style={{ gap: 4 }}>
               <Text variant="h1">Welcome back</Text>
               <Text variant="bodySm" color={colors.textMuted}>
-                Sign in with your staff number or work email.
+                Staff: use your staff number. Customers: use your Optimas account number.
               </Text>
             </View>
 
             <Input
-              label="Staff number or email"
+              label="Staff number, account number or email"
               icon="id-card-outline"
               placeholder="e.g. OPT-TEC-001"
               autoCapitalize="characters"
@@ -121,6 +121,8 @@ export default function Login() {
             ) : null}
 
             <Button label="Sign in" size="lg" loading={loading} disabled={!identifier || !password} onPress={submit} />
+
+            <InstallPill />
 
             <View style={styles.help}>
               <Ionicons name="help-circle-outline" size={16} color={colors.textDim} />

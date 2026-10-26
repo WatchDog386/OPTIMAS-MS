@@ -18,6 +18,8 @@ export const publicUser = (u: User) => ({
   phone: u.phone,
   role: u.role,
   region: u.region,
+  customerAccount: u.customerAccount,
+  address: u.address,
   active: u.active,
 });
 
@@ -66,6 +68,8 @@ const createSchema = z.object({
   phone: z.string().trim().optional(),
   role: z.enum(Role).default(Role.TECHNICIAN),
   region: z.string().trim().optional(),
+  customerAccount: z.string().trim().toUpperCase().optional(),
+  address: z.string().trim().optional(),
   password: z.string().min(8, 'Password must be at least 8 characters'),
 });
 

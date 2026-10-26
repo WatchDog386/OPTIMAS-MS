@@ -1,0 +1,133 @@
+import { Router } from 'express';
+import { z } from 'zod';
+import { TaskType } from '@prisma/client';
+import { env } from '../../config/env';
+import { prisma } from '../../lib/prisma';
+import { notFound } from '../../lib/http-error';
+import { ah } from '../../middleware/async';
+import { me } from '../../middleware/auth';
+import { parse } from '../../middleware/validate';
+import { notifyRoles } from '../notifications/notifications.service';
+
+/**
+ * Customer self-service: what a subscriber can see about their own account only —
+ * visits (with the assigned technician), devices installed at their premises and their requests.
+ */
+export const customerRouter = Router();
+
+const techSelect = { select: { name: true, phone: true } } as const;
+const jobSelect = {
+  id: true,
+  code: true,
+  title: true,
+  type: true,
+  status: true,
+  address: true,
+  dueAt: true,
+  startedAt: true,
+  endedAt: true,
+  durationMinutes: true,
+  signedByName: true,
+  createdAt: true,
+  assignee: techSelect,
+} as const;
+
+async function account(userId: string) {
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+  return user;
+}
+
+customerRouter.get(
+  '/overview',
+  ah(async (req, res) => {
+    const user = await account(me(req).id);
+    const acct = user.customerAccount;
+    const accountWhere = acct ? { customerAccount: acct } : { id: '__none__' };
+    const [active, history, devices, requests] = await Promise.all([
+      prisma.task.findMany({
+        where: { ...accountWhere, status: { in: ['ASSIGNED', 'IN_PROGRESS'] } },
+        select: jobSelect,
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.task.findMany({
+        where: { ...accountWhere, status: { in: ['COMPLETED', 'VERIFIED'] } },
+        select: jobSelect,
+        orderBy: { endedAt: 'desc' },
+        take: 10,
+      }),
+      acct
+        ? prisma.serialUnit.findMany({
+            where: { customerAccount: acct, status: 'INSTALLED' },
+            select: { serialNumber: true, installedAt: true, item: { select: { name: true, category: true } } },
+            orderBy: { installedAt: 'desc' },
+          })
+        : Promise.resolve([]),
+      prisma.serviceRequest.findMany({ where: { customerId: user.id }, orderBy: { createdAt: 'desc' }, take: 10, include: { task: { select: { id: true, code: true, status: true } } } }),
+    ]);
+    res.json({
+      customer: { name: user.name, account: acct, phone: user.phone, address: user.address, email: user.email },
+      active,
+      history,
+      devices,
+      requests,
+      support: { phone: env.SUPPORT_PHONE, whatsapp: env.SUPPORT_WHATSAPP },
+    });
+  }),
+);
+
+customerRouter.get(
+  '/jobs/:id',
+  ah(async (req, res) => {
+    const user = await account(me(req).id);
+    const job = await prisma.task.findFirst({
+      where: { id: req.params.id, OR: [{ customerAccount: user.customerAccount ?? '__none__' }, { request: { customerId: user.id } }] },
+      select: { ...jobSelect, completionNotes: true, materials: { select: { quantity: true, item: { select: { name: true, unit: true } }, unit: { select: { serialNumber: true } } } } },
+    });
+    if (!job) throw notFound('Job');
+    res.json({ job });
+  }),
+);
+
+const requestSchema = z.object({
+  type: z.enum(TaskType).default('REPAIR'),
+  description: z.string().trim().min(5, 'Tell us what the problem is').max(1000),
+  phone: z.string().trim().max(30).optional(),
+  address: z.string().trim().max(300).optional(),
+});
+
+customerRouter.post(
+  '/requests',
+  ah(async (req, res) => {
+    const user = await account(me(req).id);
+    const body = parse(requestSchema, req.body);
+    const request = await prisma.serviceRequest.create({
+      data: {
+        customerId: user.id,
+        customerAccount: user.customerAccount,
+        type: body.type,
+        description: body.description,
+        phone: body.phone || user.phone,
+        address: body.address || user.address,
+      },
+    });
+    void notifyRoles(['SUPERVISOR', 'ADMIN'], {
+      type: 'SERVICE_REQUEST',
+      title: `New ${body.type.toLowerCase()} request — ${user.name}`,
+      body: body.description.slice(0, 140),
+      data: { requestId: request.id },
+    });
+    res.status(201).json({ request });
+  }),
+);
+
+customerRouter.get(
+  '/requests',
+  ah(async (req, res) => {
+    const requests = await prisma.serviceRequest.findMany({
+      where: { customerId: me(req).id },
+      orderBy: { createdAt: 'desc' },
+      include: { task: { select: { id: true, code: true, status: true, assignee: techSelect } } },
+    });
+    res.json({ requests });
+  }),
+);

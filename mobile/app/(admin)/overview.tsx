@@ -36,6 +36,7 @@ export default function Overview() {
 
   const all: (QuickAction | false)[] = [
     managers && { label: 'New job', icon: 'add-circle-outline', onPress: () => router.push('/admin/task-new') },
+    managers && { label: 'Requests', icon: 'chatbubbles-outline', onPress: () => router.push('/admin/requests'), badge: d?.requests?.open },
     { label: 'Issue stock', icon: 'arrow-up-circle-outline', onPress: () => router.push('/admin/transfer?direction=issue') },
     managers && { label: 'Dress code', icon: 'shirt-outline', onPress: () => router.push('/admin/reviews'), badge: d?.attendance.pendingDressReviews },
     { label: 'Reports', icon: 'document-text-outline', onPress: () => router.push('/admin/reports') },
@@ -47,6 +48,9 @@ export default function Overview() {
   const actions = all.filter((a): a is QuickAction => !!a).slice(0, 8);
 
   const attention = [
+    managers && d?.requests?.open
+      ? { key: 'req', icon: 'chatbubbles-outline' as const, title: 'Customer requests', sub: 'Turn them into jobs or close them', n: d.requests.open, go: '/admin/requests' }
+      : null,
     managers && d?.attendance.pendingDressReviews
       ? { key: 'dress', icon: 'shirt-outline' as const, title: 'Dress-code photos to review', sub: 'Approve or reject check-in selfies', n: d.attendance.pendingDressReviews, go: '/admin/reviews' }
       : null,
