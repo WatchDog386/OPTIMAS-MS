@@ -11,7 +11,8 @@ import { alertDialog } from '../../src/store/feedback';
 import { colors, fonts, radius, space } from '../../src/theme';
 
 const MAX_W = 480;
-const HERO = require('../../assets/login-hero.jpg');
+const LOGO = require('../../assets/logo.png');
+const LOGO_RATIO = 1023 / 389; // width / height of assets/logo.png
 
 /** Sign-in: brand, a short welcome and one frosted card with the form, on the dashboards' own backdrop. */
 export default function Login() {
@@ -19,7 +20,7 @@ export default function Login() {
   const { width: winW, height: winH } = useWindowDimensions();
   const W = Math.min(winW, MAX_W);
   // The image gets the height left after the brand bar and the form (~510 px), within limits
-  const heroH = Math.round(Math.max(160, Math.min(winH - insets.top - insets.bottom - 510, 340)));
+  const logoW = Math.round(Math.min(W - space.lg * 2, 340));
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -63,22 +64,14 @@ export default function Login() {
         <ScrollView contentContainerStyle={[styles.scroll, { minHeight: winH }]} keyboardShouldPersistTaps="handled" bounces={false} showsVerticalScrollIndicator={false}>
           <View style={[styles.column, { width: W, paddingTop: insets.top + 16, paddingBottom: insets.bottom + space.lg }]}>
             <View style={styles.topBar}>
-              <View style={styles.brand}>
-                <View style={styles.logo}>
-                  <Ionicons name="flash" size={18} color={colors.highlight} />
-                </View>
-                <Text variant="title" style={styles.brandText}>
-                  Optimas{' '}
-                  <Text variant="title" color={colors.textMuted} style={styles.brandText}>
-                    MS
-                  </Text>
-                </Text>
-              </View>
+              <View />
               <InstallButton />
             </View>
 
-            {/* Hero image */}
-            <Image source={HERO} style={[styles.hero, { height: heroH }]} resizeMode="cover" accessibilityIgnoresInvertColors />
+            {/* The Optimas logo, as is — no frame, no mask */}
+            <View style={styles.logoArea}>
+              <Image source={LOGO} style={{ width: logoW, height: logoW / LOGO_RATIO }} resizeMode="contain" accessibilityLabel="Optimas Networks" />
+            </View>
 
             <View style={styles.main}>
               <View style={styles.intro}>
@@ -160,15 +153,13 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1, alignItems: 'center' },
   column: { flex: 1, paddingHorizontal: space.lg },
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 46 },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  logo: { width: 38, height: 38, borderRadius: 12, backgroundColor: colors.charcoal, alignItems: 'center', justifyContent: 'center' },
-  brandText: { fontFamily: fonts.bold, fontSize: 17 },
   // Content sits in the lower part of the screen, within thumb reach
-  main: { flex: 1, justifyContent: 'flex-end', gap: 18, paddingTop: 22, paddingBottom: space.lg },
+  main: { gap: 18, paddingTop: 10, paddingBottom: space.lg },
   intro: { gap: 8, paddingHorizontal: 4 },
   // Same face and size as the dashboard card titles ("Jobs done / This week")
   headline: { fontFamily: fonts.medium, fontSize: 24, lineHeight: 29, letterSpacing: -0.3, color: colors.text },
-  hero: { width: '100%', borderRadius: 28, marginTop: 14, backgroundColor: colors.charcoal },
+  // The logo takes the space above the form and sits in the middle of it
+  logoArea: { flex: 1, minHeight: 120, alignItems: 'center', justifyContent: 'center' },
   card: { gap: 14 },
   field: { backgroundColor: '#FFFFFF', minHeight: 56 },
   eye: { position: 'absolute', right: space.lg, bottom: 18 },

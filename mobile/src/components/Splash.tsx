@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
+import { Animated, Easing, Image, Platform, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts } from '../theme';
 import { DotsLoader } from './Loaders';
 import { Text } from './Text';
 
+const LOGO = require('../../assets/logo.png');
 const MIN_VISIBLE_MS = 1400;
 
 /**
@@ -40,12 +40,7 @@ export function Splash({ fontsReady, ready, onDone }: { fontsReady: boolean; rea
     <Animated.View style={[StyleSheet.absoluteFill, styles.root, { opacity }]} accessibilityLabel="Optimas MS is loading">
       <LinearGradient colors={[colors.bgTop, '#E9E9E9', colors.bgBottom]} locations={[0, 0.55, 1]} style={StyleSheet.absoluteFill} />
       <Animated.View style={[styles.center, { transform: [{ translateY: lift }] }]}>
-        <View style={styles.tile}>
-          <Ionicons name="flash" size={44} color={colors.highlight} />
-        </View>
-        <Text variant="h1" style={styles.name}>
-          Optimas MS
-        </Text>
+        <Image source={LOGO} style={styles.logo} resizeMode="contain" accessibilityLabel="Optimas Networks" />
         <Text variant="bodySm" color={colors.textMuted}>
           Field operations, accounted for
         </Text>
@@ -60,19 +55,6 @@ export function Splash({ fontsReady, ready, onDone }: { fontsReady: boolean; rea
 const styles = StyleSheet.create({
   root: { zIndex: 100, alignItems: 'center', justifyContent: 'center' },
   center: { alignItems: 'center', gap: 14 },
-  tile: {
-    width: 88,
-    height: 88,
-    borderRadius: 28,
-    backgroundColor: colors.charcoal,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#1C1D1F',
-    shadowOpacity: 0.22,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 18 },
-    elevation: 10,
-  },
-  name: { fontFamily: fonts.extrabold, fontSize: 28, lineHeight: 34, letterSpacing: -0.5, marginTop: 8 },
+  logo: { width: 260, height: 99 },
   dots: { position: 'absolute', bottom: 56 },
 });
