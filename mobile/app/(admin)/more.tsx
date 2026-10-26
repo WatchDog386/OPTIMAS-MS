@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
-import type { Dashboard, User } from '../../src/api/types';
+import type { User } from '../../src/api/types';
 import { GlassBackground, Text } from '../../src/components';
 import { TAB_BAR_CLEARANCE } from '../../src/components/Screen';
 import { useApi } from '../../src/hooks/useApi';
@@ -13,7 +13,7 @@ import { confirmAction } from '../../src/utils/confirm';
 import { humanize } from '../../src/utils/format';
 import { unregisterPush } from '../../src/utils/push';
 
-/* "Profile": completion ring, then a grid of tools with live counts — in the app's glass theme. */
+/* "Profile": completion ring and the few account tools — in the app's glass theme. */
 
 type IconName = keyof typeof Ionicons.glyphMap;
 interface Tile {
@@ -35,33 +35,21 @@ export default function More() {
   const insets = useSafeAreaInsets();
   const stored = useAuth((s) => s.user)!;
   const me = useApi<{ user: User }>('/auth/me');
-  const dash = useApi<Dashboard>('/reports/dashboard');
   const unread = useApi<{ unread: number }>('/notifications/unread-count');
   const user = me.data?.user ?? stored;
   const role = user.role;
   const managers = role === 'ADMIN' || role === 'SUPERVISOR';
-  const d = dash.data;
   const pct = completion(user);
-  const flagged = d ? d.routers.overdueInCustody + d.routers.missingInSpotCounts + d.routers.lostLast30Days : 0;
 
   const tiles: Tile[] = [
-    ...(managers
-      ? [
-          { key: 'people', icon: 'people-outline' as IconName, title: 'People', sub: 'Staff & customer accounts', href: '/admin/users' },
-          { key: 'req', icon: 'chatbubbles-outline' as IconName, title: 'Customer requests', sub: 'Visits customers asked for', href: '/admin/requests', count: d?.requests?.open },
-          { key: 'att', icon: 'calendar-outline' as IconName, title: 'Attendance', sub: 'Check-ins, photos, absentees', href: '/admin/attendance' },
-        ]
-      : []),
-    { key: 'reports', icon: 'download-outline', title: 'Reports & exports', sub: 'Excel: attendance, jobs, stock', href: '/admin/reports' },
-    { key: 'recon', icon: 'git-compare-outline', title: 'Reconciliation', sub: 'Issued vs installed vs held', href: '/admin/reconciliation', count: flagged },
-    { key: 'items', icon: 'pricetags-outline', title: 'Catalogue', sub: 'Items, prices, reorder levels', href: '/admin/items', count: d?.lowStockItems },
-    { key: 'ledger', icon: 'list-outline', title: 'Stock ledger', sub: 'Every movement, newest first', href: '/admin/movements' },
-    { key: 'trace', icon: 'barcode-outline', title: 'Trace a device', sub: 'Custody by serial number', href: '/admin/unit' },
     { key: 'alerts', icon: 'notifications-outline', title: 'Notifications', sub: 'Alerts and activity', href: '/notifications', count: unread.data?.unread },
-    ...(role === 'ADMIN' ? [{ key: 'audit', icon: 'finger-print-outline' as IconName, title: 'Audit log', sub: 'Who changed what, and when', href: '/admin/audit' }] : []),
+    { key: 'trace', icon: 'barcode-outline', title: 'Trace a device', sub: 'Custody by serial number', href: '/admin/unit' },
+    ...(role === 'ADMIN' ? [{ key: 'audit', icon: 'finger-print-outline' as IconName, title: 'Audit log', sub: 'Who changed what', href: '/admin/audit' }] : []),
     { key: 'pw', icon: 'key-outline', title: 'Change password', sub: 'Keep your account safe', href: '/change-password' },
   ];
 
+  // Back to wherever the person came from; straight to the dashboard if the page was opened directly
+  const goBack = () => (router.canGoBack() ? router.back() : router.replace('/overview'));
   const edit = () => router.push(managers ? `/admin/user-edit?id=${user.id}` : '/change-password');
   const signOut = async () => {
     if (!(await confirmAction('Sign out', 'Are you sure you want to sign out?', 'Sign out'))) return;
@@ -74,13 +62,13 @@ export default function More() {
     <View style={styles.root}>
       <GlassBackground />
       <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
-        <View style={styles.headerSide} />
+        <Pressable onPress={goBack} hitSlop={10} style={styles.back} accessibilityRole="button" accessibilityLabel="Back">
+          <Ionicons name="chevron-back" size={22} color={colors.text} />
+        </Pressable>
         <Text variant="title" style={styles.headerTitle}>
           Profile
         </Text>
-        <Pressable onPress={() => router.push('/notifications')} hitSlop={10} style={styles.headerSide} accessibilityLabel="Notifications">
-          <Ionicons name="notifications-outline" size={24} color={colors.text} />
-        </Pressable>
+        <View style={styles.backSpacer} />
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: TAB_BAR_CLEARANCE + insets.bottom }} showsVerticalScrollIndicator={false}>
@@ -93,10 +81,6 @@ export default function More() {
             {humanize(user.role)} · {user.staffNo}
             {user.region ? ` · ${user.region}` : ''}
           </Text>
-        </View>
-
-        <View style={styles.intro}>
-          <Text variant="bodySm">{pct < 100 ? 'Complete your profile so your team can reach you' : 'Your profile is complete'}</Text>
         </View>
 
         <View style={styles.grid}>
@@ -142,8 +126,8 @@ export default function More() {
 
 /** Avatar inside a ring that fills with profile completeness, a % pill and an edit pencil. */
 function CompletionRing({ pct, onEdit }: { pct: number; onEdit: () => void }) {
-  const size = 168;
-  const stroke = 10;
+  const size = 112;
+  const stroke = 8;
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   return (
@@ -164,15 +148,15 @@ function CompletionRing({ pct, onEdit }: { pct: number; onEdit: () => void }) {
         />
       </Svg>
       <View style={styles.avatar}>
-        <Ionicons name="person" size={92} color={colors.charcoal} style={{ marginTop: 26 }} />
+        <Ionicons name="person" size={60} color={colors.charcoal} style={{ marginTop: 16 }} />
       </View>
       <View style={styles.pct}>
-        <Text variant="label" style={{ fontFamily: fonts.bold, fontSize: 13 }}>
+        <Text variant="label" style={{ fontFamily: fonts.bold, fontSize: 12 }}>
           {pct}%
         </Text>
       </View>
       <Pressable onPress={onEdit} style={styles.pencil} accessibilityLabel="Edit profile" hitSlop={6}>
-        <Ionicons name="pencil" size={18} color={colors.highlight} />
+        <Ionicons name="pencil" size={15} color={colors.highlight} />
       </Pressable>
     </View>
   );
@@ -193,12 +177,12 @@ function BubbleIcon({ name }: { name: IconName }) {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgBottom },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 14 },
-  headerSide: { width: 32, alignItems: 'flex-end' },
+  backSpacer: { width: 40, height: 40 },
+  back: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.glassStrong, borderWidth: 1, borderColor: colors.glassBorder },
   headerTitle: { flex: 1, textAlign: 'center', fontFamily: fonts.semibold, fontSize: 18 },
-  profile: { alignItems: 'center', gap: 6, paddingTop: 18 },
-  name: { fontFamily: fonts.semibold, fontSize: 19, marginTop: 12 },
-  intro: { marginHorizontal: 20, marginTop: 24, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(28,29,31,0.12)' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12, paddingHorizontal: 20, paddingTop: 22 },
+  profile: { alignItems: 'center', gap: 4, paddingTop: 6 },
+  name: { fontFamily: fonts.semibold, fontSize: 18, marginTop: 10 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12, paddingHorizontal: 20, paddingTop: 24 },
   tile: {
     width: '48.5%',
     minHeight: 150,
@@ -243,8 +227,8 @@ const styles = StyleSheet.create({
     borderRightColor: 'transparent',
     borderTopColor: colors.highlight,
   },
-  avatar: { width: 140, height: 140, borderRadius: 70, overflow: 'hidden', backgroundColor: colors.glassStrong, alignItems: 'center', justifyContent: 'center' },
-  pct: { position: 'absolute', bottom: 4, paddingHorizontal: 16, height: 30, borderRadius: 15, backgroundColor: colors.highlight, alignItems: 'center', justifyContent: 'center' },
-  pencil: { position: 'absolute', right: -6, top: 86, width: 44, height: 44, borderRadius: 22, backgroundColor: colors.charcoal, alignItems: 'center', justifyContent: 'center' },
+  avatar: { width: 92, height: 92, borderRadius: 46, overflow: 'hidden', backgroundColor: colors.glassStrong, alignItems: 'center', justifyContent: 'center' },
+  pct: { position: 'absolute', bottom: -2, paddingHorizontal: 12, height: 24, borderRadius: 12, backgroundColor: colors.highlight, alignItems: 'center', justifyContent: 'center' },
+  pencil: { position: 'absolute', right: -6, top: 54, width: 34, height: 34, borderRadius: 17, backgroundColor: colors.charcoal, alignItems: 'center', justifyContent: 'center' },
   signOut: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginHorizontal: 20, marginTop: 26, height: 52, borderRadius: 26, backgroundColor: colors.dangerSoft },
 });
