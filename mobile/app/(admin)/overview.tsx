@@ -22,6 +22,7 @@ import {
 } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { useAuth } from '../../src/store/auth';
+import { DemoNotice } from '../../src/components/DemoNotice';
 import { requestScan } from '../../src/store/bridge';
 import { colors, fonts } from '../../src/theme';
 import { duration, firstName } from '../../src/utils/format';
@@ -335,7 +336,21 @@ export default function Overview() {
         </View>
       </NotchCard>
 
+      <DemoNotice />
+
       <QuickActions items={actions} />
+
+      {managers ? (
+        <QuickActions
+          title="Insights"
+          items={[
+            { label: 'Leaderboard', icon: 'trophy-outline', onPress: () => router.push('/admin/leaderboard') },
+            { label: 'Live map', icon: 'map-outline', onPress: () => router.push('/admin/map') },
+            { label: 'Charts', icon: 'bar-chart-outline', onPress: () => router.push('/admin/charts') },
+            { label: 'Ratings', icon: 'star-outline', onPress: () => router.push('/admin/ratings') },
+          ]}
+        />
+      ) : null}
 
       <Section title="Needs attention" subtitle="Things waiting on you today">
         {attention.length === 0 ? (

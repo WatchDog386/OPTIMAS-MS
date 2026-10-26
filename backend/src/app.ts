@@ -13,6 +13,7 @@ import { attendanceRouter } from './modules/attendance/attendance.routes';
 import { tasksRouter } from './modules/tasks/tasks.routes';
 import { inventoryRouter } from './modules/inventory/inventory.routes';
 import { reportsRouter } from './modules/reports/reports.routes';
+import { insightsRouter } from './modules/insights/insights.routes';
 import { notificationsRouter } from './modules/notifications/notifications.routes';
 import { exportsRouter } from './modules/exports/exports.routes';
 import { customerRouter } from './modules/customer/customer.routes';
@@ -52,6 +53,7 @@ export function createApp() {
   api.use('/tasks', requireAuth, staff, tasksRouter);
   api.use('/inventory', requireAuth, staff, inventoryRouter);
   api.use('/reports', requireAuth, staff, reportsRouter);
+  api.use('/insights', requireAuth, requireRole(ROLES.MANAGERS), insightsRouter);
   api.use('/notifications', requireAuth, notificationsRouter);
   api.use('/exports', requireAuth, staff, exportsRouter);
   api.use('/requests', requireAuth, requireRole(ROLES.MANAGERS), requestsRouter);
