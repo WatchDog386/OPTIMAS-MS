@@ -8,7 +8,7 @@ import { colors, fonts } from '../theme';
 import { Text } from './Text';
 
 /*
- * Floating navy tab bar with a smooth dip that follows the active tab, whose icon
+ * Floating black tab bar with a smooth dip that follows the active tab, whose icon
  * rides in a raised black bubble — the Business-SME mobile navigation.
  */
 const BAR_HEIGHT = 64;
@@ -89,14 +89,14 @@ export function FloatingTabBar({ state, descriptors, navigateToTab }: BottomTabB
             <Svg width={width} height={BAR_HEIGHT} style={StyleSheet.absoluteFill}>
               <Defs>
                 <SvgGradient id="navfill" x1="0" y1="0" x2="0" y2="1">
-                  <Stop offset="0" stopColor="#0A2C80" />
-                  <Stop offset="1" stopColor="#002170" />
+                  <Stop offset="0" stopColor="#242628" />
+                  <Stop offset="1" stopColor="#111213" />
                 </SvgGradient>
               </Defs>
               <Path d={barPath(width, cx, NOTCH_DEPTH)} fill="url(#navfill)" />
             </Svg>
             <View style={[styles.bubble, { left: cx - BUBBLE / 2, top: NOTCH_DEPTH - BUBBLE_GAP - BUBBLE }]}>
-              {activeIcon ? activeIcon({ focused: true, color: colors.navy, size: 22 }) : null}
+              {activeIcon ? activeIcon({ focused: true, color: colors.onHighlight, size: 22 }) : null}
             </View>
           </>
         ) : null}
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     borderBottomLeftRadius: RADIUS,
     borderBottomRightRadius: RADIUS,
-    backgroundColor: colors.navy,
+    backgroundColor: '#111213',
     shadowColor: '#1C1D1F',
     shadowOpacity: 0.22,
     shadowRadius: 18,
