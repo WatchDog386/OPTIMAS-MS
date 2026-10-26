@@ -56,7 +56,7 @@ export function AdminHero(p: Props) {
   return (
     <View
       style={{
-        paddingTop: insets.top + 10,
+        paddingTop: insets.top + 26,
         paddingHorizontal: space.lg,
         gap: 16,
         paddingBottom: 4,
