@@ -90,8 +90,7 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      {/* Android app runs full screen (status bar hidden); elsewhere it blends with the page */}
-      <StatusBar style="dark" hidden={Platform.OS === 'android'} />
+      <StatusBar style="dark" />
       {ready ? <AppStack /> : null}
       {splashDone ? null : <Splash fontsReady={fontsLoaded} ready={ready} onDone={hideSplash} />}
     </SafeAreaProvider>

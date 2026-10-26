@@ -1,72 +1,36 @@
 import { useEffect, useState } from 'react';
-import { AppState, Linking, Platform } from 'react-native';
-import * as Application from 'expo-application';
-import { API_URL } from '../api/client';
+import { AppState, Platform } from 'react-native';
 
 /** Build id baked in at export time (see deploy/web.Dockerfile). Absent in development. */
 const BUILD = process.env.EXPO_PUBLIC_BUILD_ID;
-const WEB_CHECK_MS = 5 * 60_000;
-const ANDROID_CHECK_MS = 30 * 60_000;
-/** Published by .github/workflows/android.yml on every build of main. */
-const ANDROID_RELEASE = 'https://api.github.com/repos/WatchDog386/OPTIMAS-MS/releases/tags/android-latest';
+const CHECK_EVERY_MS = 5 * 60_000;
 
-interface Release {
-  available: boolean;
-  /** Where to get it (Android: the APK download). */
-  url?: string;
-}
-
-async function webRelease(): Promise<Release> {
+async function newerBuildLive(): Promise<boolean> {
   const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' });
-  if (!res.ok) return { available: false };
+  if (!res.ok) return false;
   const latest = ((await res.json()) as { build?: string }).build;
-  return { available: !!BUILD && !!latest && latest !== BUILD };
-}
-
-async function androidRelease(): Promise<Release> {
-  const mine = Number(Application.nativeBuildVersion ?? 0);
-  // 1. Our own server (deploy/build-android.sh publishes /downloads/android.json)
-  try {
-    const origin = API_URL.replace(/\/api\/v1\/?$/, '');
-    const res = await fetch(`${origin}/downloads/android.json?t=${Date.now()}`);
-    if (res.ok) {
-      const m = (await res.json()) as { versionCode?: number; url?: string };
-      if (m.versionCode && m.url) return { available: m.versionCode > mine, url: m.url.startsWith('http') ? m.url : `${origin}${m.url}` };
-    }
-  } catch {
-    // fall through to GitHub
-  }
-  // 2. The GitHub release built by .github/workflows/android.yml
-  const res = await fetch(ANDROID_RELEASE, { headers: { Accept: 'application/vnd.github+json' } });
-  if (!res.ok) return { available: false };
-  const rel = (await res.json()) as { body?: string; assets?: { name: string; browser_download_url: string }[] };
-  const latest = Number(/versionCode:\s*(\d+)/.exec(rel.body ?? '')?.[1] ?? 0);
-  const apk = rel.assets?.find((a) => a.name.endsWith('.apk'))?.browser_download_url;
-  return { available: !!apk && latest > mine, url: apk };
+  return !!BUILD && !!latest && latest !== BUILD;
 }
 
 /**
- * Notices when a newer release is out so the person can switch with one tap:
- *  - installed web app: a new deploy (checked on start, on return to the app and every 5 min)
- *  - Android app: a newer APK on the GitHub release (on start, on return and every 30 min)
+ * Installed web app: notices when a newer release has been deployed (on start, when the app is brought
+ * back to the foreground, and every few minutes) so the person can switch to it with one tap.
  */
 export function useAppUpdate() {
-  const [release, setRelease] = useState<Release>({ available: false });
+  const [available, setAvailable] = useState(false);
 
   useEffect(() => {
-    const web = Platform.OS === 'web';
-    if (web ? !BUILD || typeof document === 'undefined' : Platform.OS !== 'android') return;
+    if (Platform.OS !== 'web' || !BUILD || typeof document === 'undefined') return;
     let stopped = false;
     const check = async () => {
       try {
-        const r = await (web ? webRelease() : androidRelease());
-        if (!stopped && r.available) setRelease(r);
+        if (!stopped && (await newerBuildLive())) setAvailable(true);
       } catch {
         // offline: try again later
       }
     };
     void check();
-    const t = setInterval(check, web ? WEB_CHECK_MS : ANDROID_CHECK_MS);
+    const t = setInterval(check, CHECK_EVERY_MS);
     const sub = AppState.addEventListener('change', (s) => s === 'active' && void check());
     return () => {
       stopped = true;
@@ -76,10 +40,6 @@ export function useAppUpdate() {
   }, []);
 
   const apply = async () => {
-    if (Platform.OS !== 'web') {
-      if (release.url) await Linking.openURL(release.url); // Android downloads it and offers to install
-      return;
-    }
     try {
       const reg = await navigator.serviceWorker?.getRegistration();
       await reg?.update();
@@ -89,5 +49,5 @@ export function useAppUpdate() {
     window.location.reload();
   };
 
-  return { available: release.available, apply, native: Platform.OS !== 'web' };
+  return { available, apply };
 }
