@@ -129,3 +129,13 @@ Customers are refused (403) on every staff endpoint (`/users`, `/capture`, `/att
 | POST | `/tasks` with `requestId` | turns a request into a job (request → `SCHEDULED`; a cancelled job reopens it) |
 
 Customers receive `JOB_UPDATE` notifications when a technician is assigned, starts, and completes their job.
+
+
+## Insights (admin and supervisor only)
+
+| Method | Path | Returns |
+|---|---|---|
+| GET | `/insights/leaderboard?range=week\|month` | Technicians ranked by score (jobs, rating, attendance) |
+| GET | `/insights/map` | Staff (last GPS photo today, state) and open jobs with coordinates |
+| GET | `/insights/charts?days=7..30` | Per-day jobs, cash, attendance, stock movement, and job mix |
+| GET | `/insights/ratings` | Average, 1–5 spread, per-technician averages, latest comments |

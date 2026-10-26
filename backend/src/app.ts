@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import { env } from './config/env';
+import { prisma } from './lib/prisma';
 import { ROLES, requireAuth, requireRole } from './middleware/auth';
 import { errorHandler, notFoundHandler } from './middleware/error';
 import { authRouter } from './modules/auth/auth.routes';
@@ -31,9 +32,27 @@ export function createApp() {
   app.use(express.json({ limit: '1mb' }));
   if (env.NODE_ENV !== 'test') app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
-  app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'optimas-ms-api', time: new Date() }));
+  // Reports healthy only while the database answers, so the proxy and monitors notice an outage
+  app.get('/health', async (_req, res) => {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      res.json({ status: 'ok', service: 'optimas-ms-api', time: new Date() });
+    } catch {
+      res.status(503).json({ status: 'degraded', service: 'optimas-ms-api', database: 'unreachable', time: new Date() });
+    }
+  });
 
   const api = express.Router();
+  // A ceiling on how fast one address can hammer the API (the login route has its own, stricter limit below)
+  api.use(
+    rateLimit({
+      windowMs: 60_000,
+      limit: env.API_RATE_LIMIT,
+      standardHeaders: 'draft-7',
+      legacyHeaders: false,
+      message: { error: { message: 'Too many requests. Slow down and try again in a minute.', code: 'RATE_LIMITED' } },
+    }),
+  );
   // Customer logins can only reach /customer and /notifications.
   const staff = requireRole(ROLES.STAFF);
   api.use(
@@ -41,6 +60,8 @@ export function createApp() {
     rateLimit({
       windowMs: 15 * 60_000,
       limit: env.LOGIN_RATE_LIMIT,
+      // Only wrong passwords count: a whole office signing in from one Wi-Fi in the morning must not lock itself out
+      skipSuccessfulRequests: true,
       standardHeaders: 'draft-7',
       legacyHeaders: false,
       message: { error: { message: 'Too many sign-in attempts. Try again in 15 minutes.', code: 'RATE_LIMITED' } },

@@ -16,6 +16,7 @@ export default defineConfig({
       JWT_SECRET: 'test-secret-test-secret-test-secret',
       PUSH_ENABLED: 'false',
       LOGIN_RATE_LIMIT: '1000',
+      API_RATE_LIMIT: '100000',
       UPLOAD_DIR: 'uploads-test',
       OFFICE_LAT: '-1.2921',
       OFFICE_LNG: '36.8219',

@@ -32,6 +32,8 @@ const schema = z.object({
   EXPO_ACCESS_TOKEN: z.string().optional(),
   TRUST_PROXY: z.coerce.number().default(0),
   LOGIN_RATE_LIMIT: z.coerce.number().default(10),
+  /** Requests one address may make per minute across the whole API (the app polls, so keep this generous). */
+  API_RATE_LIMIT: z.coerce.number().default(600),
   SUPPORT_PHONE: z.string().default('+254700000000'),
   SUPPORT_WHATSAPP: z.string().default('254700000000'),
 });
@@ -44,3 +46,14 @@ if (!parsed.success) {
 }
 
 export const env = parsed.data;
+
+// A live server must not run with a guessable signing key: anyone who knows it can sign in as any user.
+if (env.NODE_ENV === 'production') {
+  const placeholder = /change[-_ ]?me|replace[-_ ]?me|your[-_ ]?secret|^(secret|password|test|default|example)/i.test(env.JWT_SECRET);
+  if (placeholder) {
+    console.error('❌ JWT_SECRET is still a placeholder: use 32+ random characters (e.g. `openssl rand -hex 32`).');
+    process.exit(1);
+  }
+  if (env.JWT_SECRET.length < 32) console.warn('⚠️  JWT_SECRET is shorter than 32 characters: generate a longer one (`openssl rand -hex 32`).');
+  if (env.CORS_ORIGIN === '*') console.warn('⚠️  CORS_ORIGIN is "*": set it to your web address (e.g. https://ms.example.co.ke) in production.');
+}

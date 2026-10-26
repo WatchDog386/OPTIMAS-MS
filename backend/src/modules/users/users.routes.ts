@@ -7,7 +7,7 @@ import { audit } from '../../lib/audit';
 import { badRequest, conflict, forbidden, notFound } from '../../lib/http-error';
 import { passwordSchema, temporaryPassword } from '../../lib/password';
 import { ah } from '../../middleware/async';
-import { ROLES, requireRole } from '../../middleware/auth';
+import { ROLES, requireRole, forgetUser } from '../../middleware/auth';
 import { parse } from '../../middleware/validate';
 import { workDateOf } from '../../lib/time';
 
@@ -265,6 +265,7 @@ usersRouter.patch(
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') throw conflict('That email or account number is already used by another account', 'DUPLICATE');
       throw e;
     }
+    forgetUser(user.id);
     const changes = Object.keys(body).join(', ');
     await audit(actor.id, body.active === false ? 'USER_DEACTIVATED' : body.active === true ? 'USER_REACTIVATED' : 'USER_UPDATED', 'User', user.id, `Updated ${user.name}: ${changes}`, body as Prisma.InputJsonObject);
     res.json({ user: publicUser(user) });
@@ -282,6 +283,7 @@ usersRouter.post(
     if (target.id === actor.id) throw badRequest('Use “Change password” for your own account');
     const temp = temporaryPassword();
     await prisma.user.update({ where: { id: target.id }, data: { passwordHash: await bcrypt.hash(temp, 10), mustChangePassword: true } });
+    forgetUser(target.id);
     await audit(actor.id, 'PASSWORD_RESET', 'User', target.id, `Reset password for ${target.name} (${target.staffNo})`);
     res.json({ temporaryPassword: temp });
   }),

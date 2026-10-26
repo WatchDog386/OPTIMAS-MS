@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import type { Role } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import { verifyToken } from '../lib/jwt';
 import { forbidden, unauthorized } from '../lib/http-error';
 
@@ -12,15 +13,46 @@ declare global {
   }
 }
 
-export function requireAuth(req: Request, _res: Response, next: NextFunction) {
+/**
+ * Who a signed-in person is *right now*. The token only proves they signed in; their role and whether the
+ * account is still active come from the database (cached for a few seconds), so deactivating someone or
+ * changing their role takes effect on their very next request instead of when the token expires.
+ */
+const LIVE_MS = 10_000;
+const live = new Map<string, { at: number; role: Role; name: string; active: boolean }>();
+
+/** Call after changing a user's role, active flag or password so the change applies immediately. */
+export const forgetUser = (id: string) => live.delete(id);
+
+async function liveUser(id: string) {
+  const hit = live.get(id);
+  if (hit && Date.now() - hit.at < LIVE_MS) return hit;
+  const row = await prisma.user.findUnique({ where: { id }, select: { role: true, name: true, active: true } });
+  if (!row) {
+    live.delete(id);
+    return null;
+  }
+  const fresh = { at: Date.now(), ...row };
+  live.set(id, fresh);
+  return fresh;
+}
+
+export async function requireAuth(req: Request, _res: Response, next: NextFunction) {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) return next(unauthorized());
+  let sub: string;
   try {
-    const payload = verifyToken(header.slice(7));
-    req.user = { id: payload.sub, role: payload.role, name: payload.name };
-    next();
+    sub = verifyToken(header.slice(7)).sub;
   } catch {
-    next(unauthorized('Session expired, please log in again'));
+    return next(unauthorized('Session expired, please log in again'));
+  }
+  try {
+    const user = await liveUser(sub);
+    if (!user || !user.active) return next(unauthorized('This account has been deactivated. Contact your administrator.'));
+    req.user = { id: sub, role: user.role, name: user.name };
+    next();
+  } catch (err) {
+    next(err);
   }
 }
 
