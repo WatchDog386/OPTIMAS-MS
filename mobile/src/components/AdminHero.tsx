@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, space } from '../theme';
-import { GlassCircle } from './Glass';
 import { Text } from './Text';
 
 export interface HeroStat {
@@ -39,9 +39,9 @@ export function AdminHero(p: Props) {
     <View style={{ paddingTop: insets.top + 10, paddingHorizontal: space.lg, gap: 16, paddingBottom: 4 }}>
       {/* Header */}
       <View style={styles.header}>
-        <GlassCircle size={48} onPress={p.onAvatar} label="My account">
-          <Ionicons name="person-outline" size={22} color={colors.text} />
-        </GlassCircle>
+        <Pressable onPress={p.onAvatar} accessibilityLabel="My account" style={({ pressed }) => [styles.avatar, pressed && { transform: [{ scale: 0.94 }] }]}>
+          <Ionicons name="person" size={22} color={colors.white} />
+        </Pressable>
         <Text variant="title" numberOfLines={1} style={styles.hello}>
           Hello {p.firstName} 👋
         </Text>
@@ -78,8 +78,8 @@ export function AdminHero(p: Props) {
       {/* Link row */}
       <View style={styles.linkRow}>
         <Pressable onPress={p.link.onPress} style={styles.link} hitSlop={8}>
-          <Ionicons name={p.link.icon} size={18} color={colors.text} />
-          <Text variant="title" style={styles.linkText}>
+          <Ionicons name={p.link.icon} size={18} color={LINK_GREEN} />
+          <Text variant="title" color={LINK_GREEN} fixedColor style={styles.linkText}>
             {p.link.label}
           </Text>
         </Pressable>
@@ -90,29 +90,67 @@ export function AdminHero(p: Props) {
         </Pressable>
       </View>
 
-      {/* Stat cards — same frosted surface as the cards further down the page */}
+      {/* Stat cards — colour blocks with a notched corner holding the open arrow */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -space.lg }} contentContainerStyle={styles.cards}>
-        {p.stats.map((s) => (
-          <Pressable key={s.key} onPress={s.onPress} disabled={!s.onPress} style={({ pressed }) => [styles.card, s.alert && styles.cardAlert, pressed && { transform: [{ scale: 0.97 }] }]}>
-            <View style={[styles.cardIcon, s.alert && { backgroundColor: colors.dangerSoft }]}>
-              <Ionicons name={s.icon} size={18} color={s.alert ? colors.danger : colors.onHighlight} />
-            </View>
-            <Text variant="h1" style={styles.cardValue} numberOfLines={1}>
-              {s.value}
-            </Text>
-            <Text variant="label" color={colors.text} numberOfLines={1} style={{ fontFamily: fonts.medium }}>
-              {s.label}
-            </Text>
-            {s.sub ? (
-              <Text variant="label" color={s.alert ? colors.danger : colors.textMuted} numberOfLines={1} style={{ fontSize: 11 }}>
-                {s.sub}
-              </Text>
-            ) : null}
-          </Pressable>
+        {p.stats.map((s, i) => (
+          <StatBlock key={s.key} stat={s} fill={FILLS[i % FILLS.length]} />
         ))}
       </ScrollView>
       {p.footer}
     </View>
+  );
+}
+
+const CARD_W = 158;
+const CARD_H = 178;
+const FILLS = ['#C3A6FF', '#E6F45A', '#A8E6C4', '#FFD08A'];
+const LINK_GREEN = '#2DA043';
+
+/** Rounded rectangle with a concave bite out of the top-right corner (where the arrow button sits). */
+function notchedPath(w: number, h: number, r = 26, bite = 46, f = 10) {
+  const t = 0.32; // where the fillets meet the bite circle (radians from each edge)
+  const p1 = [w - bite * Math.cos(t), bite * Math.sin(t)];
+  const p2 = [w - bite * Math.sin(t), bite * Math.cos(t)];
+  return [
+    `M ${r} 0`,
+    `H ${w - bite - f}`,
+    `Q ${w - bite} 0 ${p1[0]} ${p1[1]}`,
+    `A ${bite} ${bite} 0 0 0 ${p2[0]} ${p2[1]}`,
+    `Q ${w} ${bite} ${w} ${bite + f}`,
+    `V ${h - r}`,
+    `A ${r} ${r} 0 0 1 ${w - r} ${h}`,
+    `H ${r}`,
+    `A ${r} ${r} 0 0 1 0 ${h - r}`,
+    `V ${r}`,
+    `A ${r} ${r} 0 0 1 ${r} 0`,
+    'Z',
+  ].join(' ');
+}
+
+function StatBlock({ stat: s, fill }: { stat: HeroStat; fill: string }) {
+  return (
+    <Pressable onPress={s.onPress} disabled={!s.onPress} accessibilityLabel={`${s.label}: ${s.value}`} style={({ pressed }) => [styles.block, pressed && { transform: [{ scale: 0.97 }] }]}>
+      <Svg width={CARD_W} height={CARD_H} style={StyleSheet.absoluteFill}>
+        <Path d={notchedPath(CARD_W, CARD_H)} fill={fill} />
+      </Svg>
+      <View style={styles.arrow}>
+        <Ionicons name="arrow-up-outline" size={17} color={colors.text} style={{ transform: [{ rotate: '45deg' }] }} />
+      </View>
+      <Text variant="h1" color={colors.text} fixedColor style={styles.blockValue} numberOfLines={1} adjustsFontSizeToFit>
+        {s.value}
+      </Text>
+      <Text variant="label" color={colors.text} fixedColor numberOfLines={2} style={styles.blockLabel}>
+        {s.label}
+      </Text>
+      <View style={styles.blockFoot}>
+        <Text variant="label" color="rgba(28,29,31,0.68)" fixedColor numberOfLines={2} style={styles.blockSub}>
+          {s.sub ?? ''}
+        </Text>
+        <View style={[styles.blockIcon, s.alert && { backgroundColor: colors.danger }]}>
+          <Ionicons name={s.icon} size={16} color={colors.white} />
+        </View>
+      </View>
+    </Pressable>
   );
 }
 
@@ -137,23 +175,25 @@ const styles = StyleSheet.create({
   linkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 2 },
   link: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   linkText: { fontFamily: fonts.bold, fontSize: 14, textDecorationLine: 'underline' },
-  // Vertical padding leaves room for the card shadows inside the horizontal scroller
-  cards: { gap: 10, paddingHorizontal: space.lg, paddingTop: 2, paddingBottom: 14 },
-  card: {
-    width: 150,
-    padding: 16,
-    gap: 4,
-    borderRadius: 24,
+  cards: { gap: 12, paddingHorizontal: space.lg, paddingTop: 2, paddingBottom: 8 },
+  avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.charcoal, alignItems: 'center', justifyContent: 'center' },
+  block: { width: CARD_W, height: CARD_H, padding: 16, paddingTop: 14 },
+  arrow: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: colors.glassStrong,
     borderWidth: 1,
     borderColor: colors.glassBorder,
-    shadowColor: '#1C1D1F',
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  cardAlert: { borderColor: 'rgba(220,38,38,0.35)' },
-  cardIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.highlight, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
-  cardValue: { fontFamily: fonts.semibold, fontSize: 28, lineHeight: 32 },
+  blockValue: { fontFamily: fonts.semibold, fontSize: 40, lineHeight: 46, letterSpacing: -1, marginRight: 34 },
+  blockLabel: { fontFamily: fonts.semibold, fontSize: 14, lineHeight: 17, marginTop: 2 },
+  blockFoot: { flex: 1, flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
+  blockSub: { flex: 1, fontSize: 11, lineHeight: 14 },
+  blockIcon: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.charcoal, alignItems: 'center', justifyContent: 'center' },
 });
