@@ -41,8 +41,6 @@ interface Props {
   onViewAll?: () => void;
   viewAllLabel?: string;
   stats: HeroStat[];
-  /** Hide the colour stat cards (e.g. while a dashboard is being reworked). */
-  showStats?: boolean;
   /** First load: show shimmering placeholders instead of zeros. */
   loading?: boolean;
   /** When the figures last synced; shows a live badge under the greeting. */
@@ -132,17 +130,15 @@ export function AdminHero(p: Props) {
       </View>
 
       {/* Stat cards — colour blocks with a notched corner holding the open arrow */}
-      {p.showStats !== false ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -space.lg }} contentContainerStyle={styles.cards}>
-          {p.loading
-            ? FILLS.map((f) => <Skeleton key={f} width={CARD_W} height={CARD_H} radius={26} />)
-            : p.stats.map((s, i) => (
-                <Reveal key={s.key} index={i} from={18}>
-                  <StatBlock stat={s} fill={FILLS[i % FILLS.length]} />
-                </Reveal>
-              ))}
-        </ScrollView>
-      ) : null}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -space.lg }} contentContainerStyle={styles.cards}>
+        {p.loading
+          ? FILLS.map((f) => <Skeleton key={f} width={CARD_W} height={CARD_H} radius={26} />)
+          : p.stats.map((s, i) => (
+              <Reveal key={s.key} index={i} from={18}>
+                <StatBlock stat={s} fill={FILLS[i % FILLS.length]} />
+              </Reveal>
+            ))}
+      </ScrollView>
       {p.footer}
     </View>
   );

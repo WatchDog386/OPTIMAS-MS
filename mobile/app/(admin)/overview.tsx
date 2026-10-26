@@ -310,7 +310,6 @@ export default function Overview() {
           }
           onViewAll={() => router.push(tab === 0 ? '/board' : '/store')}
           stats={tab === 0 ? opsStats : stockStats}
-          showStats={false}
           loading={!d && loading}
           updatedAt={updatedAt}
         />
