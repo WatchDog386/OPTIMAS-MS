@@ -69,6 +69,22 @@ export function useInstallPrompt() {
   };
 }
 
+/** Phone status bar / browser toolbar colour: the same light grey as the top of every screen. */
+export const STATUS_BAR_COLOR = '#F3F3F3';
+
+/** Sets (or replaces) the page's theme-color, which Android paints into the status bar. */
+export function setThemeColor(color: string) {
+  if (!isWeb || typeof document === 'undefined') return;
+  const tags = document.head.querySelectorAll('meta[name="theme-color"]');
+  tags.forEach((t, i) => (i === 0 ? t.setAttribute('content', color) : t.remove()));
+  if (!tags.length) {
+    const el = document.createElement('meta');
+    el.setAttribute('name', 'theme-color');
+    el.setAttribute('content', color);
+    document.head.appendChild(el);
+  }
+}
+
 /** Adds the manifest, icons and service worker to the web console (no-op on native). */
 export function setupPwa() {
   if (!isWeb || typeof document === 'undefined') return;
@@ -85,8 +101,9 @@ export function setupPwa() {
   };
   add('link', { rel: 'manifest', href: '/manifest.json' });
   add('link', { rel: 'apple-touch-icon', href: '/icons/apple-touch-icon.png' });
-  add('meta', { name: 'theme-color', content: '#ECF23A' });
+  setThemeColor(STATUS_BAR_COLOR);
   add('meta', { name: 'apple-mobile-web-app-capable', content: 'yes' });
+  add('meta', { name: 'mobile-web-app-capable', content: 'yes' });
   add('meta', { name: 'apple-mobile-web-app-title', content: 'Optimas MS' });
   add('meta', { name: 'apple-mobile-web-app-status-bar-style', content: 'default' });
   if ('serviceWorker' in navigator && location.protocol === 'https:') {

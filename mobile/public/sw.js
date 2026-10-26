@@ -1,6 +1,6 @@
 /* Optimas MS service worker: makes the web console installable and caches the app shell.
    API calls (/api/*) always go to the network — data is never served stale. */
-const SHELL = 'optimas-shell-v1';
+const SHELL = 'optimas-shell-v2';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(SHELL).then((c) => c.addAll(['/', '/manifest.json', '/icons/icon-192.png'])).then(() => self.skipWaiting()));
@@ -19,6 +19,11 @@ self.addEventListener('fetch', (event) => {
   // Pages: network first, fall back to the cached shell when offline.
   if (req.mode === 'navigate') {
     event.respondWith(fetch(req).catch(() => caches.match('/')));
+    return;
+  }
+  // The manifest carries the theme colour and icons: always prefer the latest copy.
+  if (url.pathname === '/manifest.json') {
+    event.respondWith(fetch(req).catch(() => caches.match(req)));
     return;
   }
   // Static assets (hashed bundles, fonts, icons): cache first.

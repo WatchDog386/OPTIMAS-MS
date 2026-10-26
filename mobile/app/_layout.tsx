@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import * as Notifications from 'expo-notifications';
 import { router, Stack } from 'expo-router';
 import { View } from 'react-native';
@@ -21,6 +21,7 @@ import { registerForPush } from '../src/utils/push';
 import { openNotificationTarget } from '../src/utils/notifications';
 import { setupPwa } from '../src/utils/install';
 import { InstallPrompt } from '../src/components/InstallPrompt';
+import { Splash } from '../src/components/Splash';
 import { colors } from '../src/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -51,6 +52,9 @@ export default function RootLayout() {
     Figtree_800ExtraBold,
   });
   const hydrated = useAuth((s) => s.hydrated);
+  const [splashDone, setSplashDone] = useState(false);
+  const hideSplash = useCallback(() => setSplashDone(true), []);
+  const ready = fontsLoaded && hydrated;
   const userId = useAuth((s) => s.user?.id);
 
   useEffect(() => {
@@ -73,20 +77,28 @@ export default function RootLayout() {
     return () => sub.remove();
   }, []);
 
+  // Hand over from the native splash to the in-app one as soon as the fonts are in.
   useEffect(() => {
-    if (fontsLoaded && hydrated) SplashScreen.hideAsync().catch(() => undefined);
-  }, [fontsLoaded, hydrated]);
-
-  if (!fontsLoaded || !hydrated) return null;
+    if (fontsLoaded) SplashScreen.hideAsync().catch(() => undefined);
+  }, [fontsLoaded]);
 
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
+      {ready ? <AppStack /> : null}
+      {splashDone ? null : <Splash fontsReady={fontsLoaded} ready={ready} onDone={hideSplash} />}
+    </SafeAreaProvider>
+  );
+}
+
+function AppStack() {
+  return (
+    <>
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg }, animation: 'slide_from_right' }}>
         <Stack.Screen name="capture" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
         <Stack.Screen name="scan" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
       </Stack>
       <InstallPrompt />
-    </SafeAreaProvider>
+    </>
   );
 }
