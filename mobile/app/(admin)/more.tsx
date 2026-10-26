@@ -13,7 +13,7 @@ import { confirmAction } from '../../src/utils/confirm';
 import { humanize } from '../../src/utils/format';
 import { unregisterPush } from '../../src/utils/push';
 
-/* "Profile & tools": completion ring, then a grid of tools with live counts — in the app's glass theme. */
+/* "Profile": completion ring, then a grid of tools with live counts — in the app's glass theme. */
 
 type IconName = keyof typeof Ionicons.glyphMap;
 interface Tile {
@@ -49,15 +49,6 @@ export default function More() {
       ? [
           { key: 'people', icon: 'people-outline' as IconName, title: 'People', sub: 'Staff & customer accounts', href: '/admin/users' },
           { key: 'req', icon: 'chatbubbles-outline' as IconName, title: 'Customer requests', sub: 'Visits customers asked for', href: '/admin/requests', count: d?.requests?.open },
-          { key: 'dress', icon: 'shirt-outline' as IconName, title: 'Dress-code reviews', sub: 'Approve check-in photos', href: '/admin/reviews', count: d?.attendance.pendingDressReviews },
-          {
-            key: 'verify',
-            icon: 'shield-checkmark-outline' as IconName,
-            title: 'Jobs to verify',
-            sub: 'Proof photos & materials',
-            href: '/board?status=COMPLETED',
-            count: d?.tasks.awaitingVerification,
-          },
           { key: 'att', icon: 'calendar-outline' as IconName, title: 'Attendance', sub: 'Check-ins, photos, absentees', href: '/admin/attendance' },
         ]
       : []),
@@ -66,7 +57,6 @@ export default function More() {
     { key: 'items', icon: 'pricetags-outline', title: 'Catalogue', sub: 'Items, prices, reorder levels', href: '/admin/items', count: d?.lowStockItems },
     { key: 'ledger', icon: 'list-outline', title: 'Stock ledger', sub: 'Every movement, newest first', href: '/admin/movements' },
     { key: 'trace', icon: 'barcode-outline', title: 'Trace a device', sub: 'Custody by serial number', href: '/admin/unit' },
-    { key: 'search', icon: 'search-outline', title: 'Search', sub: 'Jobs, devices, people', href: '/search' },
     { key: 'alerts', icon: 'notifications-outline', title: 'Notifications', sub: 'Alerts and activity', href: '/notifications', count: unread.data?.unread },
     ...(role === 'ADMIN' ? [{ key: 'audit', icon: 'finger-print-outline' as IconName, title: 'Audit log', sub: 'Who changed what, and when', href: '/admin/audit' }] : []),
     { key: 'pw', icon: 'key-outline', title: 'Change password', sub: 'Keep your account safe', href: '/change-password' },
@@ -86,7 +76,7 @@ export default function More() {
       <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
         <View style={styles.headerSide} />
         <Text variant="title" style={styles.headerTitle}>
-          Profile & tools
+          Profile
         </Text>
         <Pressable onPress={() => router.push('/notifications')} hitSlop={10} style={styles.headerSide} accessibilityLabel="Notifications">
           <Ionicons name="notifications-outline" size={24} color={colors.text} />

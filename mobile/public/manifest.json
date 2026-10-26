@@ -4,7 +4,7 @@
   "description": "Field operations, attendance, jobs and stock for the Optimas team and customers.",
   "start_url": "/",
   "scope": "/",
-  "display": "fullscreen",
+  "display": "standalone",
   "orientation": "portrait",
   "background_color": "#F3F3F3",
   "theme_color": "#F3F3F3",
@@ -27,9 +27,5 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ],
-  "display_override": [
-    "fullscreen",
-    "standalone"
   ]
 }

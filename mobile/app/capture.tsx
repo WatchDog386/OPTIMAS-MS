@@ -12,6 +12,7 @@ import type { CapturePurpose } from '../src/api/types';
 import { Button, Text } from '../src/components';
 import { resolveCapture, type CaptureResult } from '../src/store/bridge';
 import { colors, radius, space } from '../src/theme';
+import { useStatusBarColor } from '../src/utils/statusBar';
 
 /**
  * Camera-only proof capture. There is deliberately NO gallery picker in this app:
@@ -35,6 +36,7 @@ async function deviceId() {
 }
 
 export default function Capture() {
+  useStatusBarColor('#000000'); // camera pages are black edge to edge
   const params = useLocalSearchParams<{ purpose: CapturePurpose; taskId?: string; title?: string }>();
   const purpose = params.purpose ?? 'CHECK_IN';
   const meta = copy[purpose];

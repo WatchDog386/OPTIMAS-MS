@@ -8,9 +8,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Text } from '../src/components';
 import { resolveScan } from '../src/store/bridge';
 import { colors, fonts, radius, space } from '../src/theme';
+import { useStatusBarColor } from '../src/utils/statusBar';
 
 /** Barcode / QR scanner for router & ONT serial numbers. Supports single or continuous (multi) scanning. */
 export default function Scan() {
+  useStatusBarColor('#000000'); // camera pages are black edge to edge
   const params = useLocalSearchParams<{ multiple?: string; title?: string }>();
   const multiple = !!params.multiple;
   const [permission, requestPermission] = useCameraPermissions();

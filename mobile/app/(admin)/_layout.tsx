@@ -16,7 +16,7 @@ export default function AdminLayout() {
       <Tabs.Screen name="team" options={{ title: 'Team', tabBarIcon: tabIcon('people-outline', 'people'), href: storeOnly ? null : undefined }} />
       <Tabs.Screen name="board" options={{ title: 'Jobs', tabBarIcon: tabIcon('briefcase-outline', 'briefcase') }} />
       <Tabs.Screen name="store" options={{ title: 'Store', tabBarIcon: tabIcon('cube-outline', 'cube') }} />
-      <Tabs.Screen name="more" options={{ title: 'More', tabBarIcon: tabIcon('ellipsis-horizontal-circle-outline', 'ellipsis-horizontal-circle') }} />
+      <Tabs.Screen name="more" options={{ title: 'Profile', tabBarIcon: tabIcon('person-circle-outline', 'person-circle') }} />
     </Tabs>
   );
 }
