@@ -8,7 +8,7 @@ import { Text } from './Text';
 
 /** Floating "New version ready" pill that drops in from the top when a release is deployed. */
 export function UpdateBanner() {
-  const { available, apply } = useAppUpdate();
+  const { available, apply, native } = useAppUpdate();
   const insets = useSafeAreaInsets();
   const y = useRef(new Animated.Value(-120)).current;
   useEffect(() => {
@@ -26,7 +26,7 @@ export function UpdateBanner() {
             New version ready
           </Text>
           <Text variant="label" color="rgba(255,255,255,0.65)" fixedColor>
-            Tap to update — takes a second
+            {native ? 'Tap to download the update' : 'Tap to update — takes a second'}
           </Text>
         </View>
         <View style={styles.cta}>

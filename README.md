@@ -94,6 +94,15 @@ notified when a technician is assigned, starts, and completes the work.
 - **Customer:** live visit tracker (Requested → Assigned → Working → Done) with technician call / WhatsApp, request tracker, **rate your visit** (1–5 stars + comment), devices and past visits with ratings.
 - **Everyone:** screens sync silently every 20–30 s while open (*Live · synced just now*), cached data renders instantly when returning to a screen, shimmer skeletons on first load, staggered entrance animations and counting numbers.
 
+### 🤖 Android app (APK)
+Every push to `main` that touches `mobile/` builds a signed release APK on GitHub Actions
+(`.github/workflows/android.yml`) and publishes it as the **android-latest** release:
+<https://github.com/WatchDog386/OPTIMAS-MS/releases/download/android-latest/optimas-ms.apk>.
+Installed apps check that release when opened and every 30 minutes, and offer **New version ready → download**.
+The app runs full screen (status bar hidden). Set the repository variable `EXPO_PUBLIC_API_URL` if the API is not
+`https://ms.optimaswifi.co.ke/api/v1`, and add the four `ANDROID_KEY*` secrets to sign with Optimas' own key
+(see `mobile/scripts/android-signing.mjs`).
+
 ### 🔄 Installed app stays up to date
 Every deploy stamps a build id into the bundle and `/version.json`. The installed app checks it when opened,
 when brought back to the foreground and every 5 minutes; when a newer release is live it shows

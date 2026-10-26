@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Alert, Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { API_URL, authHeader } from '../../src/api/client';
 import { Button, Card, Screen, ScreenHeader, SectionHeader, Segmented, Text } from '../../src/components';
 import { colors, radius, space } from '../../src/theme';
+import { toast } from '../../src/store/feedback';
 
 type Period = '7' | '30' | 'month' | 'last-month';
 const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -52,11 +53,11 @@ export default function Reports() {
         if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(file.uri, { mimeType: XLSX, dialogTitle: 'Share report', UTI: 'org.openxmlformats.spreadsheetml.sheet' });
         } else {
-          Alert.alert('Report saved', file.uri);
+          toast.success('Report saved', file.uri);
         }
       }
     } catch (e) {
-      Alert.alert('Export failed', e instanceof Error ? e.message : 'Try again');
+      toast.error('Export failed', e instanceof Error ? e.message : 'Try again');
     } finally {
       setBusy(null);
     }

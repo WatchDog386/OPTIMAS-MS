@@ -5,7 +5,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from '../api/client';
 import { useAuth } from '../store/auth';
 import { colors, fonts } from '../theme';
+import * as Notifications from 'expo-notifications';
 import { playChime } from '../utils/chime';
+import { hasPush } from '../utils/push';
 import { notificationStyle, openNotificationTarget, type AppNotification } from '../utils/notifications';
 import { Text } from './Text';
 
@@ -40,6 +42,11 @@ export function NotificationWatcher() {
         if (stopped || !notifications[0]) return;
         setLatest(notifications[0]);
         if (Platform.OS === 'web') playChime();
+        // Android/iOS app without push (no FCM set up): raise a local notification so the phone
+        // plays its own sound and vibrates. With push active the system already did.
+        else if (!hasPush()) {
+          void Notifications.scheduleNotificationAsync({ content: { title: notifications[0].title, body: notifications[0].body, sound: 'default' }, trigger: null }).catch(() => undefined);
+        }
       } catch {
         // offline or signed out — try again next tick
       }

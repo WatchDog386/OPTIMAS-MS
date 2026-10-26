@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api, ApiError } from '../../src/api/client';
@@ -9,6 +9,7 @@ import { useApi } from '../../src/hooks/useApi';
 import { requestCapture, requestScan } from '../../src/store/bridge';
 import { colors, fonts, radius, space } from '../../src/theme';
 import { kes } from '../../src/utils/format';
+import { toast } from '../../src/store/feedback';
 
 export default function CompleteTask() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -46,12 +47,12 @@ export default function CompleteTask() {
   };
 
   const submit = async () => {
-    if (needsSerial && !serials.length) return Alert.alert('Device required', 'Scan the serial number of the router/ONT you installed.');
-    if (needsSerial && !signature) return Alert.alert('Customer signature required', 'Ask the customer to sign to confirm the installation.');
-    if (signature && signedBy.trim().length < 2) return Alert.alert('Who signed?', 'Enter the name of the person who signed.');
-    if (notes.trim().length < 5) return Alert.alert('Add notes', 'Briefly describe the work done.');
+    if (needsSerial && !serials.length) return toast.warning('Device required', 'Scan the serial number of the router/ONT you installed.');
+    if (needsSerial && !signature) return toast.warning('Customer signature required', 'Ask the customer to sign to confirm the installation.');
+    if (signature && signedBy.trim().length < 2) return toast.warning('Who signed?', 'Enter the name of the person who signed.');
+    if (notes.trim().length < 5) return toast.warning('Add notes', 'Briefly describe the work done.');
     const over = materials.find((m) => m.quantity > m.holding.quantity);
-    if (over) return Alert.alert('Not enough stock', `You only hold ${over.holding.quantity} ${over.holding.item.unit} of ${over.holding.item.name}.`);
+    if (over) return toast.warning('Not enough stock', `You only hold ${over.holding.quantity} ${over.holding.item.unit} of ${over.holding.item.name}.`);
 
     const photo = await requestCapture('TASK_END', { taskId: t.id });
     if (!photo) return;
@@ -68,10 +69,10 @@ export default function CompleteTask() {
           signature: signature ? { path: signature, signedBy: signedBy.trim() } : undefined,
         },
       });
-      Alert.alert('Job completed', 'Your report has been sent for verification.');
+      toast.success('Job completed', 'Your report has been sent for verification.');
       router.back();
     } catch (e) {
-      Alert.alert('Could not complete job', e instanceof ApiError ? e.message : 'Try again');
+      toast.error('Could not complete job', e instanceof ApiError ? e.message : 'Try again');
     } finally {
       setBusy(false);
     }

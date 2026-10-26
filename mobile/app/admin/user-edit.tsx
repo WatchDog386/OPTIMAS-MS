@@ -6,6 +6,7 @@ import { Button, Glass, Input, Loading, Screen, ScreenHeader, Segmented, Text } 
 import { useApi } from '../../src/hooks/useApi';
 import { useAuth } from '../../src/store/auth';
 import { colors } from '../../src/theme';
+import { toast } from '../../src/store/feedback';
 
 /** Edit a person's details (and, for admins, a staff member's role). */
 export default function UserEdit() {
@@ -38,6 +39,7 @@ export default function UserEdit() {
       else body.region = form.region;
       if (actor.role === 'ADMIN' && !customer && role !== u.role) body.role = role;
       await api(`/users/${u.id}`, { method: 'PATCH', body });
+      toast.success('Changes saved');
       router.back();
     } catch (e) {
       if (e instanceof ApiError && e.details) setErrors(Object.fromEntries(e.details.map((d) => [d.field, d.message])));

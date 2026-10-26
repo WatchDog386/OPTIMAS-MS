@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Alert, Platform, View } from 'react-native';
+import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api, ApiError } from '../src/api/client';
 import type { User } from '../src/api/types';
 import { Button, Glass, Input, Screen, ScreenHeader, Text } from '../src/components';
 import { homeFor, useAuth } from '../src/store/auth';
+import { toast } from '../src/store/feedback';
 import { colors, fonts } from '../src/theme';
 
 const RULES = [
@@ -31,9 +32,7 @@ export default function ChangePassword() {
     try {
       const res = await api<{ user: User }>('/auth/change-password', { body: { currentPassword: current, newPassword: next } });
       await useAuth.getState().updateUser(res.user);
-      const msg = 'Your password has been changed.';
-      if (Platform.OS === 'web') window.alert(msg);
-      else Alert.alert('Done', msg);
+      toast.success('Password changed', 'Use your new password next time you sign in.');
       router.replace(homeFor(res.user.role));
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not change password');

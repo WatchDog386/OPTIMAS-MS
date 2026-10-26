@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Linking, Platform, StyleSheet, View } from 'react-native';
+import { Linking, Platform, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api, ApiError } from '../../src/api/client';
@@ -11,6 +11,7 @@ import { isManager, useAuth } from '../../src/store/auth';
 import { requestCapture } from '../../src/store/bridge';
 import { colors, radius, space } from '../../src/theme';
 import { dateTime, duration, flagLabel, humanize, kes, priorityTone, taskStatusTone, taskTypeIcon, time } from '../../src/utils/format';
+import { toast } from '../../src/store/feedback';
 
 export default function TaskDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -28,7 +29,7 @@ export default function TaskDetail() {
     try {
       setData(await fn());
     } catch (e) {
-      Alert.alert('Action failed', e instanceof ApiError ? e.message : 'Try again');
+      toast.error('Action failed', e instanceof ApiError ? e.message : 'Try again');
     } finally {
       setBusy(false);
     }

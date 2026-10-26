@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api, ApiError } from '../../src/api/client';
@@ -8,6 +8,7 @@ import { Button, Input, ListRow, Screen, ScreenHeader, SectionHeader, Segmented,
 import { useApi } from '../../src/hooks/useApi';
 import { requestScan } from '../../src/store/bridge';
 import { colors, radius, space } from '../../src/theme';
+import { toast } from '../../src/store/feedback';
 
 /** Issue stock to a technician, or receive a return from one. */
 export default function Transfer() {
@@ -30,23 +31,23 @@ export default function Transfer() {
   };
 
   const submit = async () => {
-    if (!userId) return Alert.alert('Choose a technician');
+    if (!userId) return toast.warning('Choose a technician');
     const body =
       mode === 'devices'
         ? { userId, serials, note: note || undefined, condition }
         : { userId, itemId, quantity: Number(quantity), note: note || undefined };
-    if (mode === 'devices' && !serials.length) return Alert.alert('Scan at least one device');
-    if (mode === 'materials' && (!itemId || !Number(quantity))) return Alert.alert('Choose an item and quantity');
+    if (mode === 'devices' && !serials.length) return toast.warning('Scan at least one device');
+    if (mode === 'materials' && (!itemId || !Number(quantity))) return toast.warning('Choose an item and quantity');
     setBusy(true);
     try {
       await api(issuing ? '/inventory/issue' : '/inventory/return', { body });
-      Alert.alert(
+      toast.success(
         issuing ? 'Stock issued' : 'Return recorded',
         issuing ? 'The technician must confirm receipt in their app before devices can be installed.' : 'Stock is back in the store ledger.',
       );
       router.back();
     } catch (e) {
-      Alert.alert('Failed', e instanceof ApiError ? e.message : 'Try again');
+      toast.error('Failed', e instanceof ApiError ? e.message : 'Try again');
     } finally {
       setBusy(false);
     }

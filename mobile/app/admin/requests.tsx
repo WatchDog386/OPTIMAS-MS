@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { api, ApiError } from '../../src/api/client';
 import type { RequestStatus, ServiceRequest } from '../../src/api/types';
@@ -8,6 +8,7 @@ import { useApi } from '../../src/hooks/useApi';
 import { colors, fonts } from '../../src/theme';
 import { call } from '../../src/utils/contact';
 import { dateTime, humanize } from '../../src/utils/format';
+import { toast } from '../../src/store/feedback';
 
 /** Supervisor inbox of customer service requests → turn into jobs, or close with a note. */
 export default function Requests() {
@@ -19,11 +20,12 @@ export default function Requests() {
   const close = async (r: ServiceRequest) => {
     try {
       await api(`/requests/${r.id}/close`, { body: { note } });
+      toast.success('Request closed');
       setClosing(null);
       setNote('');
       await reload();
     } catch (e) {
-      Alert.alert('Could not close', e instanceof ApiError ? e.message : 'Try again');
+      toast.error('Could not close', e instanceof ApiError ? e.message : 'Try again');
     }
   };
 

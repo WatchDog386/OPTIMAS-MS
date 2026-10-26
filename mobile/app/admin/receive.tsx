@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { api, ApiError } from '../../src/api/client';
 import type { Item } from '../../src/api/types';
@@ -7,6 +7,7 @@ import { Badge, Button, Input, Screen, ScreenHeader, SectionHeader, Text } from 
 import { useApi } from '../../src/hooks/useApi';
 import { requestScan } from '../../src/store/bridge';
 import { colors, radius, space } from '../../src/theme';
+import { toast } from '../../src/store/feedback';
 
 /** Goods received from a supplier into the store. */
 export default function Receive() {
@@ -19,7 +20,7 @@ export default function Receive() {
   const item = data?.items.find((i) => i.id === itemId);
 
   const submit = async () => {
-    if (!item) return Alert.alert('Choose an item');
+    if (!item) return toast.warning('Choose an item');
     setBusy(true);
     try {
       const body =
@@ -27,10 +28,10 @@ export default function Receive() {
           ? { itemId: item.id, serials: serials.map((serialNumber) => ({ serialNumber })), note: note || undefined }
           : { itemId: item.id, quantity: Number(quantity), note: note || undefined };
       const r = await api<{ received: number }>('/inventory/receive', { body });
-      Alert.alert('Stock received', `${r.received} ${item.unit} of ${item.name} added to the store.`);
+      toast.success('Stock received', `${r.received} ${item.unit} of ${item.name} added to the store.`);
       router.back();
     } catch (e) {
-      Alert.alert('Failed', e instanceof ApiError ? e.message : 'Try again');
+      toast.error('Failed', e instanceof ApiError ? e.message : 'Try again');
     } finally {
       setBusy(false);
     }

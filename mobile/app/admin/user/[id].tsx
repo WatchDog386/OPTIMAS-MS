@@ -7,7 +7,8 @@ import { Badge, Button, Glass, Loading, Pill, Screen, ScreenHeader, Section, Sec
 import { useApi } from '../../../src/hooks/useApi';
 import { useAuth } from '../../../src/store/auth';
 import { colors, fonts } from '../../../src/theme';
-import { confirmAction, notice } from '../../../src/utils/confirm';
+import { confirmAction } from '../../../src/utils/confirm';
+import { toast } from '../../../src/store/feedback';
 import { call } from '../../../src/utils/contact';
 import { date, dateTime, duration, humanize, kes, taskStatusTone, taskTypeIcon, time } from '../../../src/utils/format';
 
@@ -41,7 +42,7 @@ export default function UserProfile() {
     try {
       await fn();
     } catch (e) {
-      notice('Not possible', e instanceof ApiError ? e.message : 'Try again');
+      toast.error('Not possible', e instanceof ApiError ? e.message : 'Try again');
     } finally {
       setBusy(null);
     }
@@ -59,6 +60,7 @@ export default function UserProfile() {
       const deactivate = u.active;
       if (deactivate && !(await confirmAction('Deactivate account', `${u.name} will no longer be able to sign in. History is kept.`, 'Deactivate'))) return;
       await api(`/users/${u.id}`, { method: 'PATCH', body: { active: !deactivate } });
+      toast.success(deactivate ? 'Account deactivated' : 'Account reactivated');
       await reload();
     });
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api, ApiError } from '../src/api/client';
@@ -9,6 +9,7 @@ import { useApi } from '../src/hooks/useApi';
 import { requestCapture } from '../src/store/bridge';
 import { colors, radius, space } from '../src/theme';
 import { duration, flagLabel, time } from '../src/utils/format';
+import { toast } from '../src/store/feedback';
 
 const DRESS_CODE = [
   { key: 'uniform', icon: 'shirt-outline', label: 'Full company uniform', hint: 'Branded Optimas shirt / reflector jacket, clean and tucked in' },
@@ -36,8 +37,9 @@ export default function CheckIn() {
         body: isIn ? { photoId: photo.photoId, checklist: checks } : { photoId: photo.photoId },
       });
       setDone({ record: res.record, flags: photo.flags });
+      toast.success(isIn ? 'Checked in' : 'Checked out', isIn ? 'Have a good shift.' : 'See you tomorrow.');
     } catch (e) {
-      Alert.alert(isIn ? 'Check-in failed' : 'Check-out failed', e instanceof ApiError ? e.message : 'Please try again.');
+      toast.error(isIn ? 'Check-in failed' : 'Check-out failed', e instanceof ApiError ? e.message : 'Please try again.');
     } finally {
       setBusy(false);
     }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { api, ApiError } from '../../src/api/client';
 import type { BulkHolding, SerialUnit, StockCountResult } from '../../src/api/types';
@@ -8,6 +8,7 @@ import { useApi } from '../../src/hooks/useApi';
 import { requestScan } from '../../src/store/bridge';
 import { colors, space } from '../../src/theme';
 import { dateTime } from '../../src/utils/format';
+import { toast } from '../../src/store/feedback';
 
 interface MyStock {
   pending: SerialUnit[];
@@ -25,10 +26,10 @@ export default function MyStock() {
     setBusy('accept');
     try {
       const r = await api<{ accepted: number }>('/inventory/accept', { body: {} });
-      Alert.alert('Receipt confirmed', `${r.accepted} item(s) are now in your custody.`);
+      toast.success('Receipt confirmed', `${r.accepted} item(s) are now in your custody.`);
       await reload();
     } catch (e) {
-      Alert.alert('Could not confirm', e instanceof ApiError ? e.message : 'Try again');
+      toast.error('Could not confirm', e instanceof ApiError ? e.message : 'Try again');
     } finally {
       setBusy(null);
     }
@@ -42,7 +43,7 @@ export default function MyStock() {
       await api('/inventory/stock-count', { body: { serials } });
       await reload();
     } catch (e) {
-      Alert.alert('Stock count failed', e instanceof ApiError ? e.message : 'Try again');
+      toast.error('Stock count failed', e instanceof ApiError ? e.message : 'Try again');
     } finally {
       setBusy(null);
     }

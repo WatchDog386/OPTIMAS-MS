@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { api, ApiError } from '../../src/api/client';
 import type { Attendance } from '../../src/api/types';
 import { AuthImage, Badge, Button, Card, EmptyState, Screen, ScreenHeader, Text } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { colors, space } from '../../src/theme';
 import { date, flagLabel, time } from '../../src/utils/format';
+import { toast } from '../../src/store/feedback';
 
 /** Dress-compliance queue: supervisors approve or reject each check-in selfie. */
 export default function Reviews() {
@@ -16,9 +17,11 @@ export default function Reviews() {
     setBusy(r.id + decision);
     try {
       await api(`/attendance/${r.id}/review`, { body: { decision, note: decision === 'REJECTED' ? 'Not in proper uniform' : undefined } });
+      if (decision === 'REJECTED') toast.warning('Photo rejected', 'The technician has been notified.');
+      else toast.success('Photo approved');
       setData((d) => (d ? { records: d.records.filter((x) => x.id !== r.id) } : d));
     } catch (e) {
-      Alert.alert('Failed', e instanceof ApiError ? e.message : 'Try again');
+      toast.error('Failed', e instanceof ApiError ? e.message : 'Try again');
     } finally {
       setBusy(null);
     }

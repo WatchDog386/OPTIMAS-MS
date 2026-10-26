@@ -39,6 +39,9 @@ export async function registerForPush() {
   }
 }
 
+/** True when this device receives real push notifications (they already play a sound). */
+export const hasPush = () => registeredToken !== null;
+
 /** Detach this device from the signed-in user (call before logging out). */
 export async function unregisterPush() {
   if (!registeredToken) return;

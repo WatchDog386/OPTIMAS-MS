@@ -3,6 +3,7 @@ import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts } from '../theme';
+import { DotsLoader } from './Loaders';
 import { Text } from './Text';
 
 const MIN_VISIBLE_MS = 1400;
@@ -14,18 +15,12 @@ const MIN_VISIBLE_MS = 1400;
 export function Splash({ fontsReady, ready, onDone }: { fontsReady: boolean; ready: boolean; onDone: () => void }) {
   const opacity = useRef(new Animated.Value(1)).current;
   const lift = useRef(new Animated.Value(0)).current;
-  const slide = useRef(new Animated.Value(0)).current;
   const [minElapsed, setMinElapsed] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setMinElapsed(true), MIN_VISIBLE_MS);
-    const loop = Animated.loop(Animated.timing(slide, { toValue: 1, duration: 1100, easing: Easing.inOut(Easing.ease), useNativeDriver: Platform.OS !== 'web' }));
-    loop.start();
-    return () => {
-      clearTimeout(t);
-      loop.stop();
-    };
-  }, [slide]);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     if (!fontsReady || Platform.OS !== 'web' || typeof document === 'undefined') return;
@@ -55,8 +50,8 @@ export function Splash({ fontsReady, ready, onDone }: { fontsReady: boolean; rea
           Field operations, accounted for
         </Text>
       </Animated.View>
-      <View style={styles.bar}>
-        <Animated.View style={[styles.barFill, { transform: [{ translateX: slide.interpolate({ inputRange: [0, 1], outputRange: [-48, 120] }) }] }]} />
+      <View style={styles.dots}>
+        <DotsLoader />
       </View>
     </Animated.View>
   );
@@ -79,6 +74,5 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   name: { fontFamily: fonts.extrabold, fontSize: 28, lineHeight: 34, letterSpacing: -0.5, marginTop: 8 },
-  bar: { position: 'absolute', bottom: 64, width: 120, height: 4, borderRadius: 2, backgroundColor: 'rgba(28,29,31,0.1)', overflow: 'hidden' },
-  barFill: { width: 48, height: 4, borderRadius: 2, backgroundColor: colors.primary },
+  dots: { position: 'absolute', bottom: 56 },
 });

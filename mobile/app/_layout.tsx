@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import * as Notifications from 'expo-notifications';
 import { router, Stack } from 'expo-router';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../src/components/Button';
 import { Text } from '../src/components/Text';
@@ -24,6 +24,8 @@ import { InstallPrompt } from '../src/components/InstallPrompt';
 import { Splash } from '../src/components/Splash';
 import { UpdateBanner } from '../src/components/UpdateBanner';
 import { NotificationWatcher } from '../src/components/NotificationWatcher';
+import { FeedbackHost } from '../src/components/FeedbackHost';
+import { RouteLoader } from '../src/components/RouteLoader';
 import { unlockAudioOnFirstTouch } from '../src/utils/chime';
 import { colors } from '../src/theme';
 
@@ -88,7 +90,8 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar style="dark" />
+      {/* Android app runs full screen (status bar hidden); elsewhere it blends with the page */}
+      <StatusBar style="dark" hidden={Platform.OS === 'android'} />
       {ready ? <AppStack /> : null}
       {splashDone ? null : <Splash fontsReady={fontsLoaded} ready={ready} onDone={hideSplash} />}
     </SafeAreaProvider>
@@ -102,9 +105,11 @@ function AppStack() {
         <Stack.Screen name="capture" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
         <Stack.Screen name="scan" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
       </Stack>
+      <RouteLoader />
       <InstallPrompt />
       <UpdateBanner />
       <NotificationWatcher />
+      <FeedbackHost />
     </>
   );
 }

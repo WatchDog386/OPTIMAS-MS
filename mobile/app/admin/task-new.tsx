@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { api, ApiError } from '../../src/api/client';
 import type { Task, TaskPriority, TaskType } from '../../src/api/types';
 import { Button, Input, Screen, ScreenHeader, SectionHeader, Segmented, TechPicker, Text } from '../../src/components';
 import { colors, space } from '../../src/theme';
+import { toast } from '../../src/store/feedback';
 
 const TYPES: { value: TaskType; label: string }[] = [
   { value: 'INSTALLATION', label: 'Installation' },
@@ -55,7 +56,7 @@ export default function NewTask() {
   const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   const submit = async () => {
-    if (!assigneeId) return Alert.alert('Choose a technician');
+    if (!assigneeId) return toast.warning('Choose a technician');
     setBusy(true);
     try {
       const { task } = await api<{ task: Task }>('/tasks', {
@@ -68,9 +69,10 @@ export default function NewTask() {
           dueAt: dueDate(due),
         },
       });
+      toast.success('Job created', 'The technician has been notified.');
       router.replace(`/task/${task.id}`);
     } catch (e) {
-      Alert.alert('Could not create job', e instanceof ApiError ? e.message : 'Try again');
+      toast.error('Could not create job', e instanceof ApiError ? e.message : 'Try again');
     } finally {
       setBusy(false);
     }

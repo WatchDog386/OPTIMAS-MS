@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { api, ApiError } from '../../src/api/client';
 import type { Movement, SerialUnit } from '../../src/api/types';
@@ -8,6 +8,7 @@ import { Badge, Button, Card, Input, Screen, ScreenHeader, SectionHeader, Text }
 import { requestScan } from '../../src/store/bridge';
 import { colors, space } from '../../src/theme';
 import { dateTime, humanize, unitStatusTone } from '../../src/utils/format';
+import { toast } from '../../src/store/feedback';
 
 type UnitHistory = SerialUnit & { movements: Movement[]; task: { id: string; code: string; customerName: string } | null };
 
@@ -26,7 +27,7 @@ export default function UnitTrace() {
       setUnit((await api<{ unit: UnitHistory }>(`/inventory/units/${encodeURIComponent(s.trim().toUpperCase())}/history`)).unit);
     } catch (e) {
       setUnit(null);
-      Alert.alert('Not found', e instanceof ApiError ? e.message : 'Try again');
+      toast.error('Not found', e instanceof ApiError ? e.message : 'Try again');
     } finally {
       setBusy(false);
     }
@@ -46,7 +47,7 @@ export default function UnitTrace() {
       await api('/inventory/report-lost', { body: { serialNumber: unit.serialNumber, note: lostNote } });
       await lookup(unit.serialNumber);
     } catch (e) {
-      Alert.alert('Failed', e instanceof ApiError ? e.message : 'Try again');
+      toast.error('Failed', e instanceof ApiError ? e.message : 'Try again');
     }
   };
 

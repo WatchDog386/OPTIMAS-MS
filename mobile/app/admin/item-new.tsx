@@ -4,6 +4,7 @@ import { api, ApiError } from '../../src/api/client';
 import type { Item } from '../../src/api/types';
 import { Button, Glass, Input, Screen, ScreenHeader, Segmented, Text } from '../../src/components';
 import { colors } from '../../src/theme';
+import { toast } from '../../src/store/feedback';
 
 type Category = Item['category'];
 type Tracking = Item['tracking'];
@@ -48,6 +49,7 @@ export default function ItemNew() {
           reorderLevel: Number(form.reorderLevel || 0),
         },
       });
+      toast.success('Item added', `${item.name} is now in the catalogue.`);
       router.replace(`/admin/item/${item.id}`);
     } catch (e) {
       if (e instanceof ApiError && e.details) setErrors(Object.fromEntries(e.details.map((d) => [d.field, d.message])));

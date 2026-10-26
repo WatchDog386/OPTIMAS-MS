@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Alert } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { api, ApiError } from '../src/api/client';
 import type { TaskType } from '../src/api/types';
 import { Button, Glass, Input, Screen, ScreenHeader, Segmented, Text } from '../src/components';
 import { colors } from '../src/theme';
+import { toast } from '../src/store/feedback';
 
 const TYPES: { value: TaskType; label: string }[] = [
   { value: 'REPAIR', label: 'Fault / no internet' },
@@ -25,10 +25,10 @@ export default function RequestNew() {
     setBusy(true);
     try {
       await api('/customer/requests', { body: { type, description, phone: phone || undefined } });
-      Alert.alert('Request sent', 'Thank you. A supervisor will assign a technician and you will be notified.');
+      toast.success('Request sent', 'Thank you. A supervisor will assign a technician and you will be notified.');
       router.back();
     } catch (e) {
-      Alert.alert('Could not send', e instanceof ApiError ? e.message : 'Try again');
+      toast.error('Could not send', e instanceof ApiError ? e.message : 'Try again');
     } finally {
       setBusy(false);
     }

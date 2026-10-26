@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,15 +7,19 @@ import { api, ApiError } from '../../src/api/client';
 import type { User } from '../../src/api/types';
 import { Button, GlassBackground, InstallButton, Input, SignInLoader, Text } from '../../src/components';
 import { afterLogin, useAuth } from '../../src/store/auth';
+import { alertDialog } from '../../src/store/feedback';
 import { colors, fonts, radius, space } from '../../src/theme';
 
 const MAX_W = 480;
+const HERO = require('../../assets/login-hero.jpg');
 
 /** Sign-in: brand, a short welcome and one frosted card with the form, on the dashboards' own backdrop. */
 export default function Login() {
   const insets = useSafeAreaInsets();
   const { width: winW, height: winH } = useWindowDimensions();
   const W = Math.min(winW, MAX_W);
+  // The image gets the height left after the brand bar and the form (~510 px), within limits
+  const heroH = Math.round(Math.max(160, Math.min(winH - insets.top - insets.bottom - 510, 340)));
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -44,8 +48,7 @@ export default function Login() {
 
   const help = () => {
     const msg = 'Staff: sign in with your staff number (e.g. OPT-TEC-001).\nCustomers: use your Optimas account number.\n\nForgot your password? Ask your supervisor or call Optimas support.';
-    if (Platform.OS === 'web') window.alert(msg);
-    else Alert.alert('Signing in', msg);
+    void alertDialog({ title: 'Signing in', message: msg, icon: 'help-buoy-outline', confirmLabel: 'Got it' });
   };
 
   const onChange = (set: (v: string) => void) => (v: string) => {
@@ -74,12 +77,15 @@ export default function Login() {
               <InstallButton />
             </View>
 
+            {/* Hero image */}
+            <Image source={HERO} style={[styles.hero, { height: heroH }]} resizeMode="cover" accessibilityIgnoresInvertColors />
+
             <View style={styles.main}>
               <View style={styles.intro}>
                 <Text style={styles.headline} accessibilityRole="header">
                   Welcome back
                 </Text>
-                <Text variant="body" color={colors.textMuted} style={{ lineHeight: 22 }}>
+                <Text variant="bodySm" color={colors.textMuted}>
                   Sign in to see today’s jobs, stock and visits.
                 </Text>
               </View>
@@ -158,10 +164,11 @@ const styles = StyleSheet.create({
   logo: { width: 38, height: 38, borderRadius: 12, backgroundColor: colors.charcoal, alignItems: 'center', justifyContent: 'center' },
   brandText: { fontFamily: fonts.bold, fontSize: 17 },
   // Content sits in the lower part of the screen, within thumb reach
-  main: { flex: 1, justifyContent: 'flex-end', gap: 22, paddingBottom: space.lg },
+  main: { flex: 1, justifyContent: 'flex-end', gap: 18, paddingTop: 22, paddingBottom: space.lg },
   intro: { gap: 8, paddingHorizontal: 4 },
-  // Same face as the dashboard card titles ("Jobs done / This week"), one step larger
-  headline: { fontFamily: fonts.medium, fontSize: 34, lineHeight: 40, letterSpacing: -0.8, color: colors.text },
+  // Same face and size as the dashboard card titles ("Jobs done / This week")
+  headline: { fontFamily: fonts.medium, fontSize: 24, lineHeight: 29, letterSpacing: -0.3, color: colors.text },
+  hero: { width: '100%', borderRadius: 28, marginTop: 14, backgroundColor: colors.charcoal },
   card: { gap: 14 },
   field: { backgroundColor: '#FFFFFF', minHeight: 56 },
   eye: { position: 'absolute', right: space.lg, bottom: 18 },

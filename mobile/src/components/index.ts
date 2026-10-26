@@ -31,3 +31,4 @@ export * from './Motion';
 export * from './DashCards';
 export * from './RateVisit';
 export * from './SignInLoader';
+export * from './Loaders';

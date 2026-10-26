@@ -6,7 +6,8 @@ import type { Item } from '../../../src/api/types';
 import { Badge, Button, Glass, Input, Loading, Screen, ScreenHeader, Section, Segmented, StatGrid, StatTile, Text } from '../../../src/components';
 import { useApi } from '../../../src/hooks/useApi';
 import { colors } from '../../../src/theme';
-import { confirmAction, notice } from '../../../src/utils/confirm';
+import { confirmAction } from '../../../src/utils/confirm';
+import { toast } from '../../../src/store/feedback';
 import { humanize } from '../../../src/utils/format';
 
 /** Item page: stock levels, edit details, stock-take adjustments and archiving. */
@@ -39,7 +40,7 @@ export default function ItemDetail() {
       await fn();
       await reload();
     } catch (e) {
-      notice('Not possible', e instanceof ApiError ? e.message : 'Try again');
+      toast.error('Not possible', e instanceof ApiError ? e.message : 'Try again');
     } finally {
       setBusy(null);
     }
@@ -48,13 +49,14 @@ export default function ItemDetail() {
   const save = () =>
     run('save', async () => {
       await api(`/inventory/items/${item.id}`, { method: 'PATCH', body: { name: form.name, unit: form.unit, unitPrice: Number(form.unitPrice || 0), reorderLevel: Number(form.reorderLevel || 0) } });
-      notice('Saved', `${form.name} updated.`);
+      toast.success('Saved', `${form.name} updated.`);
     });
 
   const adjust = () =>
     run('adjust', async () => {
       const n = Number(qty);
       await api('/inventory/adjust', { body: { itemId: item.id, quantity: dir === 'add' ? n : -n, reason } });
+      toast.success('Stock adjusted', `${dir === 'add' ? '+' : '−'}${n} ${item.unit} recorded in the ledger.`);
       setQty('');
       setReason('');
     });
@@ -63,6 +65,7 @@ export default function ItemDetail() {
     run('archive', async () => {
       if (!(await confirmAction('Archive item', `${item.name} will be hidden from the catalogue. History is kept.`, 'Archive'))) return;
       await api(`/inventory/items/${item.id}`, { method: 'PATCH', body: { active: false } });
+      toast.success('Item archived');
       router.back();
     });
 

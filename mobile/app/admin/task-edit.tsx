@@ -5,6 +5,7 @@ import type { Task, TaskPriority } from '../../src/api/types';
 import { Button, Glass, Input, Loading, Screen, ScreenHeader, SectionHeader, Segmented, TechPicker, Text } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { colors } from '../../src/theme';
+import { toast } from '../../src/store/feedback';
 
 const PRIORITIES: { value: TaskPriority; label: string }[] = [
   { value: 'LOW', label: 'Low' },
@@ -51,6 +52,7 @@ export default function TaskEdit() {
     try {
       const body = Object.fromEntries(Object.entries({ ...form, priority, assigneeId }).filter(([, v]) => v !== '' && v !== null));
       await api(`/tasks/${t.id}`, { method: 'PATCH', body });
+      toast.success('Job updated', assigneeId !== t.assignee.id ? 'Both technicians have been notified.' : undefined);
       router.back();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not save');
