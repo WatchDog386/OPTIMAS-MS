@@ -28,9 +28,22 @@ if [ -f deploy/secrets/optimas-release.keystore ]; then KEYSTORE_B64=$(base64 -w
 echo "▶ Building the Android toolchain image (cached after the first run)…"
 docker build -q -t optimas-android-builder -f deploy/android.Dockerfile deploy >/dev/null
 
-echo "▶ Building the APK (versionCode $VERSION_CODE, API $API_URL)…"
+# Keep the server responsive while building: cap the container's memory and CPU so the website, the
+# database and SSH always keep headroom. If the build needs more, Docker stops the build (not the VM).
+TOTAL_MB=$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo)
+SWAP_MB=$(awk '/SwapTotal/ {print int($2/1024)}' /proc/meminfo)
+CPUS=$(nproc)
+BUILD_MB=$(( TOTAL_MB - 1200 ))
+BUILD_CPUS=$(( CPUS > 1 ? CPUS - 1 : 1 ))
+HEAP_MB=$(( BUILD_MB / 2 > 3072 ? 3072 : BUILD_MB / 2 ))
+if [ "$TOTAL_MB" -lt 5500 ]; then
+  echo "⚠ This server has ${TOTAL_MB} MB RAM (+${SWAP_MB} MB swap). The Android build needs about 6 GB;"
+  echo "  it will run slowly and may fail. Give VM 107 at least 8 GB RAM in Proxmox for reliable builds."
+fi
+echo "▶ Building the APK (versionCode $VERSION_CODE, API $API_URL) — limited to ${BUILD_MB} MB RAM and ${BUILD_CPUS} CPU(s)…"
 mkdir -p deploy/downloads
-docker run --rm \
+nice -n 15 docker run --rm \
+  --memory "${BUILD_MB}m" --memory-swap "$(( BUILD_MB + SWAP_MB ))m" --cpus "$BUILD_CPUS" \
   -v "$ROOT/mobile":/src:ro \
   -v optimas-gradle-cache:/root/.gradle \
   -v optimas-android-sdk:/opt/android-sdk \
@@ -43,7 +56,8 @@ docker run --rm \
   -e ANDROID_KEY_ALIAS="${ANDROID_KEY_ALIAS:-}" \
   -e ANDROID_KEY_PASSWORD="${ANDROID_KEY_PASSWORD:-}" \
   -e EXPO_NO_TELEMETRY=1 -e CI=1 \
-  -e GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx3g -Dorg.gradle.workers.max=2" \
+  -e GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx${HEAP_MB}m -Dorg.gradle.workers.max=${BUILD_CPUS} -Dkotlin.daemon.jvm.options=-Xmx768m" \
+  -e CMAKE_BUILD_PARALLEL_LEVEL="$BUILD_CPUS" \
   optimas-android-builder bash -euo pipefail -c '
     # Work on a copy so the build never writes into the repository
     rm -rf /work/app && mkdir -p /work/app && cp -a /src/. /work/app/ && cd /work/app
