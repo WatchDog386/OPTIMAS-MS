@@ -2,6 +2,7 @@ import Constants from 'expo-constants';
 import { useAuth } from '../store/auth';
 import { ApiError } from './errors';
 import { DEMO_TOKEN } from './demoToken';
+import { setOnline } from '../store/network';
 
 /** API base URL: EXPO_PUBLIC_API_URL env var, else app.json `extra.apiUrl`. */
 export const API_URL: string =
@@ -28,8 +29,10 @@ export async function api<T>(path: string, options: { method?: string; body?: Bo
       body: isForm ? (options.body as FormData) : options.body ? JSON.stringify(options.body) : undefined,
     });
   } catch {
+    setOnline(false);
     throw new ApiError(0, 'Cannot reach the Optimas server. Check your internet connection.', 'NETWORK');
   }
+  setOnline(true);
 
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {

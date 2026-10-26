@@ -8,6 +8,7 @@ import type { CaptureResult } from '../store/bridge';
 import { useAuth } from '../store/auth';
 import { toast } from '../store/feedback';
 import { appendFile } from '../utils/upload';
+import { prefetchWork } from './prefetch';
 import { loadQueue, photoFileUri, saveQueue, toDataUri } from './store';
 
 /*
@@ -177,13 +178,19 @@ export async function retryFailed() {
 
 /** Starts sending in the background: every 20 s, when the signal returns, and when the app comes back to the front. */
 export function startSyncLoop() {
-  void ready().then(() => syncNow());
+  const refresh = async () => {
+    await syncNow();
+    await prefetchWork();
+  };
+  void ready().then(refresh);
   const timer = setInterval(() => void syncNow(), 20_000);
-  const onOnline = () => void syncNow();
+  const work = setInterval(() => void prefetchWork(), 5 * 60_000);
+  const onOnline = () => void refresh();
   if (Platform.OS === 'web') globalThis.addEventListener?.('online', onOnline);
-  const sub = AppState.addEventListener('change', (s) => s === 'active' && void syncNow());
+  const sub = AppState.addEventListener('change', (s) => s === 'active' && void refresh());
   return () => {
     clearInterval(timer);
+    clearInterval(work);
     if (Platform.OS === 'web') globalThis.removeEventListener?.('online', onOnline);
     sub.remove();
   };

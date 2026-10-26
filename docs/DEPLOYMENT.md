@@ -151,3 +151,5 @@ It alerts when the site or database stops answering, the disk is nearly full, or
 ## Working offline
 
 Check-in, check-out, starting a job and completing a job keep working with no signal: the camera takes the photo, the phone saves it with the action, and it is sent automatically when the signal returns (a "waiting to send" pill shows at the top meanwhile). The server records the time the photo was really taken and flags it **Taken offline** so supervisors can see which records were sent late. Offline photos are accepted up to 48 hours after they were taken.
+
+A technician's phone also keeps today's jobs (with details), stock and attendance and refreshes them every 5 minutes while online, so those screens open even in a dead zone. A "No signal · showing saved data" pill shows when the server can't be reached.

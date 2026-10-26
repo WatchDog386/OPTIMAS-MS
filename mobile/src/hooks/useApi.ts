@@ -50,6 +50,9 @@ export function useApi<T>(path: string | null, options: Options = {}) {
         setError(null);
       } catch (e) {
         // A failed background poll keeps showing the last good data
+        // With no signal, keep showing the saved data instead of an error
+        const offline = e instanceof ApiError && e.code === 'NETWORK';
+        if (offline && hasData.current) return;
         if (mode !== 'poll' || !hasData.current) setError(e instanceof ApiError ? e.message : 'Something went wrong');
       } finally {
         inFlight.current = false;

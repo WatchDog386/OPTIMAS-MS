@@ -1,4 +1,4 @@
-import { clearApiCache } from '../api/cache';
+import { attachPersistence, clearApiCache } from '../api/cache';
 import { create } from 'zustand';
 import type { Role, User } from '../api/types';
 import { secureStorage } from './storage';
@@ -25,6 +25,8 @@ export const useAuth = create<AuthState>((set) => ({
       const raw = await secureStorage.get(KEY);
       if (raw) {
         const { token, user } = JSON.parse(raw) as { token: string; user: User };
+        // Saved work data first, so screens opened with no signal still have something to show
+        if (user.role === 'TECHNICIAN') await (await import('../offline/prefetch')).restoreOfflineCache(user.id);
         set({ token, user });
       }
     } finally {
@@ -32,6 +34,7 @@ export const useAuth = create<AuthState>((set) => ({
     }
   },
   setSession: async (token, user) => {
+    if (user.role === 'TECHNICIAN') await (await import('../offline/prefetch')).restoreOfflineCache(user.id);
     set({ token, user });
     await secureStorage.set(KEY, JSON.stringify({ token, user }));
   },
@@ -42,6 +45,7 @@ export const useAuth = create<AuthState>((set) => ({
   },
   logout: async () => {
     clearApiCache();
+    attachPersistence(null);
     set({ token: null, user: null });
     await secureStorage.remove(KEY);
   },

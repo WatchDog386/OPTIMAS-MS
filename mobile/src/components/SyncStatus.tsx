@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dismiss, retryFailed, syncNow, useSyncQueue } from '../offline/queue';
 import { useAuth } from '../store/auth';
+import { useNetwork } from '../store/network';
 import { colors, fonts, radius } from '../theme';
 import { time } from '../utils/format';
 import { Text } from './Text';
@@ -13,8 +14,22 @@ export function SyncStatus() {
   const items = useSyncQueue();
   const signedIn = useAuth((s) => !!s.token);
   const insets = useSafeAreaInsets();
+  const online = useNetwork((s) => s.online);
   const [open, setOpen] = useState(false);
-  if (!signedIn || items.length === 0) return null;
+  if (!signedIn) return null;
+  // No signal and nothing waiting: just say so, so a blank-looking screen is understood
+  if (items.length === 0) {
+    return online ? null : (
+      <View pointerEvents="none" style={[styles.wrap, { top: insets.top + 6 }]}>
+        <View style={[styles.pill, { backgroundColor: colors.surfaceHigh }]}>
+          <Ionicons name="cloud-offline-outline" size={16} color={colors.text} />
+          <Text variant="label" style={{ fontFamily: fonts.semibold }}>
+            No signal · showing saved data
+          </Text>
+        </View>
+      </View>
+    );
+  }
   const failed = items.filter((i) => i.failed).length;
   const waiting = items.length - failed;
 

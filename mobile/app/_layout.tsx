@@ -26,6 +26,7 @@ import { UpdateBanner } from '../src/components/UpdateBanner';
 import { NotificationWatcher } from '../src/components/NotificationWatcher';
 import { SyncStatus } from '../src/components/SyncStatus';
 import { startSyncLoop } from '../src/offline/queue';
+import { prefetchWork } from '../src/offline/prefetch';
 import { FeedbackHost } from '../src/components/FeedbackHost';
 import { RouteLoader } from '../src/components/RouteLoader';
 import { unlockAudioOnFirstTouch } from '../src/utils/chime';
@@ -76,6 +77,11 @@ export default function RootLayout() {
   // Register this device for push once someone is signed in.
   useEffect(() => {
     if (userId) void registerForPush();
+  }, [userId]);
+
+  // Keep a technician's jobs and stock on the phone as soon as they are known
+  useEffect(() => {
+    if (userId) void prefetchWork();
   }, [userId]);
 
   // Tapping a push notification opens the related screen.

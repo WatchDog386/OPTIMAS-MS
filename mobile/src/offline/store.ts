@@ -7,7 +7,6 @@ import { Platform } from 'react-native';
 
 const DB = 'optimas-offline';
 const STORE = 'kv';
-const KEY = 'queue';
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -18,20 +17,20 @@ function openDb(): Promise<IDBDatabase> {
   });
 }
 
-async function webLoad<T>(): Promise<T[]> {
+async function webLoad<T>(key: string): Promise<T | undefined> {
   const db = await openDb();
   return new Promise((resolve, reject) => {
-    const req = db.transaction(STORE).objectStore(STORE).get(KEY);
-    req.onsuccess = () => resolve((req.result as T[] | undefined) ?? []);
+    const req = db.transaction(STORE).objectStore(STORE).get(key);
+    req.onsuccess = () => resolve(req.result as T | undefined);
     req.onerror = () => reject(req.error);
   });
 }
 
-async function webSave<T>(items: T[]) {
+async function webSave<T>(key: string, value: T) {
   const db = await openDb();
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(STORE, 'readwrite');
-    tx.objectStore(STORE).put(items, KEY);
+    tx.objectStore(STORE).put(value, key);
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
@@ -40,32 +39,36 @@ async function webSave<T>(items: T[]) {
 async function fs() {
   return import('expo-file-system/legacy');
 }
-async function nativePath() {
+async function nativePath(key: string) {
   const FS = await fs();
-  return `${FS.documentDirectory}offline-queue.json`;
+  return `${FS.documentDirectory}offline-${key.replace(/[^a-z0-9_-]/gi, '_')}.json`;
 }
 
-export async function loadQueue<T>(): Promise<T[]> {
+/** Reads one saved value (undefined when nothing was saved or storage is unavailable). */
+export async function loadKv<T>(key: string): Promise<T | undefined> {
   try {
-    if (Platform.OS === 'web') return await webLoad<T>();
+    if (Platform.OS === 'web') return await webLoad<T>(key);
     const FS = await fs();
-    const path = await nativePath();
-    if (!(await FS.getInfoAsync(path)).exists) return [];
-    return JSON.parse(await FS.readAsStringAsync(path)) as T[];
+    const path = await nativePath(key);
+    if (!(await FS.getInfoAsync(path)).exists) return undefined;
+    return JSON.parse(await FS.readAsStringAsync(path)) as T;
   } catch {
-    return [];
+    return undefined;
   }
 }
 
-export async function saveQueue<T>(items: T[]) {
+export async function saveKv<T>(key: string, value: T) {
   try {
-    if (Platform.OS === 'web') return await webSave(items);
+    if (Platform.OS === 'web') return await webSave(key, value);
     const FS = await fs();
-    await FS.writeAsStringAsync(await nativePath(), JSON.stringify(items));
+    await FS.writeAsStringAsync(await nativePath(key), JSON.stringify(value));
   } catch {
-    /* storage full or blocked: the in-memory queue still works until the app closes */
+    /* storage full or blocked: the in-memory copy still works until the app closes */
   }
 }
+
+export const loadQueue = async <T>() => (await loadKv<T[]>('queue')) ?? [];
+export const saveQueue = <T>(items: T[]) => saveKv('queue', items);
 
 /** A photo as a data: address, so it can be stored and sent later whatever the platform. */
 export async function toDataUri(uri: string): Promise<string> {
