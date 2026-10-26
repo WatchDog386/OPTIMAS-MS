@@ -5,6 +5,7 @@ import type { Item } from '../../src/api/types';
 import { Button, Glass, Input, Screen, ScreenHeader, Segmented, Text } from '../../src/components';
 import { colors } from '../../src/theme';
 import { toast } from '../../src/store/feedback';
+import { requestScan } from '../../src/store/bridge';
 
 type Category = Item['category'];
 type Tracking = Item['tracking'];
@@ -79,6 +80,15 @@ export default function ItemNew() {
       />
       <Glass strong style={{ gap: 14 }}>
         <Input label="SKU / code" icon="barcode-outline" autoCapitalize="characters" placeholder="RTR-HW-AX3" value={form.sku} onChangeText={set('sku')} error={errors.sku} />
+        <Button
+          label="Scan product barcode"
+          icon="scan-outline"
+          variant="secondary"
+          onPress={async () => {
+            const r = await requestScan({ title: 'Scan the product barcode' });
+            if (r?.[0]) set('sku')(r[0]);
+          }}
+        />
         <Input label="Name" icon="pricetag-outline" placeholder="Huawei AX3 Wi-Fi 6 Router" value={form.name} onChangeText={set('name')} error={errors.name} />
         <Input label="Unit" icon="cube-outline" placeholder="pcs, m, packs" value={form.unit} onChangeText={set('unit')} error={errors.unit} />
         <Input label="Unit price (KES)" icon="cash-outline" keyboardType="number-pad" value={form.unitPrice} onChangeText={(v) => set('unitPrice')(v.replace(/\D/g, ''))} error={errors.unitPrice} />

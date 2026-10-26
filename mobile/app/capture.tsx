@@ -13,6 +13,7 @@ import { Button, Text } from '../src/components';
 import { resolveCapture, type CaptureResult } from '../src/store/bridge';
 import { colors, radius, space } from '../src/theme';
 import { useStatusBarColor } from '../src/utils/statusBar';
+import { appendFile } from '../src/utils/upload';
 
 /**
  * Camera-only proof capture. There is deliberately NO gallery picker in this app:
@@ -73,12 +74,12 @@ export default function Capture() {
       });
       // 2. Take the photo live.
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
-      const photo = await camera.current.takePictureAsync({ quality: 0.6, exif: false, shutterSound: false });
+      const photo = await camera.current.takePictureAsync({ quality: 0.6, exif: false, shutterSound: false, imageType: 'jpg' });
       setPreview(photo.uri);
       // 3. Upload with location + device metadata.
       const loc = location.current ?? (await Location.getLastKnownPositionAsync().catch(() => null));
       const form = new FormData();
-      form.append('photo', { uri: photo.uri, name: 'capture.jpg', type: 'image/jpeg' } as unknown as Blob);
+      await appendFile(form, 'photo', photo.uri, 'capture.jpg', 'image/jpeg');
       form.append('challengeId', challenge.challengeId);
       form.append('nonce', challenge.nonce);
       form.append('deviceTime', new Date().toISOString());

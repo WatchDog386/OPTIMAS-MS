@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
-import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
+import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { CameraView, useCameraPermissions, type BarcodeScanningResult, type BarcodeType } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -10,7 +10,25 @@ import { resolveScan } from '../src/store/bridge';
 import { colors, fonts, radius, space } from '../src/theme';
 import { useStatusBarColor } from '../src/utils/statusBar';
 
-/** Barcode / QR scanner for router & ONT serial numbers. Supports single or continuous (multi) scanning. */
+/**
+ * Every barcode a product or device can carry: shop barcodes (EAN/UPC), shipping and carton codes,
+ * the serial-number labels on routers and ONTs, and QR / Data Matrix stickers.
+ */
+const BARCODE_TYPES: BarcodeType[] = ['ean13', 'ean8', 'upc_a', 'upc_e', 'code128', 'code39', 'code93', 'itf14', 'codabar', 'qr', 'datamatrix', 'pdf417', 'aztec'];
+
+/** Browsers without a built-in barcode reader use a small decoder; serve it from our own server, not a CDN. */
+let decoderReady: Promise<void> | null = null;
+function useLocalDecoder() {
+  if (Platform.OS !== 'web') return;
+  decoderReady ??= import('barcode-detector')
+    .then(({ setZXingModuleOverrides }) => {
+      setZXingModuleOverrides({ locateFile: (path: string, prefix: string) => (path.endsWith('.wasm') ? '/zxing_reader.wasm' : prefix + path) });
+    })
+    .catch(() => undefined);
+}
+useLocalDecoder();
+
+/** Barcode / QR scanner for products and for router & ONT serial numbers. Supports single or continuous (multi) scanning. */
 export default function Scan() {
   useStatusBarColor('#000000'); // camera pages are black edge to edge
   const params = useLocalSearchParams<{ multiple?: string; title?: string }>();
@@ -18,6 +36,8 @@ export default function Scan() {
   const [permission, requestPermission] = useCameraPermissions();
   const [serials, setSerials] = useState<string[]>([]);
   const [manual, setManual] = useState('');
+  const [torch, setTorch] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const done = useRef(false);
   const lastScan = useRef<{ value: string; at: number }>({ value: '', at: 0 });
 
@@ -65,8 +85,10 @@ export default function Scan() {
       <CameraView
         style={StyleSheet.absoluteFill}
         facing="back"
-        barcodeScannerSettings={{ barcodeTypes: ['code128', 'code39', 'ean13', 'qr', 'datamatrix'] }}
+        enableTorch={torch}
+        barcodeScannerSettings={{ barcodeTypes: BARCODE_TYPES }}
         onBarcodeScanned={onScanned}
+        onMountError={({ message }) => setCameraError(message || 'The camera could not start.')}
       />
       <SafeAreaView style={styles.overlay} edges={['top', 'bottom']}>
         <View style={styles.topBar}>
@@ -76,17 +98,28 @@ export default function Scan() {
           <Text variant="title" color={colors.white}>
             {params.title || 'Scan serial number'}
           </Text>
-          <View style={{ width: 44 }} />
+          {Platform.OS === 'web' ? (
+            <View style={{ width: 44 }} />
+          ) : (
+            <Pressable onPress={() => setTorch((t) => !t)} style={styles.round} accessibilityLabel={torch ? 'Turn torch off' : 'Turn torch on'}>
+              <Ionicons name={torch ? 'flash' : 'flash-outline'} size={22} color={colors.white} />
+            </Pressable>
+          )}
         </View>
 
-        <View style={styles.window} />
+        <View style={styles.windowWrap}>
+          <View style={styles.window} />
+          <Text variant="label" color={colors.white} align="center" style={styles.windowHint}>
+            {cameraError ?? 'Hold the barcode inside the frame'}
+          </Text>
+        </View>
 
         <View style={styles.sheet}>
           <View style={styles.manualRow}>
             <TextInput
               value={manual}
               onChangeText={setManual}
-              placeholder="Or type serial number"
+              placeholder="Or type the number"
               placeholderTextColor={colors.textDim}
               autoCapitalize="characters"
               autoCorrect={false}
@@ -134,7 +167,9 @@ const styles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'space-between' },
   topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: space.xl, paddingTop: space.sm },
   round: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.scrim, alignItems: 'center', justifyContent: 'center' },
-  window: { alignSelf: 'center', width: '80%', height: 170, borderRadius: radius.lg, borderWidth: 2, borderColor: colors.brand },
+  windowWrap: { alignItems: 'center', gap: space.md },
+  window: { alignSelf: 'center', width: '84%', height: 190, borderRadius: radius.lg, borderWidth: 2, borderColor: colors.brand },
+  windowHint: { backgroundColor: colors.scrim, paddingHorizontal: space.md, paddingVertical: 6, borderRadius: radius.pill, overflow: 'hidden' },
   sheet: { backgroundColor: colors.bg, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, padding: space.xl, gap: space.md },
   manualRow: { flexDirection: 'row', gap: space.sm },
   manualInput: { flex: 1, height: 50, borderRadius: radius.md, backgroundColor: colors.surface, color: colors.text, paddingHorizontal: space.lg, fontFamily: fonts.semibold, borderWidth: 1, borderColor: colors.border },
