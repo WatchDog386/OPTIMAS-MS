@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, ApiError } from '../../src/api/client';
 import type { User } from '../../src/api/types';
-import { Button, GlassBackground, InstallButton, Input, Text } from '../../src/components';
+import { Button, GlassBackground, InstallButton, Input, SignInLoader, Text } from '../../src/components';
 import { afterLogin, useAuth } from '../../src/store/auth';
 import { colors, fonts, radius, space } from '../../src/theme';
 
@@ -22,6 +22,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [signedIn, setSignedIn] = useState<User | null>(null);
 
   const submit = async () => {
     if (!identifier.trim() || !password) {
@@ -33,7 +34,7 @@ export default function Login() {
     try {
       const { token, user } = await api<{ token: string; user: User }>('/auth/login', { body: { identifier: identifier.trim(), password } });
       await useAuth.getState().setSession(token, user);
-      router.replace(afterLogin(user) as never);
+      setSignedIn(user); // the loader hands over to the dashboard when it is ready
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Unable to sign in');
     } finally {
@@ -143,6 +144,7 @@ export default function Login() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      {signedIn ? <SignInLoader user={signedIn} onDone={() => router.replace(afterLogin(signedIn) as never)} /> : null}
     </View>
   );
 }

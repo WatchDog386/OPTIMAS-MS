@@ -31,6 +31,8 @@ export function GlassBackground() {
         <Circle cx="5%" cy="95%" r="340" fill="url(#gb-yellow)" />
         <Circle cx="0%" cy="45%" r="220" fill="url(#gb-grey)" />
       </Svg>
+      {/* The top edge is exactly the status-bar colour, so the bar and the page read as one surface */}
+      <LinearGradient colors={[colors.bgTop, 'rgba(243,243,243,0)']} style={styles.topBlend} pointerEvents="none" />
     </View>
   );
 }
@@ -104,6 +106,7 @@ export function Hatch({ radius = 999, color = colors.hatch, gap = 7 }: { radius?
 const styles = StyleSheet.create({
   glass: { overflow: 'hidden', borderWidth: 1, borderColor: colors.glassBorder },
   padded: { padding: 20 },
+  topBlend: { position: 'absolute', top: 0, left: 0, right: 0, height: 140 },
   shadow: { shadowColor: '#1C1D1F', shadowOpacity: 0.08, shadowRadius: 22, shadowOffset: { width: 0, height: 10 }, elevation: 2 },
   circle: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, shadowColor: '#1C1D1F', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
 });

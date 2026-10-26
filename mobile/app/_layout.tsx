@@ -23,6 +23,8 @@ import { setupPwa } from '../src/utils/install';
 import { InstallPrompt } from '../src/components/InstallPrompt';
 import { Splash } from '../src/components/Splash';
 import { UpdateBanner } from '../src/components/UpdateBanner';
+import { NotificationWatcher } from '../src/components/NotificationWatcher';
+import { unlockAudioOnFirstTouch } from '../src/utils/chime';
 import { colors } from '../src/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -61,6 +63,7 @@ export default function RootLayout() {
   useEffect(() => {
     void useAuth.getState().hydrate();
     setupPwa();
+    unlockAudioOnFirstTouch();
   }, []);
 
   // Register this device for push once someone is signed in.
@@ -101,6 +104,7 @@ function AppStack() {
       </Stack>
       <InstallPrompt />
       <UpdateBanner />
+      <NotificationWatcher />
     </>
   );
 }

@@ -30,3 +30,4 @@ export * from './TempPasswordCard';
 export * from './Motion';
 export * from './DashCards';
 export * from './RateVisit';
+export * from './SignInLoader';
