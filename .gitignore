@@ -23,3 +23,8 @@ deploy/backups/
 backend/uploads-test/
 deploy/downloads/
 deploy/secrets/
+
+# Off-site backup credentials and monitor settings
+deploy/backup.env
+deploy/monitor.env
+deploy/.monitor-state

@@ -44,6 +44,7 @@ const uploadSchema = z.object({
   accuracyM: optionalNum,
   deviceId: z.string().max(128).optional(),
   deviceTime: z.coerce.date().optional(),
+  offline: z.preprocess((v) => v === '1' || v === 'true' || v === true, z.boolean()).optional(),
 });
 
 captureRouter.post(

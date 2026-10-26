@@ -10,6 +10,7 @@ import { requestCapture } from '../src/store/bridge';
 import { colors, radius, space } from '../src/theme';
 import { duration, flagLabel, time } from '../src/utils/format';
 import { toast } from '../src/store/feedback';
+import { submitWithPhoto } from '../src/offline/queue';
 
 const DRESS_CODE = [
   { key: 'uniform', icon: 'shirt-outline', label: 'Full company uniform', hint: 'Branded Optimas shirt / reflector jacket, clean and tucked in' },
@@ -26,6 +27,7 @@ export default function CheckIn() {
   const [checks, setChecks] = useState<Record<Key, boolean>>({ uniform: false, idBadge: false, safetyBoots: false, groomed: false });
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<{ record: Attendance; flags: string[] } | null>(null);
+  const [queued, setQueued] = useState(false);
   const allChecked = Object.values(checks).every(Boolean);
 
   const submit = async () => {
@@ -33,10 +35,17 @@ export default function CheckIn() {
     if (!photo) return;
     setBusy(true);
     try {
-      const res = await api<{ record: Attendance }>(isIn ? '/attendance/check-in' : '/attendance/check-out', {
-        body: isIn ? { photoId: photo.photoId, checklist: checks } : { photoId: photo.photoId },
+      const res = await submitWithPhoto<{ record: Attendance }>(photo, {
+        kind: isIn ? 'CHECK_IN' : 'CHECK_OUT',
+        label: isIn ? 'Check-in' : 'Check-out',
+        path: isIn ? '/attendance/check-in' : '/attendance/check-out',
+        body: isIn ? { checklist: checks } : {},
       });
-      setDone({ record: res.record, flags: photo.flags });
+      if (res.queued) {
+        setQueued(true);
+        return;
+      }
+      setDone({ record: res.data.record, flags: photo.flags });
       toast.success(isIn ? 'Checked in' : 'Checked out', isIn ? 'Have a good shift.' : 'See you tomorrow.');
     } catch (e) {
       toast.error(isIn ? 'Check-in failed' : 'Check-out failed', e instanceof ApiError ? e.message : 'Please try again.');
@@ -44,6 +53,25 @@ export default function CheckIn() {
       setBusy(false);
     }
   };
+
+  if (queued) {
+    return (
+      <Screen>
+        <View style={styles.success}>
+          <View style={styles.successIcon}>
+            <Ionicons name="cloud-offline-outline" size={42} color={colors.onPrimary} />
+          </View>
+          <Text variant="h1" align="center">
+            Saved on this phone
+          </Text>
+          <Text variant="body" color={colors.textMuted} align="center">
+            {`You have no signal. Your ${isIn ? 'check-in' : 'check-out'} is recorded with the time you took the photo and will be sent automatically when you are back online.`}
+          </Text>
+        </View>
+        <Button label="Back to home" onPress={() => router.back()} />
+      </Screen>
+    );
+  }
 
   if (done) {
     return (

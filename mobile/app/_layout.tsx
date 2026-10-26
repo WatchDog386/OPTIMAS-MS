@@ -24,6 +24,8 @@ import { InstallPrompt } from '../src/components/InstallPrompt';
 import { Splash } from '../src/components/Splash';
 import { UpdateBanner } from '../src/components/UpdateBanner';
 import { NotificationWatcher } from '../src/components/NotificationWatcher';
+import { SyncStatus } from '../src/components/SyncStatus';
+import { startSyncLoop } from '../src/offline/queue';
 import { FeedbackHost } from '../src/components/FeedbackHost';
 import { RouteLoader } from '../src/components/RouteLoader';
 import { unlockAudioOnFirstTouch } from '../src/utils/chime';
@@ -61,6 +63,9 @@ export default function RootLayout() {
   const hideSplash = useCallback(() => setSplashDone(true), []);
   const ready = fontsLoaded && hydrated;
   const userId = useAuth((s) => s.user?.id);
+
+  // Send anything saved offline whenever there is a signal
+  useEffect(() => startSyncLoop(), []);
 
   useEffect(() => {
     void useAuth.getState().hydrate();
@@ -108,6 +113,7 @@ function AppStack() {
       <InstallPrompt />
       <UpdateBanner />
       <NotificationWatcher />
+      <SyncStatus />
       <FeedbackHost />
     </>
   );

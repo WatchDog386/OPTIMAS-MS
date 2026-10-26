@@ -9,6 +9,7 @@ import { useApi } from '../../src/hooks/useApi';
 import { confirmAction } from '../../src/utils/confirm';
 import { isManager, useAuth } from '../../src/store/auth';
 import { requestCapture } from '../../src/store/bridge';
+import { submitWithPhoto } from '../../src/offline/queue';
 import { colors, radius, space } from '../../src/theme';
 import { dateTime, duration, flagLabel, humanize, kes, priorityTone, taskStatusTone, taskTypeIcon, time } from '../../src/utils/format';
 import { toast } from '../../src/store/feedback';
@@ -37,7 +38,17 @@ export default function TaskDetail() {
 
   const start = async () => {
     const photo = await requestCapture('TASK_START', { taskId: task.id });
-    if (photo) await run(() => api(`/tasks/${task.id}/start`, { body: { photoId: photo.photoId } }));
+    if (!photo) return;
+    let savedOffline = false;
+    await run(async () => {
+      const res = await submitWithPhoto<{ task: Task }>(photo, { kind: 'TASK_START', label: `${task.code} started`, path: `/tasks/${task.id}/start`, taskId: task.id });
+      if (res.queued) {
+        savedOffline = true;
+        return { task };
+      }
+      return res.data;
+    });
+    if (savedOffline) toast.info('Saved on this phone', 'No signal. The job start will be sent automatically when you are back online.');
   };
   const verify = (decision: 'VERIFIED' | 'REJECTED') =>
     run(() => api(`/tasks/${task.id}/verify`, { body: { decision, note: note || undefined } }));

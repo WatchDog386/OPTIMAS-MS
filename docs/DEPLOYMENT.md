@@ -128,3 +128,26 @@ VM 100, or a nightly `rsync` of `deploy/backups/` to another machine. Also sched
 | Everyone flagged `OUTSIDE_GEOFENCE` | Set `OFFICE_LAT` / `OFFICE_LNG` / `OFFICE_RADIUS_M` in `deploy/.env`, then redeploy. |
 | Times are off by hours | `TZ_OFFSET_MINUTES` (Nairobi = 180). |
 | Push notifications not arriving | Run `eas init` before building, keep `PUSH_ENABLED=true`, make sure the VM can reach `exp.host` over HTTPS. |
+
+
+## Off-site backups
+
+The nightly database dump and photo archive are kept in `deploy/backups` on the server. To also copy them somewhere else after every run:
+
+1. Make a free bucket at any S3-compatible provider (Backblaze B2, Wasabi, AWS S3, …) and an access key for it.
+2. `cp deploy/backup.env.example deploy/backup.env`, fill in the bucket and keys.
+3. `bash deploy/deploy.sh` (needs Docker Compose 2.24 or newer).
+4. Next morning check the log: `docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env logs --tail=20 backup` should say "off-site copy done".
+5. Once a month, restore a backup on a spare machine (`deploy/restore.sh`) to prove it works.
+
+## Monitoring and alerts
+
+1. Install the free **ntfy** app on your phone and subscribe to a private topic name only you know.
+2. `cp deploy/monitor.env.example deploy/monitor.env` and put `https://ntfy.sh/<your-topic>` as `ALERT_URL`.
+3. `bash deploy/monitor.sh` once to see it work, then `bash deploy/monitor.sh --install` to run it every 5 minutes.
+
+It alerts when the site or database stops answering, the disk is nearly full, or a backup is late or missing, and again when the problem clears. For a view from outside your network, also add the site address to a free uptime service (e.g. UptimeRobot).
+
+## Working offline
+
+Check-in, check-out, starting a job and completing a job keep working with no signal: the camera takes the photo, the phone saves it with the action, and it is sent automatically when the signal returns (a "waiting to send" pill shows at the top meanwhile). The server records the time the photo was really taken and flags it **Taken offline** so supervisors can see which records were sent late. Offline photos are accepted up to 48 hours after they were taken.

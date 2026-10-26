@@ -8,7 +8,7 @@ import { minutesBetween, workDateOf } from '../../lib/time';
 import { ah } from '../../middleware/async';
 import { ROLES, me, requireRole } from '../../middleware/auth';
 import { parse } from '../../middleware/validate';
-import { consumePhoto } from '../capture/capture.service';
+import { consumePhoto, eventTime } from '../capture/capture.service';
 import { consumeBulk, installSerial } from '../inventory/inventory.service';
 import { notify, notifyRoles } from '../notifications/notifications.service';
 import { notifyCustomer } from '../customer/customer.service';
@@ -207,16 +207,18 @@ tasksRouter.post(
     if (task.assigneeId !== userId) throw forbidden('This task is not assigned to you');
     if (task.status !== 'ASSIGNED') throw conflict(`Task is already ${task.status.toLowerCase().replace('_', ' ')}`);
 
-    const attendance = await prisma.attendance.findUnique({ where: { userId_workDate: { userId, workDate: workDateOf() } } });
+    // A job started offline counts for the day it was really started, even if it is sent later
+    const startedAt = await eventTime(photoId);
+    const attendance = await prisma.attendance.findUnique({ where: { userId_workDate: { userId, workDate: workDateOf(startedAt) } } });
     if (!attendance) throw conflict('Check in for the day before starting a task', 'NOT_CHECKED_IN');
-    if (attendance.checkOutAt) throw conflict('You have already checked out for the day', 'CHECKED_OUT');
+    if (attendance.checkOutAt && attendance.checkOutAt < startedAt) throw conflict('You have already checked out for the day', 'CHECKED_OUT');
 
     const busy = await prisma.task.findFirst({ where: { assigneeId: userId, status: 'IN_PROGRESS' } });
     if (busy) throw conflict(`Finish ${busy.code} before starting another task`, 'TASK_IN_PROGRESS');
 
     await prisma.$transaction(async (tx) => {
       await consumePhoto(tx, photoId, userId, 'TASK_START', task.id);
-      await tx.task.update({ where: { id: task.id }, data: { status: 'IN_PROGRESS', startedAt: new Date(), startPhotoId: photoId } });
+      await tx.task.update({ where: { id: task.id }, data: { status: 'IN_PROGRESS', startedAt, startPhotoId: photoId } });
     });
     void notifyCustomer(task, { title: 'Your technician has started', body: `${task.assignee.name} is now working on "${task.title}".` });
     res.json({ task: await loadTask(task.id) });
@@ -257,7 +259,7 @@ tasksRouter.post(
     }
 
     const customerAccount = body.customerAccount || task.customerAccount;
-    const endedAt = new Date();
+    const endedAt = await eventTime(body.photoId);
 
     await prisma.$transaction(async (tx) => {
       await consumePhoto(tx, body.photoId, userId, 'TASK_END', task.id);

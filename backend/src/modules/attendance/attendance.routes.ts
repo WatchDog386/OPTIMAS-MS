@@ -8,7 +8,7 @@ import { minutesBetween, shiftStartFor, workDateOf } from '../../lib/time';
 import { ah } from '../../middleware/async';
 import { ROLES, me, requireRole } from '../../middleware/auth';
 import { parse } from '../../middleware/validate';
-import { consumePhoto } from '../capture/capture.service';
+import { consumePhoto, eventTime } from '../capture/capture.service';
 import { notify, notifyRoles } from '../notifications/notifications.service';
 import { time as fmtTime } from '../../lib/time';
 
@@ -69,7 +69,7 @@ attendanceRouter.post(
   ah(async (req, res) => {
     const userId = me(req).id;
     const body = parse(checkInSchema, req.body);
-    const now = new Date();
+    const now = await eventTime(body.photoId);
     const workDate = workDateOf(now);
 
     const record = await prisma.$transaction(async (tx) => {
@@ -111,7 +111,7 @@ attendanceRouter.post(
   ah(async (req, res) => {
     const userId = me(req).id;
     const { photoId } = parse(z.object({ photoId: z.string().min(1) }), req.body);
-    const now = new Date();
+    const now = await eventTime(photoId);
     const workDate = workDateOf(now);
 
     const record = await prisma.$transaction(async (tx) => {

@@ -6,9 +6,12 @@ import type { CapturePurpose } from '../api/types';
  * screen resolves it with the verified photo (or null if the user backs out).
  */
 export interface CaptureResult {
+  /** Empty while the photo is only on the phone (taken offline). */
   photoId: string;
   uri: string;
   flags: string[];
+  /** Present when the photo was taken with no signal and still has to be uploaded. */
+  pending?: { capturedAt: string; lat?: number; lng?: number; accuracyM?: number; deviceId?: string };
 }
 
 let captureResolver: ((r: CaptureResult | null) => void) | null = null;

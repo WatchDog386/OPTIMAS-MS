@@ -68,16 +68,39 @@ export default function Capture() {
     setError(null);
     setBusy(true);
     try {
-      // 1. Ask the server for a fresh single-use challenge.
-      const challenge = await api<{ challengeId: string; nonce: string }>('/capture/challenge', {
-        body: { purpose, taskId: params.taskId || undefined },
-      });
+      // 1. Ask the server for a fresh single-use challenge. With no signal there is no challenge:
+      //    the photo is still taken live in this camera and kept on the phone to be sent later.
+      let challenge: { challengeId: string; nonce: string } | null = null;
+      try {
+        challenge = await api<{ challengeId: string; nonce: string }>('/capture/challenge', {
+          body: { purpose, taskId: params.taskId || undefined },
+        });
+      } catch (e) {
+        if (!(e instanceof ApiError && e.code === 'NETWORK')) throw e;
+      }
       // 2. Take the photo live.
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
       const photo = await camera.current.takePictureAsync({ quality: 0.6, exif: false, shutterSound: false, imageType: 'jpg' });
       setPreview(photo.uri);
       // 3. Upload with location + device metadata.
       const loc = location.current ?? (await Location.getLastKnownPositionAsync().catch(() => null));
+      if (!challenge) {
+        done.current = true;
+        resolveCapture({
+          photoId: '',
+          uri: photo.uri,
+          flags: ['OFFLINE_CAPTURE'],
+          pending: {
+            capturedAt: new Date().toISOString(),
+            lat: loc?.coords.latitude,
+            lng: loc?.coords.longitude,
+            accuracyM: loc?.coords.accuracy ?? undefined,
+            deviceId: await deviceId(),
+          },
+        } satisfies CaptureResult);
+        router.back();
+        return;
+      }
       const form = new FormData();
       await appendFile(form, 'photo', photo.uri, 'capture.jpg', 'image/jpeg');
       form.append('challengeId', challenge.challengeId);

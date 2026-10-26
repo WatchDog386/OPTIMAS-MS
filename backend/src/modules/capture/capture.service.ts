@@ -26,6 +26,22 @@ export interface CaptureInput {
   accuracyM?: number;
   deviceId?: string;
   deviceTime?: Date;
+  /** The photo was taken with no signal and is being sent later; `deviceTime` is when it was really taken. */
+  offline?: boolean;
+}
+
+/** An offline photo may be sent up to this long after it was taken. */
+const OFFLINE_MAX_AGE_MS = 48 * 3_600_000;
+
+/**
+ * When the thing in the photo actually happened. For a photo taken offline that is the phone's capture
+ * time (so a 08:05 check-in synced at 10:00 is still on time, and a job's duration is real); otherwise now.
+ */
+export async function eventTime(photoId: string): Promise<Date> {
+  const photo = await prisma.photo.findUnique({ where: { id: photoId }, select: { flags: true, deviceTime: true } });
+  const now = new Date();
+  if (!photo?.deviceTime || !photo.flags.includes('OFFLINE_CAPTURE')) return now;
+  return photo.deviceTime.getTime() > now.getTime() ? now : photo.deviceTime;
 }
 
 /**
@@ -44,6 +60,14 @@ export async function acceptCapture(userId: string, file: Buffer, input: Capture
   if (challenge.expiresAt < new Date()) throw badRequest('Capture session expired. Take a new photo.', 'CHALLENGE_EXPIRED');
   if (!isJpeg(file)) throw badRequest('Only photos taken with the in-app camera are accepted', 'INVALID_IMAGE');
 
+  if (input.offline) {
+    if (!input.deviceTime) throw badRequest('An offline photo needs the time it was taken', 'OFFLINE_TIME_REQUIRED');
+    const age = Date.now() - input.deviceTime.getTime();
+    if (age < -5 * 60_000 || age > OFFLINE_MAX_AGE_MS) {
+      throw badRequest('This offline photo is too old to accept. Take a new one while online.', 'OFFLINE_TIME_INVALID');
+    }
+  }
+
   const sha256 = crypto.createHash('sha256').update(file).digest('hex');
   const duplicate = await prisma.photo.findUnique({ where: { sha256 } });
   if (duplicate) throw conflict('This photo has already been submitted before. Take a new one.', 'DUPLICATE_PHOTO');
@@ -52,7 +76,8 @@ export async function acceptCapture(userId: string, file: Buffer, input: Capture
   const hasLocation = input.lat !== undefined && input.lng !== undefined;
   if (!hasLocation) flags.push('NO_LOCATION');
   if (input.accuracyM !== undefined && input.accuracyM > env.MIN_GPS_ACCURACY_M) flags.push('LOW_GPS_ACCURACY');
-  if (input.deviceTime && Math.abs(input.deviceTime.getTime() - Date.now()) > 5 * 60_000) flags.push('DEVICE_CLOCK_SKEW');
+  if (input.offline) flags.push('OFFLINE_CAPTURE');
+  else if (input.deviceTime && Math.abs(input.deviceTime.getTime() - Date.now()) > 5 * 60_000) flags.push('DEVICE_CLOCK_SKEW');
 
   const atOffice = challenge.purpose === 'CHECK_IN' || challenge.purpose === 'CHECK_OUT';
   if (atOffice && hasLocation && env.OFFICE_LAT !== undefined && env.OFFICE_LNG !== undefined) {

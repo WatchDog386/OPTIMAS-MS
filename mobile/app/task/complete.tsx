@@ -7,6 +7,7 @@ import type { BulkHolding, SerialUnit, Task } from '../../src/api/types';
 import { Button, Card, Input, ListRow, Loading, Screen, ScreenHeader, SectionHeader, SignaturePad, Text } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { requestCapture, requestScan } from '../../src/store/bridge';
+import { submitWithPhoto } from '../../src/offline/queue';
 import { colors, fonts, radius, space } from '../../src/theme';
 import { kes } from '../../src/utils/format';
 import { toast } from '../../src/store/feedback';
@@ -58,9 +59,12 @@ export default function CompleteTask() {
     if (!photo) return;
     setBusy(true);
     try {
-      await api(`/tasks/${t.id}/complete`, {
+      const sent = await submitWithPhoto(photo, {
+        kind: 'TASK_END',
+        label: `${t.code} completed`,
+        path: `/tasks/${t.id}/complete`,
+        taskId: t.id,
         body: {
-          photoId: photo.photoId,
           notes: notes.trim(),
           customerAccount: (account ?? t.customerAccount) || undefined,
           amountCollected: collected ? Number(collected) : undefined,
@@ -69,7 +73,8 @@ export default function CompleteTask() {
           signature: signature ? { path: signature, signedBy: signedBy.trim() } : undefined,
         },
       });
-      toast.success('Job completed', 'Your report has been sent for verification.');
+      if (sent.queued) toast.info('Saved on this phone', 'No signal. Your completion report will be sent automatically when you are back online.');
+      else toast.success('Job completed', 'Your report has been sent for verification.');
       router.back();
     } catch (e) {
       toast.error('Could not complete job', e instanceof ApiError ? e.message : 'Try again');

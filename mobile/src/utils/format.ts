@@ -68,6 +68,7 @@ export const flagLabel: Record<string, string> = {
   LOW_GPS_ACCURACY: 'Weak GPS',
   OUTSIDE_GEOFENCE: 'Outside office',
   DEVICE_CLOCK_SKEW: 'Clock mismatch',
+  OFFLINE_CAPTURE: 'Taken offline',
 };
 
 export const minutesSince = (iso?: string | null) => (iso ? Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000)) : 0);

@@ -265,7 +265,7 @@ export async function demoRequest<T>(path: string, options: { method?: string; b
   const method = (options.method ?? (options.body ? 'POST' : 'GET')).toUpperCase();
   // Only look-ups; anything that would save something is refused
   if (method !== 'GET') {
-    throw new ApiError(0, 'This is demo data, so changes are not saved. Sign out and sign in with your own account to work for real.', 'DEMO');
+    throw new ApiError(403, 'This is demo data, so changes are not saved. Sign out and sign in with your own account to work for real.', 'DEMO');
   }
   await new Promise((r) => setTimeout(r, 120));
   const [route, query = ''] = path.split('?');
