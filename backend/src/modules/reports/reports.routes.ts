@@ -76,30 +76,57 @@ reportsRouter.get(
   }),
 );
 
-/** Technician home: personal performance at a glance. */
+/**
+ * Technician home & profile: personal performance at a glance — this calendar month (profile), this week vs
+ * the last 30 days, punctuality and customer rating (dashboard).
+ */
 reportsRouter.get(
   '/me',
   ah(async (req, res) => {
     const userId = me(req).id;
+    const now = Date.now();
+    const weekAgo = new Date(now - 7 * DAY_MS);
+    const monthAgo = new Date(now - 30 * DAY_MS);
+    const done = { assigneeId: userId, status: { in: ['COMPLETED', 'VERIFIED'] as ('COMPLETED' | 'VERIFIED')[] } };
     const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    const [open, done, attendance, custody] = await Promise.all([
+    const [week, month, ratings, attendance, verified, rejected, open, calMonth, calAttendance, custody] = await Promise.all([
+      prisma.task.aggregate({ where: { ...done, endedAt: { gte: weekAgo } }, _count: { _all: true }, _avg: { durationMinutes: true } }),
+      prisma.task.aggregate({ where: { ...done, endedAt: { gte: monthAgo } }, _count: { _all: true }, _avg: { durationMinutes: true } }),
+      prisma.task.aggregate({ where: { assigneeId: userId, customerRating: { not: null } }, _count: { customerRating: true }, _avg: { customerRating: true } }),
+      prisma.attendance.findMany({ where: { userId, workDate: { gte: monthAgo } }, select: { workDate: true, status: true, workedMinutes: true } }),
+      prisma.task.count({ where: { assigneeId: userId, status: 'VERIFIED', verifiedAt: { gte: monthAgo } } }),
+      prisma.task.count({ where: { assigneeId: userId, status: 'REJECTED', verifiedAt: { gte: monthAgo } } }),
       prisma.task.count({ where: { assigneeId: userId, status: { in: ['ASSIGNED', 'IN_PROGRESS'] } } }),
-      prisma.task.aggregate({
-        where: { assigneeId: userId, status: { in: ['COMPLETED', 'VERIFIED'] }, endedAt: { gte: monthStart } },
-        _count: { _all: true },
-        _avg: { durationMinutes: true },
-      }),
+      prisma.task.aggregate({ where: { ...done, endedAt: { gte: monthStart } }, _count: { _all: true }, _avg: { durationMinutes: true } }),
       prisma.attendance.findMany({ where: { userId, workDate: { gte: monthStart } }, select: { status: true, workedMinutes: true } }),
       prisma.serialUnit.count({ where: { holderId: userId, status: { in: ['IN_TRANSIT', 'WITH_TECHNICIAN'] } } }),
     ]);
+    const weekDays = attendance.filter((a) => a.workDate >= weekAgo);
+    const onTime = attendance.filter((a) => a.status === 'PRESENT').length;
     res.json({
+      // calendar month (profile screen)
       openTasks: open,
-      completedThisMonth: done._count._all,
-      avgJobMinutes: Math.round(done._avg.durationMinutes ?? 0),
-      daysPresent: attendance.length,
-      lateDays: attendance.filter((a) => a.status === 'LATE').length,
-      hoursWorked: Math.round(attendance.reduce((n, a) => n + (a.workedMinutes ?? 0), 0) / 60),
+      completedThisMonth: calMonth._count._all,
+      avgJobMinutes: Math.round(calMonth._avg.durationMinutes ?? 0),
+      daysPresent: calAttendance.length,
+      lateDays: calAttendance.filter((a) => a.status === 'LATE').length,
+      hoursWorked: Math.round(calAttendance.reduce((n, a) => n + (a.workedMinutes ?? 0), 0) / 60),
       unitsInCustody: custody,
+      week: {
+        jobs: week._count._all,
+        avgMinutes: Math.round(week._avg.durationMinutes ?? 0),
+        hours: Math.round((weekDays.reduce((n, a) => n + (a.workedMinutes ?? 0), 0) / 60) * 10) / 10,
+        days: weekDays.length,
+      },
+      month: {
+        jobs: month._count._all,
+        avgMinutes: Math.round(month._avg.durationMinutes ?? 0),
+        days: attendance.length,
+        onTimeRate: attendance.length ? Math.round((onTime / attendance.length) * 100) : null,
+        verified,
+        sentBack: rejected,
+      },
+      rating: { average: ratings._avg.customerRating ? Math.round(ratings._avg.customerRating * 10) / 10 : null, count: ratings._count.customerRating },
     });
   }),
 );

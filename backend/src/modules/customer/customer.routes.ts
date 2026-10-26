@@ -3,11 +3,11 @@ import { z } from 'zod';
 import { TaskType } from '@prisma/client';
 import { env } from '../../config/env';
 import { prisma } from '../../lib/prisma';
-import { notFound } from '../../lib/http-error';
+import { conflict, notFound } from '../../lib/http-error';
 import { ah } from '../../middleware/async';
 import { me } from '../../middleware/auth';
 import { parse } from '../../middleware/validate';
-import { notifyRoles } from '../notifications/notifications.service';
+import { notify, notifyRoles } from '../notifications/notifications.service';
 
 /**
  * Customer self-service: what a subscriber can see about their own account only —
@@ -28,6 +28,9 @@ const jobSelect = {
   endedAt: true,
   durationMinutes: true,
   signedByName: true,
+  customerRating: true,
+  customerFeedback: true,
+  ratedAt: true,
   createdAt: true,
   assignee: techSelect,
 } as const;
@@ -129,5 +132,39 @@ customerRouter.get(
       include: { task: { select: { id: true, code: true, status: true, assignee: techSelect } } },
     });
     res.json({ requests });
+  }),
+);
+
+const rateSchema = z.object({
+  rating: z.number().int().min(1, 'Choose 1 to 5 stars').max(5, 'Choose 1 to 5 stars'),
+  comment: z.string().trim().max(500).optional(),
+});
+
+/** The customer rates a finished visit once; the technician is told how it went. */
+customerRouter.post(
+  '/jobs/:id/rate',
+  ah(async (req, res) => {
+    const user = await account(me(req).id);
+    const body = parse(rateSchema, req.body);
+    const job = await prisma.task.findFirst({
+      where: { id: req.params.id, OR: [{ customerAccount: user.customerAccount ?? '__none__' }, { request: { customerId: user.id } }] },
+      select: { id: true, code: true, status: true, ratedAt: true, assigneeId: true },
+    });
+    if (!job) throw notFound('Job');
+    if (job.status !== 'COMPLETED' && job.status !== 'VERIFIED') throw conflict('You can rate a visit once the work is finished', 'NOT_FINISHED');
+    // Guarded update so a double tap cannot rate twice
+    const { count } = await prisma.task.updateMany({
+      where: { id: job.id, ratedAt: null },
+      data: { customerRating: body.rating, customerFeedback: body.comment || null, ratedAt: new Date() },
+    });
+    if (!count) throw conflict('You have already rated this visit', 'ALREADY_RATED');
+    void notify([job.assigneeId], {
+      type: 'JOB_UPDATE',
+      title: `${'★'.repeat(body.rating)}${'☆'.repeat(5 - body.rating)} for ${job.code}`,
+      body: body.comment ? `“${body.comment.slice(0, 120)}” — ${user.name}` : `${user.name} rated your visit ${body.rating}/5`,
+      data: { taskId: job.id },
+    });
+    const updated = await prisma.task.findUniqueOrThrow({ where: { id: job.id }, select: jobSelect });
+    res.json({ job: updated });
   }),
 );

@@ -84,9 +84,10 @@ A `photoId` must be used by its action within 10 minutes, once.
 | GET | `/inventory/reconciliation` | K S A | per-technician accountability report |
 
 ## Reports
-| GET | `/reports/dashboard` | K S A | supervisor dashboard numbers |
+| Method | Path | Who | Body / notes |
 |---|---|---|---|
-| GET | `/reports/me` | all | technician's monthly stats |
+| GET | `/reports/dashboard` | K S A | supervisor dashboard numbers |
+| GET | `/reports/me` | staff | own performance: calendar-month totals (profile), `week { jobs, avgMinutes, hours, days }`, `month { jobs, avgMinutes, days, onTimeRate, verified, sentBack }` (last 30 days), `rating { average, count }` |
 
 ## Notifications
 | Method | Path | Who | Body / notes |
@@ -116,6 +117,7 @@ Defaults to the last 30 days; at most one year per export. `POST /auth/login` is
 | GET | `/customer/jobs/:id` | one visit on the customer's own account (404 otherwise) |
 | POST | `/customer/requests` | `{ type: REPAIR \| RELOCATION \| INSTALLATION \| MAINTENANCE, description, phone?, address? }` — notifies supervisors |
 | GET | `/customer/requests` | the customer's requests with linked job |
+| POST | `/customer/jobs/:id/rate` | `{ rating: 1–5, comment? }` — finished visits only (`NOT_FINISHED`), once (`ALREADY_RATED`); notifies the technician. Ratings appear on the job for supervisors and in the technician's `/reports/me` |
 
 Customers are refused (403) on every staff endpoint (`/users`, `/capture`, `/attendance`, `/tasks`, `/inventory`, `/reports`, `/exports`).
 

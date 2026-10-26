@@ -210,6 +210,9 @@ model Task {
   customerSignature String? // SVG path data drawn by the customer on the technician's phone
   signedByName      String?
   signedAt          DateTime?
+  customerRating    Int? // 1–5 stars, given by the customer after the visit
+  customerFeedback  String?
+  ratedAt           DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

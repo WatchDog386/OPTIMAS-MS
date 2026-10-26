@@ -1,3 +1,4 @@
+import { clearApiCache } from '../api/cache';
 import { create } from 'zustand';
 import type { Role, User } from '../api/types';
 import { secureStorage } from './storage';
@@ -40,6 +41,7 @@ export const useAuth = create<AuthState>((set) => ({
     if (token) await secureStorage.set(KEY, JSON.stringify({ token, user }));
   },
   logout: async () => {
+    clearApiCache();
     set({ token: null, user: null });
     await secureStorage.remove(KEY);
   },

@@ -104,6 +104,9 @@ export interface Task {
   customerSignature: string | null;
   signedByName: string | null;
   signedAt: string | null;
+  customerRating?: number | null;
+  customerFeedback?: string | null;
+  ratedAt?: string | null;
   createdAt: string;
   assignee: Person;
   createdBy?: Person;
@@ -232,6 +235,9 @@ export interface CustomerJob {
   endedAt: string | null;
   durationMinutes: number | null;
   signedByName: string | null;
+  customerRating: number | null;
+  customerFeedback: string | null;
+  ratedAt: string | null;
   createdAt: string;
   assignee: { name: string; phone: string | null };
   completionNotes?: string | null;
@@ -245,4 +251,18 @@ export interface CustomerOverview {
   devices: { serialNumber: string; installedAt: string | null; item: { name: string; category: string } }[];
   requests: ServiceRequest[];
   support: { phone: string; whatsapp: string };
+}
+
+/** GET /reports/me — a technician's own performance. */
+export interface MyStats {
+  openTasks: number;
+  completedThisMonth: number;
+  avgJobMinutes: number;
+  daysPresent: number;
+  lateDays: number;
+  hoursWorked: number;
+  unitsInCustody: number;
+  week: { jobs: number; avgMinutes: number; hours: number; days: number };
+  month: { jobs: number; avgMinutes: number; days: number; onTimeRate: number | null; verified: number; sentBack: number };
+  rating: { average: number | null; count: number };
 }

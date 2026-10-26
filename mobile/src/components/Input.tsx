@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, TextInput, View, type StyleProp, type TextInputProps, type ViewStyle } from 'react-native';
+import { Platform, StyleSheet, TextInput, View, type StyleProp, type TextInputProps, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, radius, space } from '../theme';
 import { Text } from './Text';
@@ -62,5 +62,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.72)',
   },
   multi: { alignItems: 'flex-start', paddingVertical: space.md, borderRadius: radius.lg },
-  input: { flex: 1, color: colors.text, fontFamily: fonts.regular, fontSize: 14.5, paddingVertical: 0 },
+  // The pill's border already shows focus; drop the browser's square focus outline on web
+  input: { flex: 1, color: colors.text, fontFamily: fonts.regular, fontSize: 14.5, paddingVertical: 0, ...(Platform.OS === 'web' ? { outlineWidth: 0 } : null) },
 });

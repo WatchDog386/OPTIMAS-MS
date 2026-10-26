@@ -4,7 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api, ApiError } from '../../src/api/client';
 import type { PhotoRef, Task } from '../../src/api/types';
-import { AuthImage, Badge, Button, Card, Input, Loading, Screen, ScreenHeader, SectionHeader, SignatureView, Text } from '../../src/components';
+import { AuthImage, Badge, Button, Card, Input, Loading, Screen, ScreenHeader, SectionHeader, SignatureView, StarRating, Text } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { confirmAction } from '../../src/utils/confirm';
 import { isManager, useAuth } from '../../src/store/auth';
@@ -186,6 +186,19 @@ export default function TaskDetail() {
             <SignatureView path={task.customerSignature} />
             <Text variant="bodySm" color={colors.textMuted}>
               Signed by <Text variant="bodySm">{task.signedByName}</Text> · {dateTime(task.signedAt)}
+            </Text>
+          </Card>
+        </>
+      ) : null}
+
+      {task.customerRating ? (
+        <>
+          <SectionHeader title="Customer rating" />
+          <Card style={{ gap: space.sm }}>
+            <StarRating value={task.customerRating} size={22} />
+            {task.customerFeedback ? <Text variant="body">“{task.customerFeedback}”</Text> : null}
+            <Text variant="bodySm" color={colors.textMuted}>
+              Rated {dateTime(task.ratedAt)}
             </Text>
           </Card>
         </>

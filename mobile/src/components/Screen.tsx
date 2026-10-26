@@ -1,16 +1,9 @@
-import type { ReactNode } from "react";
-import {
-  Animated,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  View,
-  type ViewStyle,
-} from "react-native";
-import { SafeAreaView, type Edge } from "react-native-safe-area-context";
-import { colors, space } from "../theme";
-import { GlassBackground } from "./Glass";
-import { usePullToRefresh } from "./PullToRefresh";
+import type { ReactNode } from 'react';
+import { Animated, RefreshControl, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
+import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
+import { colors, space } from '../theme';
+import { GlassBackground } from './Glass';
+import { usePullToRefresh } from './PullToRefresh';
 
 interface Props {
   children: ReactNode;
@@ -28,17 +21,7 @@ interface Props {
 /** Space reserved at the bottom so content clears the floating tab bar. */
 export const TAB_BAR_CLEARANCE = 112;
 
-export function Screen({
-  children,
-  scroll = true,
-  refreshing,
-  onRefresh,
-  edges = ["top"],
-  contentStyle,
-  footer,
-  scrollEnabled = true,
-  glow = true,
-}: Props) {
+export function Screen({ children, scroll = true, refreshing, onRefresh, edges = ['top'], contentStyle, footer, scrollEnabled = true, glow = true }: Props) {
   const ptr = usePullToRefresh(onRefresh, refreshing);
   return (
     <View style={styles.root}>
@@ -50,33 +33,18 @@ export function Screen({
             <Animated.View style={ptr.style ?? { flex: 1 }}>
               <ScrollView
                 ref={ptr.scrollRef}
-                contentContainerStyle={[
-                  styles.content,
-                  footer ? { paddingBottom: space.xxl } : null,
-                  contentStyle,
-                ]}
+                contentContainerStyle={[styles.content, footer ? { paddingBottom: space.xxl } : null, contentStyle]}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
                 scrollEnabled={scrollEnabled}
-                refreshControl={
-                  onRefresh && !ptr.enabled ? (
-                    <RefreshControl
-                      refreshing={!!refreshing}
-                      onRefresh={onRefresh}
-                      tintColor={colors.primary}
-                      colors={[colors.primary]}
-                    />
-                  ) : undefined
-                }
+                refreshControl={onRefresh && !ptr.enabled ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} /> : undefined}
               >
                 {children}
               </ScrollView>
             </Animated.View>
           </View>
         ) : (
-          <View style={[styles.content, { flex: 1 }, contentStyle]}>
-            {children}
-          </View>
+          <View style={[styles.content, { flex: 1 }, contentStyle]}>{children}</View>
         )}
         {footer ? <View style={styles.footer}>{footer}</View> : null}
       </SafeAreaView>
@@ -94,7 +62,7 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: space.lg,
     paddingVertical: space.md,
-    backgroundColor: "rgba(255,255,255,0.72)",
+    backgroundColor: 'rgba(255,255,255,0.72)',
     borderTopWidth: 1,
     borderTopColor: colors.glassBorder,
   },

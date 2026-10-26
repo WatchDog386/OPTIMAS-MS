@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import type { CustomerJob } from '../../src/api/types';
-import { Badge, Button, Glass, HatchedProgress, ListRow, Loading, Screen, ScreenHeader, Section, Text } from '../../src/components';
+import { Badge, Button, Glass, HatchedProgress, ListRow, Loading, RateVisit, Screen, ScreenHeader, Section, StarRating, Text } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { colors, fonts } from '../../src/theme';
 import { call } from '../../src/utils/contact';
@@ -12,7 +12,7 @@ const STAGE: Record<string, number> = { ASSIGNED: 0.34, IN_PROGRESS: 0.67, COMPL
 /** Customer view of one visit: progress, technician and what was installed. */
 export default function Visit() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { data, refresh, refreshing } = useApi<{ job: CustomerJob }>(`/customer/jobs/${id}`);
+  const { data, refresh, refreshing, setData } = useApi<{ job: CustomerJob }>(`/customer/jobs/${id}`, { poll: 20_000 });
   const job = data?.job;
   if (!job) return <Loading />;
   const done = job.status === 'COMPLETED' || job.status === 'VERIFIED';
@@ -35,6 +35,17 @@ export default function Visit() {
           </Text>
         ) : null}
       </Glass>
+      {done && !job.ratedAt ? <RateVisit job={job} onRated={(j) => setData((prev) => (prev ? { job: { ...prev.job, ...j } } : prev))} /> : null}
+      {job.customerRating ? (
+        <Section title="Your rating">
+          <StarRating value={job.customerRating} size={22} />
+          {job.customerFeedback ? (
+            <Text variant="body" style={{ marginTop: 8 }}>
+              “{job.customerFeedback}”
+            </Text>
+          ) : null}
+        </Section>
+      ) : null}
       <Section title="Your technician">
         <ListRow icon="person" iconTint={colors.text} title={job.assignee.name} subtitle={job.assignee.phone ?? undefined} />
         {job.assignee.phone && !done ? <Button label={`Call ${job.assignee.name.split(' ')[0]}`} icon="call" onPress={() => call(job.assignee.phone)} /> : null}

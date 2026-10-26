@@ -89,6 +89,11 @@ notified when a technician is assigned, starts, and completes the work.
 - **Error boundary** so a broken screen offers *Try again* instead of a blank page.
 - **Automated tests** (`cd backend && npm test`, 32 API tests on a real Postgres) and **CI** on every push.
 
+### ⚡ Live dashboards (phase 4)
+- **Technician:** Today / Performance header cards, live shift ring, **Up next** job with one-tap *Navigate* (Google Maps) · *Call* · *Start*, today's route timeline, custody alert, weekly chart and latest customer feedback.
+- **Customer:** live visit tracker (Requested → Assigned → Working → Done) with technician call / WhatsApp, request tracker, **rate your visit** (1–5 stars + comment), devices and past visits with ratings.
+- **Everyone:** screens sync silently every 20–30 s while open (*Live · synced just now*), cached data renders instantly when returning to a screen, shimmer skeletons on first load, staggered entrance animations and counting numbers.
+
 ### 📲 Install the app
 The web console is an installable **PWA** (manifest, service worker, app icons). Phones get an install card
 (Android: one-tap **Install**; iPhone: Share → *Add to Home Screen* steps), and an install button sits on the sign-in
