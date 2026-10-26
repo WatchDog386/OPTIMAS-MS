@@ -28,6 +28,12 @@
 
 	# Manager web console (Expo web build, single-page app)
 	handle {
+		# Hashed bundles never change: cache for a year. Everything else (index.html, sw.js, manifest,
+		# version.json, icons) must be revalidated so installed apps pick up new releases immediately.
+		@immutable path /_expo/static/*
+		header @immutable Cache-Control "public, max-age=31536000, immutable"
+		@mutable not path /_expo/static/*
+		header @mutable Cache-Control "no-cache"
 		root * /srv/web
 		try_files {path} {path}.html /index.html
 		file_server

@@ -1,6 +1,6 @@
 /* Optimas MS service worker: makes the web console installable and caches the app shell.
    API calls (/api/*) always go to the network — data is never served stale. */
-const SHELL = 'optimas-shell-v2';
+const SHELL = 'optimas-shell-v3';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(SHELL).then((c) => c.addAll(['/', '/manifest.json', '/icons/icon-192.png'])).then(() => self.skipWaiting()));
@@ -16,6 +16,8 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
+  // The release marker must always come from the server
+  if (url.pathname === '/version.json') return;
   // Pages: network first, fall back to the cached shell when offline.
   if (req.mode === 'navigate') {
     event.respondWith(fetch(req).catch(() => caches.match('/')));

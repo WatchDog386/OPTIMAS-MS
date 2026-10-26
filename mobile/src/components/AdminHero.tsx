@@ -150,7 +150,7 @@ const FILLS = ['#C3A6FF', '#E6F45A', '#A8E6C4', '#FFD08A'];
 const LINK_GREEN = '#2DA043';
 
 /** Rounded rectangle with a concave bite out of the top-right corner (where the arrow button sits). */
-function notchedPath(w: number, h: number, r = 26, bite = 46, f = 10) {
+export function notchedPath(w: number, h: number, r = 26, bite = 46, f = 10) {
   const t = 0.32; // where the fillets meet the bite circle (radians from each edge)
   const p1 = [w - bite * Math.cos(t), bite * Math.sin(t)];
   const p2 = [w - bite * Math.sin(t), bite * Math.cos(t)];

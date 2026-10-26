@@ -7,8 +7,6 @@ export const fonts = {
   semibold: 'Figtree_600SemiBold',
   bold: 'Figtree_700Bold',
   extrabold: 'Figtree_800ExtraBold',
-  /** Condensed poster face for editorial headlines (sign-in slides). */
-  display: 'BebasNeue_400Regular',
 } as const;
 
 /** Phone proportions from the Business-SME app. */

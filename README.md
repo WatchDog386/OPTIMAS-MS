@@ -94,6 +94,12 @@ notified when a technician is assigned, starts, and completes the work.
 - **Customer:** live visit tracker (Requested → Assigned → Working → Done) with technician call / WhatsApp, request tracker, **rate your visit** (1–5 stars + comment), devices and past visits with ratings.
 - **Everyone:** screens sync silently every 20–30 s while open (*Live · synced just now*), cached data renders instantly when returning to a screen, shimmer skeletons on first load, staggered entrance animations and counting numbers.
 
+### 🔄 Installed app stays up to date
+Every deploy stamps a build id into the bundle and `/version.json`. The installed app checks it when opened,
+when brought back to the foreground and every 5 minutes; when a newer release is live it shows
+**New version ready → Update** and reloads into it. Caddy serves the app shell with `Cache-Control: no-cache`
+and the hashed bundles as immutable, so phones never hold on to an old version.
+
 ### 📲 Install the app
 The web console is an installable **PWA** (manifest, service worker, app icons). Phones get an install card
 (Android: one-tap **Install**; iPhone: Share → *Add to Home Screen* steps), and an install button sits on the sign-in
