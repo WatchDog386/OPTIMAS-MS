@@ -26,6 +26,15 @@
 		reverse_proxy api:4000
 	}
 
+	# Android APK and its update manifest (built by deploy/build-android.sh)
+	handle /downloads/* {
+		root * /srv
+		header Cache-Control "no-cache"
+		@apk path *.apk
+		header @apk Content-Type "application/vnd.android.package-archive"
+		file_server
+	}
+
 	# Manager web console (Expo web build, single-page app)
 	handle {
 		# Hashed bundles never change: cache for a year. Everything else (index.html, sw.js, manifest,

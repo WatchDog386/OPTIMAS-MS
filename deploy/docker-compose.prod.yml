@@ -68,6 +68,7 @@ services:
       - "${HTTPS_PORT:-443}:443"
       - "${HTTPS_PORT:-443}:443/udp"
     volumes:
+      - ./downloads:/srv/downloads:ro
       - caddy_data:/data
       - caddy_config:/config
     networks: [internal]

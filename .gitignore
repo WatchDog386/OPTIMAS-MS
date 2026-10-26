@@ -21,3 +21,5 @@ mobile/android/
 deploy/.env
 deploy/backups/
 backend/uploads-test/
+deploy/downloads/
+deploy/secrets/

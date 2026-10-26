@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AppState, Linking, Platform } from 'react-native';
 import * as Application from 'expo-application';
+import { API_URL } from '../api/client';
 
 /** Build id baked in at export time (see deploy/web.Dockerfile). Absent in development. */
 const BUILD = process.env.EXPO_PUBLIC_BUILD_ID;
@@ -23,11 +24,23 @@ async function webRelease(): Promise<Release> {
 }
 
 async function androidRelease(): Promise<Release> {
+  const mine = Number(Application.nativeBuildVersion ?? 0);
+  // 1. Our own server (deploy/build-android.sh publishes /downloads/android.json)
+  try {
+    const origin = API_URL.replace(/\/api\/v1\/?$/, '');
+    const res = await fetch(`${origin}/downloads/android.json?t=${Date.now()}`);
+    if (res.ok) {
+      const m = (await res.json()) as { versionCode?: number; url?: string };
+      if (m.versionCode && m.url) return { available: m.versionCode > mine, url: m.url.startsWith('http') ? m.url : `${origin}${m.url}` };
+    }
+  } catch {
+    // fall through to GitHub
+  }
+  // 2. The GitHub release built by .github/workflows/android.yml
   const res = await fetch(ANDROID_RELEASE, { headers: { Accept: 'application/vnd.github+json' } });
   if (!res.ok) return { available: false };
   const rel = (await res.json()) as { body?: string; assets?: { name: string; browser_download_url: string }[] };
   const latest = Number(/versionCode:\s*(\d+)/.exec(rel.body ?? '')?.[1] ?? 0);
-  const mine = Number(Application.nativeBuildVersion ?? 0);
   const apk = rel.assets?.find((a) => a.name.endsWith('.apk'))?.browser_download_url;
   return { available: !!apk && latest > mine, url: apk };
 }

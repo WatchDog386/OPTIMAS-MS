@@ -95,6 +95,9 @@ notified when a technician is assigned, starts, and completes the work.
 - **Everyone:** screens sync silently every 20–30 s while open (*Live · synced just now*), cached data renders instantly when returning to a screen, shimmer skeletons on first load, staggered entrance animations and counting numbers.
 
 ### 🤖 Android app (APK)
+**Build on the server:** `sudo bash deploy/build-android.sh` builds the APK in Docker on VM 107 and publishes it at
+`https://<your site>/downloads/optimas-ms.apk` (with `/downloads/android.json` for in-app update checks).
+
 Every push to `main` that touches `mobile/` builds a signed release APK on GitHub Actions
 (`.github/workflows/android.yml`) and publishes it as the **android-latest** release:
 <https://github.com/WatchDog386/OPTIMAS-MS/releases/download/android-latest/optimas-ms.apk>.

@@ -28,7 +28,6 @@ jobs:
     timeout-minutes: 60
     env:
       EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL || 'https://ms.optimaswifi.co.ke/api/v1' }}
-      ANDROID_VERSION_CODE: ${{ github.run_number }}
       EXPO_NO_TELEMETRY: 1
       CI: 1
     defaults:
@@ -49,6 +48,10 @@ jobs:
           java-version: 17
 
       - uses: gradle/actions/setup-gradle@v4
+
+      # Minutes since 1970: always increases and matches deploy/build-android.sh on the server
+      - name: Version code
+        run: echo "ANDROID_VERSION_CODE=$(( $(date +%s) / 60 ))" >> "$GITHUB_ENV"
 
       - name: Install dependencies
         run: npm ci
@@ -83,7 +86,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: optimas-ms-${{ github.run_number }}
+          name: optimas-ms-${{ env.ANDROID_VERSION_CODE }}
           path: mobile/optimas-ms.apk
 
       - name: Publish release
@@ -92,8 +95,8 @@ jobs:
         run: |
           gh release delete android-latest --yes --cleanup-tag 2>/dev/null || true
           gh release create android-latest optimas-ms.apk \
-            --title "Optimas MS for Android · build ${{ github.run_number }}" \
-            --notes "versionCode: ${{ github.run_number }}
+            --title "Optimas MS for Android · build ${{ env.ANDROID_VERSION_CODE }}" \
+            --notes "versionCode: ${{ env.ANDROID_VERSION_CODE }}
           Commit: ${{ github.sha }}
 
           Download: https://github.com/${{ github.repository }}/releases/download/android-latest/optimas-ms.apk" \
