@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, ApiError } from '../../src/api/client';
 import type { User } from '../../src/api/types';
-import { Button, Glass, GlassBackground, InstallButton, Input, Text } from '../../src/components';
+import { Button, GlassBackground, InstallButton, Input, Text } from '../../src/components';
 import { afterLogin, useAuth } from '../../src/store/auth';
 import { colors, fonts, radius, space } from '../../src/theme';
 
@@ -83,7 +83,7 @@ export default function Login() {
                 </Text>
               </View>
 
-              <Glass strong style={styles.card}>
+              <View style={styles.card}>
                 <Input
                   label="Staff or account number"
                   icon="id-card-outline"
@@ -122,7 +122,7 @@ export default function Login() {
                 ) : null}
 
                 <Button label="Sign in" size="lg" trailingIcon="arrow-forward-circle-outline" loading={loading} onPress={submit} />
-              </Glass>
+              </View>
 
               <Pressable onPress={help} hitSlop={8} style={styles.help} accessibilityRole="button">
                 <Text variant="bodySm" color={colors.textMuted}>
@@ -160,9 +160,9 @@ const styles = StyleSheet.create({
   intro: { gap: 8, paddingHorizontal: 4 },
   // Same face as the dashboard card titles ("Jobs done / This week"), one step larger
   headline: { fontFamily: fonts.medium, fontSize: 34, lineHeight: 40, letterSpacing: -0.8, color: colors.text },
-  card: { gap: 16 },
-  field: { backgroundColor: 'rgba(28,29,31,0.04)', borderColor: 'transparent', minHeight: 54 },
-  eye: { position: 'absolute', right: space.lg, bottom: 17 },
+  card: { gap: 14 },
+  field: { backgroundColor: '#FFFFFF', minHeight: 56 },
+  eye: { position: 'absolute', right: space.lg, bottom: 18 },
   error: { flexDirection: 'row', gap: space.sm, alignItems: 'center', backgroundColor: colors.dangerSoft, padding: space.md, borderRadius: radius.md },
   help: { alignSelf: 'center' },
   secure: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },

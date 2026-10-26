@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Platform, StyleSheet, TextInput, View, type StyleProp, type TextInputProps, type ViewStyle } from 'react-native';
+import { Platform, StyleSheet, TextInput, View, type StyleProp, type TextInputProps, type TextStyle, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, radius, space } from '../theme';
 import { Text } from './Text';
@@ -38,7 +38,7 @@ export function Input({ label, icon, error, style, fieldStyle, multiline, onFocu
             setFocused(false);
             onBlur?.(e);
           }}
-          style={[styles.input, multiline && { textAlignVertical: 'top', minHeight: 96 }, style]}
+          style={[styles.input, !multiline && styles.single, multiline && { textAlignVertical: 'top', minHeight: 96 }, style]}
           {...rest}
         />
       </View>
@@ -51,6 +51,13 @@ export function Input({ label, icon, error, style, fieldStyle, multiline, onFocu
   );
 }
 
+/**
+ * Chrome draws its own focus ring around a focused <input> (outline-style: auto ignores outline-width),
+ * which shows as a hard rectangle inside our rounded field. The pill's border already shows focus.
+ * RN's types don't list 'none', hence the cast; it is a no-op on native.
+ */
+const WEB_NO_OUTLINE = (Platform.OS === 'web' ? { outlineStyle: 'none', outlineWidth: 0 } : {}) as TextStyle;
+
 const styles = StyleSheet.create({
   field: {
     flexDirection: 'row',
@@ -61,7 +68,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     backgroundColor: 'rgba(255,255,255,0.72)',
   },
+  single: { alignSelf: 'stretch' },
   multi: { alignItems: 'flex-start', paddingVertical: space.md, borderRadius: radius.lg },
-  // The pill's border already shows focus; drop the browser's square focus outline on web
-  input: { flex: 1, color: colors.text, fontFamily: fonts.regular, fontSize: 14.5, paddingVertical: 0, ...(Platform.OS === 'web' ? { outlineWidth: 0 } : null) },
+  input: { flex: 1, color: colors.text, fontFamily: fonts.regular, fontSize: 14.5, paddingVertical: 0, ...WEB_NO_OUTLINE },
 });
