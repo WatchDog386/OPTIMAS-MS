@@ -11,7 +11,7 @@ const BARS = [1, 0.78, 0.92, 0.6];
  * Stacked-bars loader (in the spirit of Paystack's): four rounded bars that stretch and settle one after
  * another in a smooth wave. Calm, branded and readable at any size.
  */
-export function BarsLoader({ size = 44, color = colors.charcoal }: { size?: number; color?: string }) {
+export function BarsLoader({ size = 44, color = colors.navy }: { size?: number; color?: string }) {
   const t = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const loop = Animated.loop(Animated.timing(t, { toValue: 1, duration: 1100, easing: Easing.linear, useNativeDriver: NATIVE }));

@@ -34,6 +34,8 @@ export const colors = {
 
   // Brand accents
   brand: '#2DA043',
+  /** Optimas logo navy */
+  navy: '#002170',
   onBrand: '#FFFFFF',
   brandSoft: '#EAF7ED',
   lime: '#C6EA5A',

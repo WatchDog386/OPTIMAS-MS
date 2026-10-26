@@ -23,7 +23,7 @@ export default function Login() {
   const W = Math.min(winW, MAX_W);
   // Free space between the top bar and the form; the picture is sized to fit it exactly (never larger)
   const [area, setArea] = useState({ w: 0, h: 0 });
-  const heroH = Math.max(0, Math.min(area.h - 16, area.w / HERO_RATIO));
+  const heroH = Math.max(0, Math.min((area.h - 16) * 0.72, area.w / HERO_RATIO, 230));
   const heroW = heroH * HERO_RATIO;
   const heroIn = useRef(new Animated.Value(0)).current;
   const passwordRef = useRef<ComponentRef<typeof TextInput>>(null);
@@ -74,7 +74,12 @@ export default function Login() {
         <ScrollView contentContainerStyle={[styles.scroll, { minHeight: winH }]} keyboardShouldPersistTaps="handled" bounces={false} showsVerticalScrollIndicator={false}>
           <View style={[styles.column, { width: W, paddingTop: insets.top + 16, paddingBottom: insets.bottom + space.lg }]}>
             <View style={styles.topBar}>
-              <View />
+              <Text variant="title" style={styles.brandText}>
+                Optimas{' '}
+                <Text variant="title" color={colors.textMuted} style={styles.brandText}>
+                  MS
+                </Text>
+              </Text>
               <InstallButton />
             </View>
 
@@ -175,6 +180,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgBottom },
   scroll: { flexGrow: 1, alignItems: 'center' },
   column: { flex: 1, paddingHorizontal: space.lg },
+  brandText: { fontFamily: fonts.bold, fontSize: 18 },
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 46 },
   // Content sits in the lower part of the screen, within thumb reach
   main: { gap: 18, paddingTop: 10, paddingBottom: space.lg },
