@@ -11,8 +11,8 @@ import { alertDialog } from '../../src/store/feedback';
 import { colors, fonts, radius, space } from '../../src/theme';
 
 const MAX_W = 480;
-const LOGO = require('../../assets/logo.png');
-const LOGO_RATIO = 1023 / 389; // width / height of assets/logo.png
+const HERO = require('../../assets/login-fiber.webp');
+const HERO_RATIO = 892 / 900; // width / height of assets/login-fiber.webp
 
 /** Sign-in: brand, a short welcome and one frosted card with the form, on the dashboards' own backdrop. */
 export default function Login() {
@@ -20,8 +20,11 @@ export default function Login() {
   const { width: winW, height: winH } = useWindowDimensions();
   const W = Math.min(winW, MAX_W);
   // The image gets the height left after the brand bar and the form (~510 px), within limits
-  const logoW = Math.round(Math.min(W - space.lg * 2, 340));
 
+  // Free space between the top bar and the form; the picture is sized to fit it exactly (never larger)
+  const [area, setArea] = useState({ w: 0, h: 0 });
+  const heroH = Math.max(0, Math.min(area.h - 16, area.w / HERO_RATIO));
+  const heroW = heroH * HERO_RATIO;
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -68,9 +71,13 @@ export default function Login() {
               <InstallButton />
             </View>
 
-            {/* The Optimas logo, as is — no frame, no mask */}
-            <View style={styles.logoArea}>
-              <Image source={LOGO} style={{ width: logoW, height: logoW / LOGO_RATIO }} resizeMode="contain" accessibilityLabel="Optimas Networks" />
+            {/* The Fiber-to-the-Home picture, as is — no frame, no mask; it fills the space above the form */}
+            <View style={styles.heroArea} onLayout={(e) => setArea({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
+              {area.h > 0 ? (
+                <View style={styles.heroCenter} pointerEvents="none">
+                  <Image source={HERO} style={{ width: heroW, height: heroH }} resizeMode="contain" accessibilityLabel="Fiber to the home" />
+                </View>
+              ) : null}
             </View>
 
             <View style={styles.main}>
@@ -158,8 +165,9 @@ const styles = StyleSheet.create({
   intro: { gap: 8, paddingHorizontal: 4 },
   // Same face and size as the dashboard card titles ("Jobs done / This week")
   headline: { fontFamily: fonts.medium, fontSize: 24, lineHeight: 29, letterSpacing: -0.3, color: colors.text },
-  // The logo takes the space above the form and sits in the middle of it
-  logoArea: { flex: 1, minHeight: 120, alignItems: 'center', justifyContent: 'center' },
+  // The picture sits in the free space above the form; it is overlaid so it can never push the form off screen
+  heroArea: { flex: 1, minHeight: 170 },
+  heroCenter: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, alignItems: 'center', justifyContent: 'center' },
   card: { gap: 14 },
   field: { backgroundColor: '#FFFFFF', minHeight: 56 },
   eye: { position: 'absolute', right: space.lg, bottom: 18 },
