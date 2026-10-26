@@ -1,6 +1,6 @@
 /* Optimas MS service worker: makes the web console installable and caches the app shell.
    API calls (/api/*) always go to the network — data is never served stale. */
-const SHELL = 'optimas-shell-v3';
+const SHELL = 'optimas-shell-v4';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(SHELL).then((c) => c.addAll(['/', '/manifest.json', '/icons/icon-192.png'])).then(() => self.skipWaiting()));
@@ -41,5 +41,47 @@ self.addEventListener('fetch', (event) => {
           return res;
         }),
     ),
+  );
+});
+
+// ── Push notifications (the server sends { title, body, type, data }) ──────────────────────────────
+self.addEventListener('push', (event) => {
+  let msg = {};
+  try {
+    msg = event.data ? event.data.json() : {};
+  } catch {
+    msg = { title: 'Optimas MS', body: event.data ? event.data.text() : '' };
+  }
+  event.waitUntil(
+    (async () => {
+      // If the app is open and in front, it already shows the alert itself
+      const open = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      if (open.some((c) => c.visibilityState === 'visible')) return;
+      await self.registration.showNotification(msg.title || 'Optimas MS', {
+        body: msg.body || '',
+        icon: '/icons/icon-192.png',
+        badge: '/icons/icon-192.png',
+        tag: msg.type || 'optimas',
+        data: { url: '/notifications' },
+      });
+    })(),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/notifications';
+  event.waitUntil(
+    (async () => {
+      const open = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const c of open) {
+        if ('focus' in c) {
+          await c.focus();
+          if ('navigate' in c) await c.navigate(url).catch(() => undefined);
+          return;
+        }
+      }
+      await self.clients.openWindow(url);
+    })(),
   );
 });

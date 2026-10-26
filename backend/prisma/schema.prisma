@@ -21,41 +21,44 @@ enum Role {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  staffNo      String   @unique
-  name         String
-  email        String?  @unique
-  phone        String?
-  passwordHash String
+  id                 String    @id @default(cuid())
+  staffNo            String    @unique
+  name               String
+  email              String?   @unique
+  phone              String?
+  passwordHash       String
   /// Set when an admin creates the account or resets the password; the app forces a change at next sign-in.
-  mustChangePassword Boolean @default(false)
-  lastLoginAt  DateTime?
-  role         Role     @default(TECHNICIAN)
-  region       String?
+  mustChangePassword Boolean   @default(false)
+  lastLoginAt        DateTime?
+  role               Role      @default(TECHNICIAN)
+  region             String?
   /// CUSTOMER accounts only: the ISP account number this login belongs to.
-  customerAccount String?
-  address      String?
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  customerAccount    String?
+  address            String?
+  active             Boolean   @default(true)
+  /// Raised to sign the person out of every device (password change, "sign out other devices"); tokens carry the number they were issued under.
+  sessionVersion     Int       @default(0)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  photos          Photo[]
-  challenges      CaptureChallenge[]
-  attendance      Attendance[]        @relation("AttendanceUser")
-  reviewedAttend  Attendance[]        @relation("AttendanceReviewer")
-  tasksAssigned   Task[]              @relation("TaskAssignee")
-  tasksCreated    Task[]              @relation("TaskCreator")
-  tasksVerified   Task[]              @relation("TaskVerifier")
-  unitsHeld       SerialUnit[]
-  bulkHoldings    BulkHolding[]
-  movementsFrom   StockMovement[]     @relation("MovementFrom")
-  movementsTo     StockMovement[]     @relation("MovementTo")
-  movementsActed  StockMovement[]     @relation("MovementActor")
-  stockCounts     StockCount[]
-  notifications   Notification[]
-  pushTokens      PushToken[]
-  requests        ServiceRequest[]
-  auditEntries    AuditLog[]
+  photos               Photo[]
+  challenges           CaptureChallenge[]
+  attendance           Attendance[]          @relation("AttendanceUser")
+  reviewedAttend       Attendance[]          @relation("AttendanceReviewer")
+  tasksAssigned        Task[]                @relation("TaskAssignee")
+  tasksCreated         Task[]                @relation("TaskCreator")
+  tasksVerified        Task[]                @relation("TaskVerifier")
+  unitsHeld            SerialUnit[]
+  bulkHoldings         BulkHolding[]
+  movementsFrom        StockMovement[]       @relation("MovementFrom")
+  movementsTo          StockMovement[]       @relation("MovementTo")
+  movementsActed       StockMovement[]       @relation("MovementActor")
+  stockCounts          StockCount[]
+  notifications        Notification[]
+  pushTokens           PushToken[]
+  webPushSubscriptions WebPushSubscription[]
+  requests             ServiceRequest[]
+  auditEntries         AuditLog[]
 
   @@index([customerAccount])
 }
@@ -196,17 +199,17 @@ model Task {
   assigneeId  String
   createdById String
 
-  startedAt        DateTime?
-  startPhotoId     String?   @unique
-  endedAt          DateTime?
-  endPhotoId       String?   @unique
-  durationMinutes  Int?
-  completionNotes  String?
-  amountCollected  Int?
-  requestId        String?   @unique
-  verifiedById     String?
-  verifiedAt       DateTime?
-  verificationNote String?
+  startedAt         DateTime?
+  startPhotoId      String?   @unique
+  endedAt           DateTime?
+  endPhotoId        String?   @unique
+  durationMinutes   Int?
+  completionNotes   String?
+  amountCollected   Int?
+  requestId         String?   @unique
+  verifiedById      String?
+  verifiedAt        DateTime?
+  verificationNote  String?
   customerSignature String? // SVG path data drawn by the customer on the technician's phone
   signedByName      String?
   signedAt          DateTime?
@@ -217,12 +220,12 @@ model Task {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  assignee   User           @relation("TaskAssignee", fields: [assigneeId], references: [id])
-  createdBy  User           @relation("TaskCreator", fields: [createdById], references: [id])
-  verifiedBy User?          @relation("TaskVerifier", fields: [verifiedById], references: [id])
+  assignee   User            @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdBy  User            @relation("TaskCreator", fields: [createdById], references: [id])
+  verifiedBy User?           @relation("TaskVerifier", fields: [verifiedById], references: [id])
   request    ServiceRequest? @relation(fields: [requestId], references: [id])
-  startPhoto Photo?         @relation("TaskStartPhoto", fields: [startPhotoId], references: [id])
-  endPhoto   Photo?         @relation("TaskEndPhoto", fields: [endPhotoId], references: [id])
+  startPhoto Photo?          @relation("TaskStartPhoto", fields: [startPhotoId], references: [id])
+  endPhoto   Photo?          @relation("TaskEndPhoto", fields: [endPhotoId], references: [id])
   materials  TaskMaterial[]
   units      SerialUnit[]
   movements  StockMovement[]
@@ -415,6 +418,22 @@ model PushToken {
   updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// A browser (installed web app) that receives push notifications even when the app is closed.
+model WebPushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 // ─────────────────────────── Customer requests ──────────────────────

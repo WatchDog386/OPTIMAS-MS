@@ -19,14 +19,17 @@ An honest audit of the system as it stands: what was wrong, what has been fixed 
 | 9 | **Backups lived on the same server.** | A dead disk or VM would lose the data and the backups together. | Optional off-site copy after every nightly backup (`deploy/backup.env.example`). | Run against stand-in tools; **not yet run against a real cloud bucket.** |
 | 10 | **Nobody was told when the site went down.** | An outage at night would be found by customers first. | `deploy/monitor.sh` checks the site and database, disk space and backup age every 5 minutes and sends a phone alert only when something changes. | Run against a stand-in site and alert receiver. |
 
-Backend suite: 42 tests pass (34 before this pass).
+| 11 | **A password change or a stolen phone did not end other sessions.** | Someone holding an old token stayed signed in for up to 12 hours. | Changing a password, an admin resetting one, or "Sign out other devices" ends every other session at once; the device you are on gets a fresh token. | `test/websession.test.ts`. |
+| 12 | **Alerts only arrived while the web app was open.** | A technician with the app closed missed "job assigned". | Web push: alerts reach the installed web app when it is closed (opt-in on the Notifications screen; needs `deploy/vapid.sh` once). | Server tests with the push service replaced by a recorder; subscription flow and the service-worker handlers checked in a browser/stand-in. **Not yet seen on a real phone.** |
+
+Backend suite: 47 tests pass (34 before this pass).
 
 ## Still open — highest value first
 
 1. **Switch on the new safety nets.** Off-site backups and monitoring ship switched off: they need your storage account and your phone's alert topic (see `docs/DEPLOYMENT.md`). Until then problem 2 below is unsolved. After the first night, restore a backup on a spare machine to prove it works.
 2. **Offline gaps.** Offline now covers the four photo steps *and* opening today's jobs, job details, stock and attendance (a technician's phone saves them and refreshes every 5 minutes while online). Not yet offline: scanning stock in/out, recording a service request, and job lists for managers.
-3. **Session hygiene.** A password change doesn't sign out other devices, and the web app keeps its token in the browser's local storage (normal for a PWA, but a stolen phone stays signed in until the token expires). Add a "sign out everywhere" and shorter tokens with refresh.
-4. **Push notifications on the web app.** Alerts only arrive while the app is open (polling). Web push would make "job assigned" instant.
+3. **Shorter sessions.** Tokens still last 12 hours and the web app keeps its token in the browser (normal for a PWA). A short-lived token with silent refresh would shrink the window further.
+4. **Push on real phones.** Test web push on an Android phone and an iPhone (iPhones need the app added to the home screen first), and extend it to customers.
 5. **End-to-end tests of the screens.** The API is well tested; the app has typechecking only. Turn the browser checks used in this review (sign-in, camera, offline sync, demo walkthrough) into a CI job.
 6. **Reporting depth.** Next: payroll export from attendance, SLA tracking (time from request to visit), and technician utilisation.
 7. **Dependency advisories.** Backend: one moderate (`uuid` via `exceljs`, not reachable in the way we use it). Mobile: advisories are in build tooling only, nothing shipped to phones. Re-check monthly.

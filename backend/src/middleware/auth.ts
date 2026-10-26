@@ -19,7 +19,7 @@ declare global {
  * changing their role takes effect on their very next request instead of when the token expires.
  */
 const LIVE_MS = 10_000;
-const live = new Map<string, { at: number; role: Role; name: string; active: boolean }>();
+const live = new Map<string, { at: number; role: Role; name: string; active: boolean; sessionVersion: number }>();
 
 /** Call after changing a user's role, active flag or password so the change applies immediately. */
 export const forgetUser = (id: string) => live.delete(id);
@@ -27,7 +27,7 @@ export const forgetUser = (id: string) => live.delete(id);
 async function liveUser(id: string) {
   const hit = live.get(id);
   if (hit && Date.now() - hit.at < LIVE_MS) return hit;
-  const row = await prisma.user.findUnique({ where: { id }, select: { role: true, name: true, active: true } });
+  const row = await prisma.user.findUnique({ where: { id }, select: { role: true, name: true, active: true, sessionVersion: true } });
   if (!row) {
     live.delete(id);
     return null;
@@ -41,14 +41,19 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) return next(unauthorized());
   let sub: string;
+  let sv: number;
   try {
-    sub = verifyToken(header.slice(7)).sub;
+    const payload = verifyToken(header.slice(7));
+    sub = payload.sub;
+    sv = payload.sv ?? 0; // tokens issued before this existed count as version 0
   } catch {
     return next(unauthorized('Session expired, please log in again'));
   }
   try {
     const user = await liveUser(sub);
     if (!user || !user.active) return next(unauthorized('This account has been deactivated. Contact your administrator.'));
+    // Signed out remotely (password changed, or "sign out other devices")
+    if (sv !== user.sessionVersion) return next(unauthorized('You were signed out. Please sign in again.'));
     req.user = { id: sub, role: user.role, name: user.name };
     next();
   } catch (err) {

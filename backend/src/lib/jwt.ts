@@ -6,6 +6,8 @@ export interface TokenPayload {
   sub: string;
   role: Role;
   name: string;
+  /** Session version the token was issued under; raised to sign a person out of every device. */
+  sv?: number;
 }
 
 export const signToken = (payload: TokenPayload) =>

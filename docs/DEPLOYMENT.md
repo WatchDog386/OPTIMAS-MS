@@ -153,3 +153,14 @@ It alerts when the site or database stops answering, the disk is nearly full, or
 Check-in, check-out, starting a job and completing a job keep working with no signal: the camera takes the photo, the phone saves it with the action, and it is sent automatically when the signal returns (a "waiting to send" pill shows at the top meanwhile). The server records the time the photo was really taken and flags it **Taken offline** so supervisors can see which records were sent late. Offline photos are accepted up to 48 hours after they were taken.
 
 A technician's phone also keeps today's jobs (with details), stock and attendance and refreshes them every 5 minutes while online, so those screens open even in a dead zone. A "No signal · showing saved data" pill shows when the server can't be reached.
+
+
+## Push notifications on the web app
+
+Alerts that arrive even when the app is closed (job assigned, approvals, stock alerts):
+
+1. `bash deploy/deploy.sh` (installs the new version).
+2. `bash deploy/vapid.sh` once: creates the server's key pair in `deploy/.env`. Then `bash deploy/deploy.sh` again.
+3. On each phone, open **Notifications** in the app and tap **Turn on alerts**. iPhones (iOS 16.4+) must first add the app to the Home Screen.
+
+Changing a password, or **Sign out other devices** on the Change password screen, signs the person out everywhere else straight away.

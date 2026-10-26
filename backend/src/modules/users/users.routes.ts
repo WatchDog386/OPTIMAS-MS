@@ -282,7 +282,7 @@ usersRouter.post(
     assertCanManage(actor, target.role);
     if (target.id === actor.id) throw badRequest('Use “Change password” for your own account');
     const temp = temporaryPassword();
-    await prisma.user.update({ where: { id: target.id }, data: { passwordHash: await bcrypt.hash(temp, 10), mustChangePassword: true } });
+    await prisma.user.update({ where: { id: target.id }, data: { passwordHash: await bcrypt.hash(temp, 10), mustChangePassword: true, sessionVersion: { increment: 1 } } });
     forgetUser(target.id);
     await audit(actor.id, 'PASSWORD_RESET', 'User', target.id, `Reset password for ${target.name} (${target.staffNo})`);
     res.json({ temporaryPassword: temp });

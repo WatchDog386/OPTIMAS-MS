@@ -4,6 +4,7 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { api } from '../api/client';
 import { colors } from '../theme';
+import { disableWebPush, syncWebPush } from './webpush';
 
 let registeredToken: string | null = null;
 
@@ -17,7 +18,8 @@ Notifications.setNotificationHandler({
  */
 export async function registerForPush() {
   try {
-    if (Platform.OS === 'web' || !Device.isDevice) return;
+    if (Platform.OS === 'web') return void (await syncWebPush());
+    if (!Device.isDevice) return;
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
         name: 'Optimas MS',
@@ -44,6 +46,7 @@ export const hasPush = () => registeredToken !== null;
 
 /** Detach this device from the signed-in user (call before logging out). */
 export async function unregisterPush() {
+  if (Platform.OS === 'web') return disableWebPush();
   if (!registeredToken) return;
   try {
     await api('/notifications/push-token', { method: 'DELETE', body: { token: registeredToken } });

@@ -30,6 +30,10 @@ const schema = z.object({
     .default('true')
     .transform((v) => v === 'true'),
   EXPO_ACCESS_TOKEN: z.string().optional(),
+  /** Web push (installed web app): generate a pair with `npx web-push generate-vapid-keys`. Both are needed to switch it on. */
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().default('mailto:admin@example.com'),
   TRUST_PROXY: z.coerce.number().default(0),
   LOGIN_RATE_LIMIT: z.coerce.number().default(10),
   /** Requests one address may make per minute across the whole API (the app polls, so keep this generous). */

@@ -30,8 +30,10 @@ export default function ChangePassword() {
     setBusy(true);
     setError(null);
     try {
-      const res = await api<{ user: User }>('/auth/change-password', { body: { currentPassword: current, newPassword: next } });
-      await useAuth.getState().updateUser(res.user);
+      const res = await api<{ user: User; token?: string }>('/auth/change-password', { body: { currentPassword: current, newPassword: next } });
+      // Changing the password signs out every other device; this one carries on with a fresh token
+      if (res.token) await useAuth.getState().setSession(res.token, res.user);
+      else await useAuth.getState().updateUser(res.user);
       toast.success('Password changed', 'Use your new password next time you sign in.');
       router.replace(homeFor(res.user.role));
     } catch (e) {
@@ -79,6 +81,23 @@ export default function ChangePassword() {
           </Text>
         ) : null}
       </Glass>
+      {!forced ? (
+        <Button
+          label="Sign out other devices"
+          icon="phone-portrait-outline"
+          variant="secondary"
+          onPress={async () => {
+            try {
+              const res = await api<{ token: string }>('/auth/logout-others', { body: {} });
+              const me = useAuth.getState().user;
+              if (me) await useAuth.getState().setSession(res.token, me);
+              toast.success('Other devices signed out', 'Anyone else using your account has to sign in again.');
+            } catch (e) {
+              toast.error('Could not sign out other devices', e instanceof ApiError ? e.message : 'Try again');
+            }
+          }}
+        />
+      ) : null}
       {forced ? (
         <Button
           label="Sign out instead"
