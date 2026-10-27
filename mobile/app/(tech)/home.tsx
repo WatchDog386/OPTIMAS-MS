@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { Attendance, Custody, MyStats, SerialUnit, Task } from '../../src/api/types';
 import {
   AdminHero,
+  AdminHeroBar,
   AttentionCard,
   BrandFooter,
   Button,
@@ -125,15 +126,12 @@ export default function TechHome() {
     }));
 
   return (
-    <Screen edges={[]} refreshing={open.refreshing || today.refreshing} onRefresh={refresh} contentStyle={{ gap: 18, paddingTop: 0 }}>
+    <Screen edges={[]} refreshing={open.refreshing || today.refreshing} onRefresh={refresh} contentStyle={{ gap: 18, paddingTop: 0 }} stickyHeader>
+      <AdminHeroBar firstName={firstName(user.name)} unread={unread.data?.unread} updatedAt={open.updatedAt} onAvatar={() => router.push('/profile')} onSearch={() => router.push('/search')} onBell={() => router.push('/notifications')} />
       <View style={{ marginHorizontal: -16 }}>
         <AdminHero
+          bar={false}
           firstName={firstName(user.name)}
-          unread={unread.data?.unread}
-          updatedAt={open.updatedAt}
-          onAvatar={() => router.push('/profile')}
-          onSearch={() => router.push('/search')}
-          onBell={() => router.push('/notifications')}
           tabs={['Today', 'Performance']}
           tab={tab}
           onTab={setTab}

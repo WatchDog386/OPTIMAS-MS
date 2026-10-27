@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { CustomerJob, CustomerOverview, ServiceRequest } from '../../src/api/types';
 import {
   AdminHero,
+  AdminHeroBar,
   BrandFooter,
   CircleAction,
   Glass,
@@ -66,15 +67,19 @@ export default function Portal() {
   const onRated = (job: CustomerJob) => setData((prev) => (prev ? { ...prev, history: prev.history.map((j) => (j.id === job.id ? job : j)) } : prev));
 
   return (
-    <Screen edges={[]} refreshing={refreshing} onRefresh={() => (refresh(), unread.refresh())} contentStyle={{ gap: 18, paddingTop: 0 }}>
+    <Screen edges={[]} refreshing={refreshing} onRefresh={() => (refresh(), unread.refresh())} contentStyle={{ gap: 18, paddingTop: 0 }} stickyHeader>
+      <AdminHeroBar
+        firstName={firstName(name)}
+        unread={unread.data?.unread}
+        updatedAt={updatedAt}
+        onAvatar={() => router.push('/account')}
+        extra={support ? { icon: 'headset-outline', label: 'Call Optimas support', onPress: () => call(support.phone) } : undefined}
+        onBell={() => router.push('/notifications')}
+      />
       <View style={{ marginHorizontal: -16 }}>
         <AdminHero
+          bar={false}
           firstName={firstName(name)}
-          unread={unread.data?.unread}
-          updatedAt={updatedAt}
-          onAvatar={() => router.push('/account')}
-          extra={support ? { icon: 'headset-outline', label: 'Call Optimas support', onPress: () => call(support.phone) } : undefined}
-          onBell={() => router.push('/notifications')}
           link={{ label: 'Request service', icon: 'add-circle-outline', onPress: () => router.push('/request-new') }}
           onViewAll={() => router.push('/requests')}
           viewAllLabel="My requests"

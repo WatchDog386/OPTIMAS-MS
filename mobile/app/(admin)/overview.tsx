@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import type { Dashboard, Task } from '../../src/api/types';
 import {
   AdminHero,
+  AdminHeroBar,
   BrandFooter,
   Glass,
   GlassLink,
@@ -13,6 +14,7 @@ import {
   Pill,
   PillChart,
   QuickActions,
+  Reveal,
   Screen,
   Section,
   SectionRow,
@@ -37,6 +39,8 @@ export default function Overview() {
   // Everything technicians sent that is waiting for a supervisor (photos, check-outs, finished jobs)
   const approvals = useApi<ApprovalSummary>(managers ? '/approvals/summary' : null, { poll: 30_000 });
   const [tab, setTab] = useState<0 | 1>(managers ? 0 : 1);
+  // Insights shortcuts stay tucked away until the manager taps Manage
+  const [manage, setManage] = useState(false);
 
   const techs = d?.attendance.technicians ?? 0;
   const inField = d ? d.routers.withTechnicians + d.routers.inTransit : 0;
@@ -204,79 +208,6 @@ export default function Overview() {
   ];
   const actions = all.filter((a): a is QuickAction => !!a).slice(0, 8);
 
-  const attention = [
-    managers && d?.requests?.open
-      ? {
-          key: 'req',
-          icon: 'chatbubbles-outline' as const,
-          title: 'Customer requests',
-          sub: 'Turn them into jobs or close them',
-          n: d.requests.open,
-          go: '/admin/requests',
-        }
-      : null,
-    managers && d?.attendance.pendingDressReviews
-      ? {
-          key: 'dress',
-          icon: 'shirt-outline' as const,
-          title: 'Check-in photos to review',
-          sub: 'Approve or send back',
-          n: d.attendance.pendingDressReviews,
-          go: '/admin/approvals?tab=checkins',
-        }
-      : null,
-    managers && approvals.data?.checkOuts
-      ? {
-          key: 'checkouts',
-          icon: 'log-out-outline' as const,
-          title: 'Check-out photos to review',
-          sub: 'End-of-day photos and hours worked',
-          n: approvals.data.checkOuts,
-          go: '/admin/approvals?tab=checkouts',
-        }
-      : null,
-    managers && d?.tasks.awaitingVerification
-      ? {
-          key: 'verify',
-          icon: 'shield-checkmark-outline' as const,
-          title: 'Jobs awaiting verification',
-          sub: 'Before and after photos, materials, signature',
-          n: d.tasks.awaitingVerification,
-          go: '/admin/approvals?tab=jobs',
-        }
-      : null,
-    d?.routers.overdueInCustody
-      ? {
-          key: 'overdue',
-          icon: 'time-outline' as const,
-          title: 'Devices held too long',
-          sub: 'In a technician’s hands past the limit',
-          n: d.routers.overdueInCustody,
-          go: '/admin/reconciliation',
-        }
-      : null,
-    d?.routers.missingInSpotCounts
-      ? {
-          key: 'missing',
-          icon: 'alert-circle-outline' as const,
-          title: 'Missing in stock counts',
-          sub: 'Last 7 days',
-          n: d.routers.missingInSpotCounts,
-          go: '/admin/reconciliation',
-        }
-      : null,
-    d?.lowStockItems
-      ? {
-          key: 'low',
-          icon: 'trending-down-outline' as const,
-          title: 'Items below reorder level',
-          sub: 'Restock the store',
-          n: d.lowStockItems,
-          go: '/admin/items',
-        }
-      : null,
-  ].filter((x): x is NonNullable<typeof x> => x !== null);
-
   const scan = async () => {
     const r = await requestScan({ title: 'Scan a device' });
     if (r?.[0]) router.push(`/admin/unit?serial=${encodeURIComponent(r[0])}`);
@@ -293,15 +224,21 @@ export default function Overview() {
         approvals.refresh();
       }}
       contentStyle={{ gap: 18, paddingTop: 0 }}
+      stickyHeader
     >
+      <AdminHeroBar
+        firstName={firstName(user.name)}
+        unread={unread.data?.unread}
+        onAvatar={() => router.push('/more')}
+        onSearch={() => router.push('/search')}
+        onScan={scan}
+        onBell={() => router.push('/notifications')}
+        updatedAt={updatedAt}
+      />
       <View style={{ marginHorizontal: -16 }}>
         <AdminHero
+          bar={false}
           firstName={firstName(user.name)}
-          unread={unread.data?.unread}
-          onAvatar={() => router.push('/more')}
-          onSearch={() => router.push('/search')}
-          onScan={scan}
-          onBell={() => router.push('/notifications')}
           tabs={['Operations', 'Inventory']}
           tab={tab}
           onTab={setTab}
@@ -352,42 +289,23 @@ export default function Overview() {
 
       <DemoNotice />
 
-      <QuickActions items={actions} />
+      <QuickActions items={actions} action={managers ? { label: manage ? 'Done' : 'Manage', active: manage, onPress: () => setManage((m) => !m) } : undefined} />
 
-      {managers ? (
-        <QuickActions
-          title="Insights"
-          items={[
-            { label: 'Approvals', icon: 'checkmark-done-circle-outline', onPress: () => router.push('/admin/approvals'), badge: approvals.data?.total },
-            { label: 'Activity', icon: 'time-outline', onPress: () => router.push('/admin/activity') },
-            { label: 'Leaderboard', icon: 'trophy-outline', onPress: () => router.push('/admin/leaderboard') },
-            { label: 'Live map', icon: 'map-outline', onPress: () => router.push('/admin/map') },
-            { label: 'Charts', icon: 'bar-chart-outline', onPress: () => router.push('/admin/charts') },
-            { label: 'Ratings', icon: 'star-outline', onPress: () => router.push('/admin/ratings') },
-          ]}
-        />
+      {managers && manage ? (
+        <Reveal index={0}>
+          <QuickActions
+            title="Insights"
+            items={[
+              { label: 'Approvals', icon: 'checkmark-done-circle-outline', onPress: () => router.push('/admin/approvals'), badge: approvals.data?.total },
+              { label: 'Activity', icon: 'time-outline', onPress: () => router.push('/admin/activity') },
+              { label: 'Leaderboard', icon: 'trophy-outline', onPress: () => router.push('/admin/leaderboard') },
+              { label: 'Live map', icon: 'map-outline', onPress: () => router.push('/admin/map') },
+              { label: 'Charts', icon: 'bar-chart-outline', onPress: () => router.push('/admin/charts') },
+              { label: 'Ratings', icon: 'star-outline', onPress: () => router.push('/admin/ratings') },
+            ]}
+          />
+        </Reveal>
       ) : null}
-
-      <Section title="Needs attention" subtitle="Things waiting on you today">
-        {attention.length === 0 ? (
-          <Text variant="bodySm" color={colors.textDim} style={{ paddingHorizontal: 4 }}>
-            All clear — nothing needs your attention.
-          </Text>
-        ) : (
-          attention.map((a) => (
-            <SectionRow
-              key={a.key}
-              icon={a.icon}
-              tint={colors.text}
-              tintBg={colors.highlight}
-              title={a.title}
-              subtitle={a.sub}
-              right={<Pill label={String(a.n)} tone="danger" />}
-              onPress={() => router.push(a.go as never)}
-            />
-          ))
-        )}
-      </Section>
 
       {managers ? (
         <GlassStatCard

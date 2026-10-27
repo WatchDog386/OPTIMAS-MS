@@ -20,7 +20,8 @@ export interface HeroStat {
 interface Props {
   firstName: string;
   unread?: number;
-  onAvatar: () => void;
+  /** Required whenever the header bar is shown (see BarProps). */
+  onAvatar?: () => void;
   onSearch?: () => void;
   onScan?: () => void;
   /** Extra header icon (e.g. support for customers), shown before the bell. */
@@ -29,7 +30,7 @@ interface Props {
     label: string;
     onPress: () => void;
   };
-  onBell: () => void;
+  onBell?: () => void;
   tabs?: [string, string];
   tab?: 0 | 1;
   onTab?: (t: 0 | 1) => void;
@@ -48,21 +49,14 @@ interface Props {
   /** When the figures last synced; shows a live badge under the greeting. */
   updatedAt?: number | null;
   footer?: ReactNode;
+  /** false when the greeting bar is shown separately (as a pinned page header, see AdminHeroBar). */
+  bar?: boolean;
 }
 
-/** Dashboard hero on the page's glass backdrop: greeting header, segmented toggle, action link and stat cards. */
-export function AdminHero(p: Props) {
-  const insets = useSafeAreaInsets();
+type BarProps = Pick<Props, 'firstName' | 'unread' | 'onSearch' | 'onScan' | 'extra' | 'updatedAt'> & Required<Pick<Props, 'onAvatar' | 'onBell'>>;
+
+function HeroBar(p: BarProps) {
   return (
-    <View
-      style={{
-        paddingTop: insets.top + 26,
-        paddingHorizontal: space.lg,
-        gap: 16,
-        paddingBottom: 4,
-      }}
-    >
-      {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={p.onAvatar} accessibilityLabel="My account" style={({ pressed }) => [styles.avatar, pressed && { transform: [{ scale: 0.94 }] }]}>
           <Ionicons name="person" size={22} color={colors.white} />
@@ -89,6 +83,35 @@ export function AdminHero(p: Props) {
           </View>
         </View>
       </View>
+  );
+}
+
+/**
+ * The dashboard's greeting bar (avatar, hello, search, scan, bell) on its own, so a page can pin it at the
+ * top while everything below scrolls. Use with <Screen stickyHeader> and <AdminHero bar={false}>.
+ */
+export function AdminHeroBar(p: BarProps) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={{ paddingTop: insets.top + 20, paddingBottom: 6 }}>
+      <HeroBar {...p} />
+    </View>
+  );
+}
+
+/** Dashboard hero on the page's glass backdrop: greeting header, segmented toggle, action link and stat cards. */
+export function AdminHero(p: Props) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View
+      style={{
+        paddingTop: p.bar === false ? 4 : insets.top + 26,
+        paddingHorizontal: space.lg,
+        gap: 16,
+        paddingBottom: 4,
+      }}
+    >
+      {p.bar === false ? null : <HeroBar {...p} onAvatar={p.onAvatar ?? (() => {})} onBell={p.onBell ?? (() => {})} />}
 
       {/* Segmented toggle */}
       {p.tabs ? (
