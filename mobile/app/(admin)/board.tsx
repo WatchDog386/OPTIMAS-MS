@@ -1,12 +1,9 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import type { Task } from '../../src/api/types';
-import { EmptyState, Reveal, Screen, Segmented, TaskCard, Text } from '../../src/components';
+import { EmptyState, HeaderButton, PageHeader, Reveal, Screen, Segmented, TaskCard } from '../../src/components';
 import { useAuth } from '../../src/store/auth';
 import { useApi } from '../../src/hooks/useApi';
-import { colors, shadow } from '../../src/theme';
 
 const FILTERS = [
   { value: 'ASSIGNED,IN_PROGRESS', label: 'Open' },
@@ -24,26 +21,15 @@ export default function AdminJobs() {
   const canCreate = role === 'ADMIN' || role === 'SUPERVISOR';
 
   return (
-    <View style={{ flex: 1 }}>
-      <Screen refreshing={refreshing} onRefresh={refresh}>
-        <Text variant="h1">Jobs</Text>
-        <Segmented options={FILTERS} value={filter} onChange={setFilter} />
-        {data?.tasks.map((t, i) => (
-          <Reveal key={t.id} index={Math.min(i, 8)}>
-            <TaskCard task={t} showAssignee />
-          </Reveal>
-        ))}
-        {!loading && !data?.tasks.length ? <EmptyState icon="briefcase-outline" title="No jobs" message="Nothing matches this filter." /> : null}
-      </Screen>
-      {canCreate ? (
-        <Pressable style={[styles.fab, shadow.glow]} onPress={() => router.push('/admin/task-new')} accessibilityLabel="New job">
-          <Ionicons name="add" size={28} color={colors.onPrimary} />
-        </Pressable>
-      ) : null}
-    </View>
+    <Screen refreshing={refreshing} onRefresh={refresh}>
+      <PageHeader title="Jobs" right={canCreate ? <HeaderButton icon="add" label="New job" primary onPress={() => router.push('/admin/task-new')} /> : undefined} />
+      <Segmented options={FILTERS} value={filter} onChange={setFilter} />
+      {data?.tasks.map((t, i) => (
+        <Reveal key={t.id} index={Math.min(i, 8)}>
+          <TaskCard task={t} showAssignee />
+        </Reveal>
+      ))}
+      {!loading && !data?.tasks.length ? <EmptyState icon="briefcase-outline" title="No jobs" message="Nothing matches this filter." /> : null}
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  fab: { position: 'absolute', right: 20, bottom: 20, width: 58, height: 58, borderRadius: 18, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
-});

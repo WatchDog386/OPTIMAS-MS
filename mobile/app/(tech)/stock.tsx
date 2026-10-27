@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { api, ApiError } from '../../src/api/client';
 import type { BulkHolding, SerialUnit, StockCountResult } from '../../src/api/types';
-import { Badge, Button, Card, EmptyState, ListRow, Screen, SectionHeader, Text } from '../../src/components';
+import { Badge, Button, Card, EmptyState, ListRow, PageHeader, Screen, SectionHeader, Text } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { requestScan } from '../../src/store/bridge';
 import { colors, space } from '../../src/theme';
@@ -54,7 +54,7 @@ export default function MyStock() {
 
   return (
     <Screen refreshing={refreshing} onRefresh={refresh}>
-      <Text variant="h1">My stock</Text>
+      <PageHeader title="My stock" />
 
       <Card variant="hero" style={styles.hero}>
         <View style={{ flex: 1, gap: 4 }}>

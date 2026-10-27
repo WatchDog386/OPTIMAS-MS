@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Task } from '../../src/api/types';
-import { EmptyState, Reveal, Screen, Segmented, TaskCard, Text } from '../../src/components';
+import { EmptyState, PageHeader, Reveal, Screen, Segmented, TaskCard, Text } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { colors } from '../../src/theme';
 
@@ -16,7 +16,7 @@ export default function Jobs() {
   const { data, refreshing, refresh, loading } = useApi<{ tasks: Task[] }>(`/tasks${filter ? `?status=${filter}` : ''}`);
   return (
     <Screen refreshing={refreshing} onRefresh={refresh}>
-      <Text variant="h1">My jobs</Text>
+      <PageHeader title="My jobs" />
       <Text variant="bodySm" color={colors.textMuted}>
         Take a photo when you start and when you finish every job.
       </Text>

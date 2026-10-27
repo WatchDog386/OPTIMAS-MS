@@ -13,15 +13,17 @@ interface Props {
   right?: ReactNode;
   onPress?: () => void;
   chevron?: boolean;
+  /** Plain row on the page (no card behind it, no arrow), separated by a hairline. */
+  flat?: boolean;
 }
 
-export function ListRow({ title, subtitle, icon, iconTint = colors.primary, left, right, onPress, chevron = !!onPress }: Props) {
+export function ListRow({ title, subtitle, icon, iconTint = colors.primary, left, right, onPress, flat, chevron = !!onPress && !flat }: Props) {
   return (
     <Pressable
       disabled={!onPress}
       onPress={onPress}
       android_ripple={{ color: 'rgba(15,23,42,0.06)' }}
-      style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.glassStrong }]}
+      style={({ pressed }) => [styles.row, flat && styles.flat, pressed && (flat ? { opacity: 0.6 } : { backgroundColor: colors.glassStrong })]}
     >
       {left ??
         (icon ? (
@@ -57,5 +59,6 @@ const styles = StyleSheet.create({
     padding: space.md + 2,
     overflow: 'hidden',
   },
+  flat: { backgroundColor: 'transparent', borderWidth: 0, borderRadius: 0, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, paddingHorizontal: 2, paddingVertical: space.md },
   icon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
 });

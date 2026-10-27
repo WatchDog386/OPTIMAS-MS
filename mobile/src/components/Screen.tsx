@@ -5,6 +5,7 @@ import { colors, space } from '../theme';
 import { GlassBackground } from './Glass';
 import { usePullToRefresh } from './PullToRefresh';
 import { NATIVE, prefersReducedMotion, spring } from '../utils/motion';
+import { PageHeader } from './PageHeader';
 import { ScreenHeader } from './ScreenHeader';
 import { Text } from './Text';
 
@@ -29,7 +30,7 @@ interface Props {
 /** Is this the page's title row (so it should stay put while the page scrolls)? */
 function isPageHeader(node: ReactNode) {
   if (!isValidElement(node)) return false;
-  if (node.type === ScreenHeader) return true;
+  if (node.type === ScreenHeader || node.type === PageHeader) return true;
   return node.type === Text && (node as ReactElement<{ variant?: string }>).props.variant === 'h1';
 }
 

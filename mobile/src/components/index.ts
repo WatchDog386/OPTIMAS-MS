@@ -33,3 +33,4 @@ export * from './RateVisit';
 export * from './SignInLoader';
 export * from './Loaders';
 export * from './NotchCards';
+export * from './PageHeader';
