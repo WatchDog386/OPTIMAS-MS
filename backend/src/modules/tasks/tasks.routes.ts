@@ -13,6 +13,10 @@ import { consumeBulk, installSerial } from '../inventory/inventory.service';
 import { notify, notifyRoles } from '../notifications/notifications.service';
 import { notifyCustomer } from '../customer/customer.service';
 import { audit } from '../../lib/audit';
+import { distanceMetres } from '../../lib/geo';
+import { estimateMinutes } from '../../lib/routing';
+import { positionsOf } from '../location/location.service';
+import { fillJobCoordinates, trackJob } from '../location/track';
 
 export const tasksRouter = Router();
 const managers = requireRole(ROLES.MANAGERS);
@@ -103,12 +107,15 @@ tasksRouter.post(
       const request = await prisma.serviceRequest.findUnique({ where: { id: body.requestId }, include: { task: true } });
       if (!request) throw badRequest('Service request not found');
       if (request.status === 'CLOSED' || request.task) throw conflict('This request already has a job or was closed');
+      // The customer's phone said where they are: use it unless the manager pinned the job themselves
+      if (body.lat == null && request.lat != null && request.lng != null) Object.assign(body, { lat: request.lat, lng: request.lng });
     }
     const task = await prisma.$transaction(async (tx) => {
       const created = await tx.task.create({ data: { ...body, code: newCode(), createdById: me(req).id }, include: detailInclude });
       if (body.requestId) await tx.serviceRequest.update({ where: { id: body.requestId }, data: { status: 'SCHEDULED' } });
       return created;
     });
+    if (task.lat == null) void fillJobCoordinates(task.id, task.address);
     void notifyCustomer(task, {
       title: 'A technician has been assigned',
       body: `${task.assignee.name} will handle "${task.title}"${task.dueAt ? ` · due ${task.dueAt.toLocaleString('en-KE', { timeZone: 'Africa/Nairobi', hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}` : ''}.`,
@@ -135,7 +142,10 @@ tasksRouter.patch(
       const assignee = await prisma.user.findUnique({ where: { id: body.assigneeId } });
       if (!assignee?.active || assignee.role !== 'TECHNICIAN') throw badRequest('Tasks can only be assigned to active technicians');
     }
-    const updated = await prisma.task.update({ where: { id: task.id }, data: body, include: detailInclude });
+    // A new address without a pin: forget the old pin and look the new address up
+    const moved = body.address && body.address !== task.address && body.lat == null;
+    const updated = await prisma.task.update({ where: { id: task.id }, data: moved ? { ...body, lat: null, lng: null } : body, include: detailInclude });
+    if (moved) void fillJobCoordinates(task.id, updated.address);
     if (body.assigneeId && body.assigneeId !== task.assigneeId) {
       await audit(me(req).id, 'TASK_REASSIGNED', 'Task', task.id, `Reassigned ${task.code} from ${task.assignee.name} to ${updated.assignee.name}`);
       void notify([updated.assigneeId], {
@@ -146,6 +156,96 @@ tasksRouter.patch(
       });
       void notify([task.assigneeId], { type: 'TASK_CANCELLED', title: `${task.code} reassigned`, body: 'This job was moved to another technician.', data: { taskId: task.id } });
     }
+    res.json({ task: updated });
+  }),
+);
+
+// ───────────────────────────── Tracking & dispatch ───────────────────
+
+/** Follow the technician to the job: live position, trail, road route and arrival time. */
+tasksRouter.get(
+  '/:id/track',
+  ah(async (req, res) => {
+    const user = me(req);
+    const task = await prisma.task.findUnique({ where: { id: req.params.id } });
+    if (!task) throw notFound('Task');
+    if (task.assigneeId !== user.id && !ROLES.STORE.includes(user.role)) throw forbidden();
+    res.json(await trackJob(task));
+  }),
+);
+
+/**
+ * Technicians ranked by how quickly they could reach this job: free and checked-in people first, then by
+ * driving time from where their phone (or today's GPS photo) last placed them.
+ */
+tasksRouter.get(
+  '/:id/nearby',
+  managers,
+  ah(async (req, res) => {
+    const task = await prisma.task.findUnique({ where: { id: req.params.id }, select: { id: true, lat: true, lng: true, assigneeId: true, status: true } });
+    if (!task) throw notFound('Task');
+    const techs = await prisma.user.findMany({
+      where: { role: 'TECHNICIAN', active: true },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        staffNo: true,
+        attendance: { where: { workDate: workDateOf() }, select: { checkInAt: true, checkOutAt: true } },
+        tasksAssigned: { where: { status: { in: ['ASSIGNED', 'IN_PROGRESS'] } }, select: { status: true } },
+      },
+    });
+    const where = await positionsOf(techs.map((t) => t.id));
+    const site = task.lat != null && task.lng != null ? ([task.lat, task.lng] as [number, number]) : null;
+    const rows = techs.map((t) => {
+      const pos = where.get(t.id) ?? null;
+      const today = t.attendance[0];
+      const onDuty = !!today && !today.checkOutAt;
+      const busy = t.tasksAssigned.some((x) => x.status === 'IN_PROGRESS');
+      const distanceM = pos && site ? Math.round(distanceMetres(pos.lat, pos.lng, site[0], site[1])) : null;
+      return {
+        user: { id: t.id, name: t.name, phone: t.phone, staffNo: t.staffNo },
+        current: t.id === task.assigneeId,
+        onDuty,
+        busy,
+        openJobs: t.tasksAssigned.length,
+        position: pos ? { lat: pos.lat, lng: pos.lng, at: pos.at.toISOString(), kind: pos.kind } : null,
+        distanceKm: distanceM == null ? null : Math.round(distanceM / 100) / 10,
+        etaMinutes: pos && site ? estimateMinutes([pos.lat, pos.lng], site) : null,
+      };
+    });
+    // Free and on duty before busy or off duty; then the closest; people we cannot place go last
+    const rank = (r: (typeof rows)[number]) => (r.onDuty ? 0 : 2) + (r.busy ? 1 : 0);
+    rows.sort((a, b) => rank(a) - rank(b) || (a.etaMinutes ?? 1e9) - (b.etaMinutes ?? 1e9) || a.openJobs - b.openJobs);
+    const best = rows.find((r) => !r.current && r.onDuty && !r.busy && r.etaMinutes != null) ?? null;
+    res.json({ job: { id: task.id, lat: task.lat, lng: task.lng, status: task.status }, suggestedId: best?.user.id ?? null, technicians: rows });
+  }),
+);
+
+/** Hand a job that has not started to another technician (usually the nearest one). */
+tasksRouter.post(
+  '/:id/forward',
+  managers,
+  ah(async (req, res) => {
+    const body = parse(z.object({ technicianId: z.string().min(1), note: z.string().trim().max(300).optional() }), req.body);
+    const task = await loadTask(req.params.id);
+    if (task.status !== 'ASSIGNED') throw conflict('Only jobs that have not started can be forwarded', 'NOT_FORWARDABLE');
+    if (body.technicianId === task.assigneeId) throw badRequest(`${task.assignee.name} already has this job`);
+    const tech = await prisma.user.findUnique({ where: { id: body.technicianId } });
+    if (!tech?.active || tech.role !== 'TECHNICIAN') throw badRequest('Jobs can only go to active technicians');
+    // Guarded so two managers forwarding at once cannot both win
+    const { count } = await prisma.task.updateMany({ where: { id: task.id, status: 'ASSIGNED', assigneeId: task.assigneeId }, data: { assigneeId: tech.id } });
+    if (!count) throw conflict('This job changed while you were looking. Refresh and try again.', 'STALE');
+    const updated = await loadTask(task.id);
+    await audit(me(req).id, 'TASK_FORWARDED', 'Task', task.id, `Forwarded ${task.code} from ${task.assignee.name} to ${tech.name}${body.note ? `: ${body.note}` : ''}`);
+    void notify([tech.id], {
+      type: 'TASK_ASSIGNED',
+      title: `Job forwarded to you: ${task.title}`,
+      body: `${task.customerName} · ${task.address}${body.note ? ` — ${body.note}` : ''}`,
+      data: { taskId: task.id },
+    });
+    void notify([task.assigneeId], { type: 'TASK_CANCELLED', title: `${task.code} moved to ${tech.name}`, body: 'A closer technician will handle this job.', data: { taskId: task.id } });
+    void notifyCustomer(updated, { title: 'Your technician has changed', body: `${tech.name} is now handling "${task.title}".` });
     res.json({ task: updated });
   }),
 );

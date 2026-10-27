@@ -38,6 +38,9 @@ services:
       TZ_OFFSET_MINUTES: ${TZ_OFFSET_MINUTES:-180}
       SHIFT_START: ${SHIFT_START:-08:00}
       LATE_GRACE_MINUTES: ${LATE_GRACE_MINUTES:-15}
+      # In-app directions and arrival times (OSRM) and address look-up (Nominatim); empty = off
+      ROUTING_URL: ${ROUTING_URL-https://router.project-osrm.org}
+      GEOCODING_URL: ${GEOCODING_URL-https://nominatim.openstreetmap.org}
       CAPTURE_TTL_SECONDS: ${CAPTURE_TTL_SECONDS:-90}
       MIN_GPS_ACCURACY_M: ${MIN_GPS_ACCURACY_M:-100}
       OFFICE_LAT: ${OFFICE_LAT:-}

@@ -164,3 +164,13 @@ Alerts that arrive even when the app is closed (job assigned, approvals, stock a
 3. On each phone, open **Notifications** in the app and tap **Turn on alerts**. iPhones (iOS 16.4+) must first add the app to the Home Screen.
 
 Changing a password, or **Sign out other devices** on the Change password screen, signs the person out everywhere else straight away.
+
+## Maps, live tracking and chat
+
+Nothing to install: they come with `bash deploy/deploy.sh`.
+
+- **Location must be allowed.** After signing in, technicians and customers are asked whether the app may use their location. "Not now" asks again at the next sign-in. They can change their answer later under Profile (technicians) or Account (customers). Location only works over **https**, so use the domain, not the bare IP.
+- **What the app sees.** A technician's phone reports its position while the Optimas app is open, about every 20 seconds or after moving 40 m. A web app cannot track a phone that has closed it, so managers then see "last seen" with a time.
+- **Map service.** Street maps come from OpenStreetMap, which is free and needs no key. For heavy use you may want your own tile provider later: set `EXPO_PUBLIC_MAP_TILE_URL` (and `EXPO_PUBLIC_MAP_TILE_ATTRIBUTION`) when building the web app.
+- **Road directions and arrival times** come from the free public OSRM server (`ROUTING_URL`). Typed addresses are looked up with OpenStreetMap Nominatim (`GEOCODING_URL`). Both are fair-use services. If either cannot be reached, the app still works and shows straight-line estimates, labelled as estimates. To turn them off, set `ROUTING_URL=` or `GEOCODING_URL=` (empty) in `deploy/.env`. If the business grows, run your own OSRM server and point `ROUTING_URL` at it.
+- **Chat** goes through the Optimas server. Messages arrive within a few seconds while a conversation is open, and as a push notification otherwise, if alerts are turned on.

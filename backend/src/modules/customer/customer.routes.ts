@@ -8,6 +8,7 @@ import { ah } from '../../middleware/async';
 import { me } from '../../middleware/auth';
 import { parse } from '../../middleware/validate';
 import { notify, notifyRoles } from '../notifications/notifications.service';
+import { trackJob } from '../location/track';
 
 /**
  * Customer self-service: what a subscriber can see about their own account only —
@@ -96,6 +97,9 @@ const requestSchema = z.object({
   description: z.string().trim().min(5, 'Tell us what the problem is').max(1000),
   phone: z.string().trim().max(30).optional(),
   address: z.string().trim().max(300).optional(),
+  /** Where the customer is, from their phone (only when they allowed location). */
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
 });
 
 customerRouter.post(
@@ -111,6 +115,9 @@ customerRouter.post(
         description: body.description,
         phone: body.phone || user.phone,
         address: body.address || user.address,
+        // Their phone's position now, or the premises pin recorded earlier (at onboarding or a past share)
+        lat: body.lat ?? user.lastLat,
+        lng: body.lng ?? user.lastLng,
       },
     });
     void notifyRoles(['SUPERVISOR', 'ADMIN'], {
@@ -132,6 +139,21 @@ customerRouter.get(
       include: { task: { select: { id: true, code: true, status: true, assignee: techSelect } } },
     });
     res.json({ requests });
+  }),
+);
+
+/** Follow the technician coming to one of my visits (only while it is on its way or under way). */
+customerRouter.get(
+  '/jobs/:id/track',
+  ah(async (req, res) => {
+    const user = await account(me(req).id);
+    const job = await prisma.task.findFirst({
+      where: { id: req.params.id, status: { in: ['ASSIGNED', 'IN_PROGRESS'] }, OR: [{ customerAccount: user.customerAccount ?? '__none__' }, { request: { customerId: user.id } }] },
+    });
+    if (!job) throw notFound('Visit');
+    const t = await trackJob(job);
+    // Customers see who is coming and where they are (the id lets them open a chat with them)
+    res.json({ ...t, tech: { id: t.tech.id, name: t.tech.name, phone: t.tech.phone, position: t.tech.position } });
   }),
 );
 

@@ -1,6 +1,6 @@
 /* Optimas MS service worker: makes the web console installable and caches the app shell.
    API calls (/api/*) always go to the network — data is never served stale. */
-const SHELL = 'optimas-shell-v4';
+const SHELL = 'optimas-shell-v5';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(SHELL).then((c) => c.addAll(['/', '/manifest.json', '/icons/icon-192.png'])).then(() => self.skipWaiting()));
@@ -61,8 +61,9 @@ self.addEventListener('push', (event) => {
         body: msg.body || '',
         icon: '/icons/icon-192.png',
         badge: '/icons/icon-192.png',
-        tag: msg.type || 'optimas',
-        data: { url: '/notifications' },
+        // Chat messages open their conversation (one alert per conversation); everything else the inbox
+        tag: msg.data && msg.data.conversationId ? `chat-${msg.data.conversationId}` : msg.type || 'optimas',
+        data: { url: msg.data && msg.data.conversationId ? `/chat/${msg.data.conversationId}` : '/notifications' },
       });
     })(),
   );

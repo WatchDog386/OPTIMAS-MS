@@ -3,6 +3,9 @@ import { Tabs } from 'expo-router/js-tabs';
 import { FloatingTabBar, tabIcon, tabScreenOptions } from '../../src/components/tabs';
 import { isManager, useAuth } from '../../src/store/auth';
 
+// Overview sits in the middle of the bar and stays the tab the app opens on
+export const unstable_settings = { initialRouteName: 'overview' };
+
 export default function AdminLayout() {
   const user = useAuth((s) => s.user);
   if (!user) return <Redirect href="/login" />;
@@ -12,9 +15,9 @@ export default function AdminLayout() {
   const storeOnly = user.role === 'STOREKEEPER';
   return (
     <Tabs screenOptions={tabScreenOptions} tabBar={(props) => <FloatingTabBar {...props} />}>
-      <Tabs.Screen name="overview" options={{ title: 'Overview', tabBarIcon: tabIcon('grid-outline', 'grid') }} />
       <Tabs.Screen name="team" options={{ title: 'Team', tabBarIcon: tabIcon('people-outline', 'people'), href: storeOnly ? null : undefined }} />
       <Tabs.Screen name="board" options={{ title: 'Jobs', tabBarIcon: tabIcon('briefcase-outline', 'briefcase') }} />
+      <Tabs.Screen name="overview" options={{ title: 'Overview', tabBarIcon: tabIcon('grid-outline', 'grid') }} />
       <Tabs.Screen name="store" options={{ title: 'Store', tabBarIcon: tabIcon('cube-outline', 'cube') }} />
       <Tabs.Screen name="more" options={{ title: 'Profile', tabBarIcon: tabIcon('person-circle-outline', 'person-circle') }} />
     </Tabs>

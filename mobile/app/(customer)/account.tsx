@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import type { CustomerOverview } from '../../src/api/types';
-import { ListRow, ProfileView, Screen, Section } from '../../src/components';
+import { ListRow, LocationSetting, ProfileView, Screen, Section } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { colors } from '../../src/theme';
 import { call, whatsapp } from '../../src/utils/contact';
@@ -17,6 +17,7 @@ export default function Account() {
           <ListRow icon="call-outline" title="Phone" subtitle={c?.phone ?? '—'} />
           <ListRow icon="mail-outline" title="Email" subtitle={c?.email ?? '—'} />
         </Section>
+        <LocationSetting />
         <ListRow icon="key-outline" iconTint={colors.text} title="Change password" onPress={() => router.push('/change-password')} />
         <Section title="Support" subtitle="We’re here to help">
           <ListRow icon="call" iconTint={colors.text} title="Call Optimas support" subtitle={data?.support.phone} onPress={() => call(data?.support.phone)} />

@@ -31,7 +31,7 @@ import {
 import { useApi } from '../../src/hooks/useApi';
 import { useAuth } from '../../src/store/auth';
 import { colors, fonts } from '../../src/theme';
-import { call, navigate } from '../../src/utils/contact';
+import { call } from '../../src/utils/contact';
 import { date, duration, firstName, humanize, minutesSince, taskTypeIcon, time } from '../../src/utils/format';
 
 interface Today {
@@ -262,6 +262,8 @@ export default function TechHome() {
             { label: shift === 'ON' ? 'Check out' : 'Check in', icon: 'scan-outline', onPress: () => router.push(shift === 'ON' ? '/check-in?mode=out' : '/check-in?mode=in') },
             { label: 'My jobs', icon: 'briefcase-outline', onPress: () => router.push('/jobs') },
             { label: 'My stock', icon: 'cube-outline', onPress: () => router.push('/stock'), badge: pending.length },
+            { label: 'Onboard customer', icon: 'person-add-outline', onPress: () => router.push('/onboard') },
+            { label: 'Messages', icon: 'chatbubble-ellipses-outline', onPress: () => router.push('/messages') },
             { label: 'Search', icon: 'search-outline', onPress: () => router.push('/search') },
           ]}
         />
@@ -317,7 +319,7 @@ function NextJob({ job }: { job: Task }) {
         </View>
       </View>
       <View style={styles.actions}>
-        <CircleAction icon="navigate-outline" label="Navigate" onPress={() => navigate({ lat: job.lat, lng: job.lng, address: job.address })} />
+        <CircleAction icon="navigate-outline" label="Navigate" onPress={() => router.push(`/navigate/${job.id}`)} />
         <CircleAction icon="call-outline" label="Call" onPress={job.customerPhone ? () => call(job.customerPhone) : undefined} />
         <CircleAction icon={running ? 'flag-outline' : 'play'} label={running ? 'Finish' : 'Start'} primary onPress={() => router.push(`/task/${job.id}`)} />
       </View>

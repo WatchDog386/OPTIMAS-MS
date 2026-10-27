@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: space.sm },
   action: { flex: 1, alignItems: 'center', gap: 6 },
   circle: { width: 54, height: 54, borderRadius: 27, backgroundColor: colors.glassStrong, borderWidth: 1, borderColor: colors.glassBorder, alignItems: 'center', justifyContent: 'center' },
-  // Plain rows on the page, split by a hairline (no card behind each item)
-  item: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md, paddingHorizontal: 2, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+  // Plain rows on the page (no card behind each item, no dividing lines)
+  item: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md, paddingHorizontal: 2 },
   itemIcon: { width: 42, height: 42, borderRadius: radius.sm, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
 });

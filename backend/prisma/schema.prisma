@@ -38,6 +38,15 @@ model User {
   active             Boolean   @default(true)
   /// Raised to sign the person out of every device (password change, "sign out other devices"); tokens carry the number they were issued under.
   sessionVersion     Int       @default(0)
+  /// Whether the person let the app use their location: null until they have been asked.
+  locationConsent    Boolean?
+  /// Last position the app reported (technicians: live while the app is open; customers: their premises).
+  lastLat            Float?
+  lastLng            Float?
+  lastAccuracy       Float?
+  lastHeading        Float?
+  lastSpeed          Float?
+  lastLocationAt     DateTime?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -59,6 +68,10 @@ model User {
   webPushSubscriptions WebPushSubscription[]
   requests             ServiceRequest[]
   auditEntries         AuditLog[]
+  locationPings        LocationPing[]
+  chatMemberships      ConversationMember[]
+  messagesSent         Message[]
+  supportConversation  Conversation?         @relation("SupportCustomer")
 
   @@index([customerAccount])
 }
@@ -398,6 +411,7 @@ enum NotificationType {
   UNIT_LOST
   SERVICE_REQUEST
   JOB_UPDATE
+  CHAT_MESSAGE
 }
 
 model Notification {
@@ -459,6 +473,9 @@ model ServiceRequest {
   description     String
   phone           String?
   address         String?
+  /// Where the customer is (from their phone, when they allowed location).
+  lat             Float?
+  lng             Float?
   status          RequestStatus @default(OPEN)
   closedNote      String?
   createdAt       DateTime      @default(now())
@@ -487,4 +504,75 @@ model AuditLog {
 
   @@index([createdAt])
   @@index([entity, entityId])
+}
+
+// ─────────────────────────── Live location ───────────────────────────
+
+/// Positions a technician's phone reported while the app was open (kept for a few days, for tracking trails).
+model LocationPing {
+  id       String   @id @default(cuid())
+  userId   String
+  lat      Float
+  lng      Float
+  accuracy Float?
+  heading  Float?
+  speed    Float?
+  at       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, at])
+}
+
+// ─────────────────────────────── Chat ────────────────────────────────
+
+enum ConversationKind {
+  /// Two people (staff ↔ staff, manager ↔ customer, technician ↔ their customer).
+  DIRECT
+  /// A customer and the Optimas office: every supervisor and admin can read and reply.
+  SUPPORT
+}
+
+model Conversation {
+  id            String           @id @default(cuid())
+  kind          ConversationKind
+  /// DIRECT only: the two user ids sorted and joined, so a pair has one conversation.
+  pairKey       String?          @unique
+  /// SUPPORT only: the customer the conversation belongs to.
+  customerId    String?          @unique
+  lastMessageAt DateTime         @default(now())
+  createdAt     DateTime         @default(now())
+
+  customer User?                @relation("SupportCustomer", fields: [customerId], references: [id], onDelete: Cascade)
+  members  ConversationMember[]
+  messages Message[]
+
+  @@index([kind, lastMessageAt])
+}
+
+model ConversationMember {
+  id             String    @id @default(cuid())
+  conversationId String
+  userId         String
+  lastReadAt     DateTime?
+  joinedAt       DateTime  @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  senderId       String
+  body           String
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id])
+
+  @@index([conversationId, createdAt])
 }

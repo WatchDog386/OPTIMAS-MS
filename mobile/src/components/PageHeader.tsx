@@ -32,7 +32,8 @@ export function PageHeader({ title, subtitle, right, onBack }: { title: string; 
           </Text>
         ) : null}
       </View>
-      {right === undefined ? <BellButton /> : right ?? <View style={styles.btn} />}
+      {/* An invisible spacer keeps the title centred when there is no action */}
+      {right === undefined ? <BellButton /> : right ?? <View style={styles.spacer} />}
     </View>
   );
 }
@@ -64,6 +65,7 @@ const styles = StyleSheet.create({
   middle: { flex: 1, alignItems: 'center' },
   title: { textAlign: 'center', fontFamily: fonts.semibold, fontSize: 18 },
   btn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.glassStrong, borderWidth: 1, borderColor: colors.glassBorder },
+  spacer: { width: 40, height: 40 },
   primary: { backgroundColor: colors.primary, borderColor: colors.primary },
   badge: { position: 'absolute', top: -3, right: -3, minWidth: 17, height: 17, borderRadius: 9, paddingHorizontal: 3, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.white },
 });

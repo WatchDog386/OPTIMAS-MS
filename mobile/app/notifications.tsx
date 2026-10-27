@@ -79,8 +79,8 @@ export default function Notifications() {
 }
 
 const styles = StyleSheet.create({
-  // Plain rows on the page split by a hairline; new ones are marked by the dot
-  row: { flexDirection: 'row', gap: space.md, paddingVertical: space.md, paddingHorizontal: 2, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+  // Plain rows on the page (no cards, no dividing lines); new ones are marked by the dot
+  row: { flexDirection: 'row', gap: space.md, paddingVertical: space.md, paddingHorizontal: 2 },
   icon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
   dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary, marginTop: 6 },
 });

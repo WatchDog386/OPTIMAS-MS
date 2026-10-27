@@ -27,9 +27,15 @@ export interface LiveMap {
     lat: number | null;
     lng: number | null;
     seenAt: string | null;
-    currentTask: { code: string; title: string } | null;
+    /** Direction of travel in degrees (0 = north), when the phone reports it. */
+    heading?: number | null;
+    /** The phone is reporting right now (not just a photo from earlier today). */
+    live?: boolean;
+    currentTask: { id?: string; code: string; title: string } | null;
   }[];
-  jobs: { id: string; code: string; title: string; status: string; priority: string; address: string; lat: number | null; lng: number | null; assigneeName: string }[];
+  jobs: { id: string; code: string; title: string; status: string; priority: string; address: string; lat: number | null; lng: number | null; assigneeName: string; customerName?: string }[];
+  /** Customer requests nobody has scheduled yet. */
+  requests?: { id: string; type: string; description: string; address: string | null; lat: number | null; lng: number | null; createdAt: string; customerName: string }[];
 }
 
 export interface DayPoint {

@@ -24,6 +24,7 @@ import {
   techs,
   unitsInStatus,
 } from './data';
+import { demoContacts, demoConversation, demoConversations, demoNearby, demoOpen, demoPositions, demoRequestPins, demoRoute, demoTrack, demoUnread } from './field';
 
 /*
  * Answers the app's API calls from the demo data instead of the server.
@@ -149,24 +150,23 @@ function leaderboard(range: 'week' | 'month') {
 }
 
 function liveMap() {
-  const staff = techs.map((u) => {
-    const att = attendanceToday.find((a) => a.userId === u.id);
-    const current = tasks.find((t) => t.assignee.id === u.id && t.status === 'IN_PROGRESS');
-    const state = !att || att.checkOutAt ? 'OFFLINE' : current ? 'ON_JOB' : 'AVAILABLE';
-    const wobble = (u.id.charCodeAt(u.id.length - 1) % 5) / 400;
+  const staff = demoPositions().map((p) => {
+    const state = !p.att || p.att.checkOutAt ? 'OFFLINE' : p.working ? 'ON_JOB' : 'AVAILABLE';
     return {
-      user: { id: u.id, name: u.name, staffNo: u.staffNo, phone: u.phone },
+      user: { id: p.user.id, name: p.user.name, staffNo: p.user.staffNo, phone: p.user.phone },
       state,
-      lat: current?.lat ?? u.t.lat + wobble,
-      lng: current?.lng ?? u.t.lng - wobble,
-      seenAt: att ? iso(NOW - (u.id.charCodeAt(u.id.length - 1) % 9 + 2) * MIN) : null,
-      currentTask: current ? { code: current.code, title: current.title } : null,
+      lat: p.lat,
+      lng: p.lng,
+      heading: p.heading,
+      live: p.live && state !== 'OFFLINE',
+      seenAt: p.att ? iso(p.live ? Date.now() - 5_000 : NOW - ((p.user.id.charCodeAt(p.user.id.length - 1) % 9) + 2) * MIN) : null,
+      currentTask: p.working ? { id: p.working.id, code: p.working.code, title: p.working.title } : null,
     };
   });
   const jobs = tasks
     .filter((t) => t.status === 'ASSIGNED' || t.status === 'IN_PROGRESS')
-    .map((t) => ({ id: t.id, code: t.code, title: t.title, status: t.status, priority: t.priority, address: t.address, lat: t.lat, lng: t.lng, assigneeName: t.assignee.name }));
-  return { generatedAt: iso(NOW), staff, jobs };
+    .map((t) => ({ id: t.id, code: t.code, title: t.title, status: t.status, priority: t.priority, address: t.address, lat: t.lat, lng: t.lng, assigneeName: t.assignee.name, customerName: t.customerName }));
+  return { generatedAt: iso(Date.now()), staff, jobs, requests: demoRequestPins() };
 }
 
 function charts(days: number) {
@@ -330,6 +330,11 @@ function myStock() {
 /** Handles one API call the way the server would. `path` includes the query string. */
 export async function demoRequest<T>(path: string, options: { method?: string; body?: unknown } = {}): Promise<T> {
   const method = (options.method ?? (options.body ? 'POST' : 'GET')).toUpperCase();
+  // Opening a chat only finds the conversation (nothing is created), so it is allowed
+  if (method === 'POST' && path === '/chat/conversations') {
+    const b = (options.body ?? {}) as { userId?: string };
+    return demoOpen(b.userId) as T;
+  }
   // Only look-ups; anything that would save something is refused
   if (method !== 'GET') {
     throw new ApiError(403, 'This is demo data, so changes are not saved. Sign out and sign in with your own account to work for real.', 'DEMO');
@@ -416,6 +421,25 @@ export async function demoRequest<T>(path: string, options: { method?: string; b
 
   if (route === '/insights/leaderboard') return body(leaderboard(q.get('range') === 'month' ? 'month' : 'week'));
   if (route === '/insights/map') return body(liveMap());
+
+  // Live tracking, dispatch and chat
+  if (route === '/location/route') {
+    const pt = (v: string | null) => (v ?? '0,0').split(',').map(Number) as [number, number];
+    return body({ route: demoRoute(pt(q.get('from')), pt(q.get('to'))) });
+  }
+  const track = /^\/(?:tasks|customer\/jobs)\/([^/]+)\/track$/.exec(route);
+  if (track) return body(demoTrack(track[1]));
+  const nearby = /^\/tasks\/([^/]+)\/nearby$/.exec(route);
+  if (nearby) return body(demoNearby(nearby[1]));
+  if (route === '/chat/unread') return body(demoUnread());
+  if (route === '/chat/conversations') return body(demoConversations());
+  if (route === '/chat/contacts') return body(demoContacts());
+  const conv = /^\/chat\/conversations\/([^/]+)$/.exec(route);
+  if (conv) {
+    // Polling for newer messages: the demo has none
+    if (q.get('after')) return body({ ...demoConversation(conv[1]), messages: [] });
+    return body(demoConversation(conv[1]));
+  }
   if (route === '/insights/charts') return body(charts(Math.min(30, Math.max(7, Number(q.get('days')) || 14))));
   if (route === '/insights/ratings') return body(ratings());
 

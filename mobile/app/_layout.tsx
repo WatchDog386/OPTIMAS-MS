@@ -29,6 +29,7 @@ import { PhotoViewerHost } from '../src/components/PhotoViewer';
 import { startSyncLoop } from '../src/offline/queue';
 import { prefetchWork } from '../src/offline/prefetch';
 import { FeedbackHost } from '../src/components/FeedbackHost';
+import { LocationHost } from '../src/components/LocationHost';
 import { RouteLoader } from '../src/components/RouteLoader';
 import { unlockAudioOnFirstTouch } from '../src/utils/chime';
 import { colors } from '../src/theme';
@@ -122,6 +123,7 @@ function AppStack() {
       <NotificationWatcher />
       <SyncStatus />
       <PhotoViewerHost />
+      <LocationHost />
       <FeedbackHost />
     </>
   );

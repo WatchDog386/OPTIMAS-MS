@@ -5,6 +5,8 @@ import type { TaskType } from '../src/api/types';
 import { Button, Glass, Input, Screen, ScreenHeader, Segmented, Text } from '../src/components';
 import { colors } from '../src/theme';
 import { toast } from '../src/store/feedback';
+import { useAuth } from '../src/store/auth';
+import { currentFix } from '../src/utils/location';
 
 const TYPES: { value: TaskType; label: string }[] = [
   { value: 'REPAIR', label: 'Fault / no internet' },
@@ -20,11 +22,14 @@ export default function RequestNew() {
   const [description, setDescription] = useState('');
   const [phone, setPhone] = useState('');
   const [busy, setBusy] = useState(false);
+  // With location on, the request carries where the customer is so the technician can drive straight there
+  const sharing = useAuth((s) => s.user?.locationConsent === true);
 
   const submit = async () => {
     setBusy(true);
     try {
-      await api('/customer/requests', { body: { type, description, phone: phone || undefined } });
+      const fix = sharing ? await currentFix() : null;
+      await api('/customer/requests', { body: { type, description, phone: phone || undefined, ...(fix ? { lat: fix.lat, lng: fix.lng } : {}) } });
       toast.success('Request sent', 'Thank you. A supervisor will assign a technician and you will be notified.');
       router.back();
     } catch (e) {
@@ -44,6 +49,9 @@ export default function RequestNew() {
         <Segmented options={TYPES} value={type} onChange={setType} />
         <Input label="Describe the problem" multiline value={description} onChangeText={setDescription} placeholder="e.g. Internet drops every evening, red light on the router" />
         <Input label="Phone to reach you (optional)" icon="call-outline" keyboardType="phone-pad" value={phone} onChangeText={setPhone} />
+        <Text variant="label" color={colors.textMuted}>
+          {sharing ? 'Your current location is sent with the request so the technician can find you.' : 'Tip: turn on location in Account so technicians can find you without calling.'}
+        </Text>
       </Glass>
     </Screen>
   );

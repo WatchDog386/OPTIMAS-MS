@@ -13,16 +13,19 @@ interface Message {
 }
 
 /**
- * Records an in-app notification for each user and delivers it as a push notification.
+ * Records an in-app notification for each user (unless `inbox: false`) and delivers it as a push notification.
  * Never throws: a notification failure must not fail the business action that triggered it.
  */
-export async function notify(userIds: (string | null | undefined)[], msg: Message) {
+export async function notify(userIds: (string | null | undefined)[], msg: Message, opts: { inbox?: boolean } = {}) {
   const ids = [...new Set(userIds.filter((id): id is string => !!id))];
   if (!ids.length) return;
   try {
-    await prisma.notification.createMany({
-      data: ids.map((userId) => ({ userId, type: msg.type, title: msg.title, body: msg.body, data: msg.data })),
-    });
+    // Chat messages only buzz the phone: the conversation itself is their inbox
+    if (opts.inbox !== false) {
+      await prisma.notification.createMany({
+        data: ids.map((userId) => ({ userId, type: msg.type, title: msg.title, body: msg.body, data: msg.data })),
+      });
+    }
     if (env.PUSH_ENABLED) await Promise.all([sendPush(ids, msg), sendWeb(ids, msg)]);
   } catch (err) {
     console.error('[notify] failed', err);

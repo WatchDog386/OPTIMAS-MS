@@ -25,6 +25,7 @@ export const publicUser = (u: User) => ({
   address: u.address,
   active: u.active,
   mustChangePassword: u.mustChangePassword,
+  locationConsent: u.locationConsent,
   lastLoginAt: u.lastLoginAt,
   createdAt: u.createdAt,
 });
@@ -207,6 +208,89 @@ usersRouter.post(
       }
       throw e;
     }
+  }),
+);
+
+const onboardSchema = z.object({
+  name: z.string().trim().min(2, 'Enter the customer’s name').max(120),
+  phone: z.string().trim().regex(/^\+?[0-9 ]{9,16}$/, 'Enter a valid phone number, e.g. +254712345678'),
+  email: baseSchema.email,
+  address: z.string().trim().min(3, 'Enter where the customer is').max(300),
+  region: baseSchema.region,
+  /** The ISP account number if the office already issued one; otherwise one is created. */
+  customerAccount: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9-]{3,40}$/, 'Use letters, numbers and dashes only')
+    .transform((s) => s.toUpperCase())
+    .optional()
+    .or(z.literal('').transform(() => undefined)),
+  /** Premises pin (the technician's phone while standing there). */
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
+  /** The installation job this customer is being onboarded on. */
+  taskId: z.string().optional(),
+});
+
+const newAccountNumber = () => `OPT-CUS-${String(Math.floor(10000 + Math.random() * 90000))}`;
+
+/**
+ * Onboarding: a technician (or the office) creates the app login for the customer they are installing for.
+ * The customer signs in with the account number and a one-time password, then chooses their own.
+ */
+usersRouter.post(
+  '/onboard-customer',
+  requireRole(['ADMIN', 'SUPERVISOR', 'TECHNICIAN']),
+  ah(async (req, res) => {
+    const actor = req.user!;
+    const body = parse(onboardSchema, req.body);
+    let account = body.customerAccount;
+    if (body.taskId) {
+      const task = await prisma.task.findUnique({ where: { id: body.taskId }, select: { id: true, code: true, assigneeId: true, customerAccount: true, status: true } });
+      if (!task) throw notFound('Job');
+      if (actor.role === 'TECHNICIAN' && task.assigneeId !== actor.id) throw forbidden('This job is not assigned to you');
+      if (task.customerAccount && account && task.customerAccount !== account) throw conflict(`This job belongs to account ${task.customerAccount}`, 'ACCOUNT_MISMATCH');
+      account = account ?? task.customerAccount ?? undefined;
+    }
+    if (account && (await prisma.user.findFirst({ where: { customerAccount: account, role: 'CUSTOMER' } }))) {
+      throw conflict(`Account ${account} already has an app login. Ask the office to reset its password instead.`, 'ALREADY_ONBOARDED');
+    }
+    const temp = temporaryPassword();
+    const passwordHash = await bcrypt.hash(temp, 10);
+    let user: User | null = null;
+    // A generated account number can (rarely) collide: try a few
+    for (let attempt = 0; !user && attempt < 5; attempt += 1) {
+      const loginId = account ?? newAccountNumber();
+      try {
+        user = await prisma.user.create({
+          data: {
+            name: body.name,
+            phone: body.phone,
+            email: body.email,
+            address: body.address,
+            region: body.region,
+            role: 'CUSTOMER',
+            customerAccount: loginId,
+            staffNo: loginId,
+            passwordHash,
+            mustChangePassword: true,
+            lastLat: body.lat ?? null,
+            lastLng: body.lng ?? null,
+            lastLocationAt: body.lat != null ? new Date() : null,
+          },
+        });
+      } catch (e) {
+        if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002')) throw e;
+        const field = String((e.meta?.target as string[] | undefined)?.[0] ?? '');
+        if (field === 'email') throw conflict('That email is already used by another account', 'DUPLICATE');
+        if (account) throw conflict(`Account ${account} already has an app login`, 'ALREADY_ONBOARDED');
+      }
+    }
+    if (!user) throw conflict('Could not create an account number. Try again.');
+    // Link the job to the new account so the customer sees the visit straight away
+    if (body.taskId) await prisma.task.updateMany({ where: { id: body.taskId, customerAccount: null }, data: { customerAccount: user.customerAccount } });
+    await audit(actor.id, 'CUSTOMER_ONBOARDED', 'User', user.id, `Onboarded customer ${user.name} (${user.staffNo})${body.taskId ? ' on a job' : ''}`);
+    res.status(201).json({ user: publicUser(user), loginId: user.staffNo, temporaryPassword: temp });
   }),
 );
 

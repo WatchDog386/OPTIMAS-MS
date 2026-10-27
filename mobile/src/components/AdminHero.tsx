@@ -6,6 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, space } from '../theme';
 import { CountUp, LiveBadge, Reveal, Skeleton } from './Motion';
 import { Text } from './Text';
+import { router } from 'expo-router';
+import { useApi } from '../hooks/useApi';
 
 export interface HeroStat {
   key: string;
@@ -71,6 +73,7 @@ function HeroBar(p: BarProps) {
           {p.onSearch ? <IconBtn icon="search" label="Search" onPress={p.onSearch} /> : null}
           {p.onScan ? <IconBtn icon="qr-code-outline" label="Scan a device" onPress={p.onScan} /> : null}
           {p.extra ? <IconBtn icon={p.extra.icon} label={p.extra.label} onPress={p.extra.onPress} /> : null}
+          <ChatBtn />
           <View>
             <IconBtn icon="notifications-outline" label="Notifications" onPress={p.onBell} />
             {p.unread ? (
@@ -225,6 +228,23 @@ function StatBlock({ stat: s, fill }: { stat: HeroStat; fill: string }) {
         </View>
       </View>
     </Pressable>
+  );
+}
+
+/** Messages, with the number of conversations that have something new. */
+function ChatBtn() {
+  const { data } = useApi<{ unread: number }>('/chat/unread', { poll: 20_000 });
+  return (
+    <View>
+      <IconBtn icon="chatbubble-ellipses-outline" label="Messages" onPress={() => router.push('/chat')} />
+      {data?.unread ? (
+        <View style={styles.badge} pointerEvents="none">
+          <Text variant="label" color="#FFFFFF" fixedColor style={styles.badgeText}>
+            {data.unread > 9 ? '9+' : data.unread}
+          </Text>
+        </View>
+      ) : null}
+    </View>
   );
 }
 

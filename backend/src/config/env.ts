@@ -38,6 +38,10 @@ const schema = z.object({
   LOGIN_RATE_LIMIT: z.coerce.number().default(10),
   /** Requests one address may make per minute across the whole API (the app polls, so keep this generous). */
   API_RATE_LIMIT: z.coerce.number().default(600),
+  /** OSRM server for in-app driving routes and arrival times. Empty switches road routing off (straight-line estimates are used). */
+  ROUTING_URL: z.string().default('https://router.project-osrm.org'),
+  /** Nominatim server used to find coordinates for typed addresses. Empty switches it off. */
+  GEOCODING_URL: z.string().default('https://nominatim.openstreetmap.org'),
   SUPPORT_PHONE: z.string().default('+254700000000'),
   SUPPORT_WHATSAPP: z.string().default('254700000000'),
 });

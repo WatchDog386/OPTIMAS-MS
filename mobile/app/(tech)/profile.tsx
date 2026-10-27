@@ -1,6 +1,6 @@
 import type { Attendance } from '../../src/api/types';
 import { router } from 'expo-router';
-import { Badge, ListRow, ProfileView, Screen, SectionHeader, StatGrid, StatTile } from '../../src/components';
+import { Badge, ListRow, LocationSetting, ProfileView, Screen, SectionHeader, StatGrid, StatTile } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { colors } from '../../src/theme';
 import { date, duration, time } from '../../src/utils/format';
@@ -15,6 +15,7 @@ export default function Profile() {
           <StatTile icon="calendar" label="Days present" value={stats.data?.daysPresent ?? '–'} tint={colors.info} />
           <StatTile icon="alarm-outline" label="Late arrivals" value={stats.data?.lateDays ?? '–'} tint={colors.warning} />
         </StatGrid>
+        <LocationSetting />
         <ListRow icon="key-outline" iconTint={colors.text} title="Change password" onPress={() => router.push('/change-password')} />
         <ListRow icon="search" iconTint={colors.text} title="Search my jobs and devices" onPress={() => router.push('/search')} />
         <SectionHeader title="Attendance history" />

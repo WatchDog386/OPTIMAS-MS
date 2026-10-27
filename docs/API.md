@@ -23,6 +23,7 @@ account; the app forces the password-change screen until it is cleared.
 | POST | `/users` | S A | `{ staffNo, name, email?, phone?, role, region?, password?, customerAccount?, address? }` — no password → a one-time temporary password is returned as `temporaryPassword`. Customers sign in with `customerAccount`. Supervisors cannot create admins |
 | PATCH | `/users/:id` | S A | profile fields, `role`, `active`. Refuses: changing your own role or deactivating yourself, removing the last active admin, deactivating someone still holding devices (`HOLDS_DEVICES`), converting staff ↔ customer |
 | POST | `/users/:id/reset-password` | S A | → `{ temporaryPassword }`; the user must set a new one at next sign-in |
+| POST | `/users/onboard-customer` | T S A | `{ name, phone, address, email?, customerAccount?, lat?, lng?, taskId? }` — creates the customer's app login on site (account number generated as `OPT-CUS-#####` if not given; a technician only on their own job). → `{ user, loginId, temporaryPassword }`; links the job to the account |
 
 ## Search & audit
 | Method | Path | Who | Body / notes |
@@ -63,6 +64,30 @@ A `photoId` must be used by its action within 10 minutes, once.
 | POST | `/tasks/:id/complete` | assignee | `{ photoId, notes, customerAccount?, amountCollected?, serials: string[], materials: [{ itemId, quantity, unitPrice? }], signature?: { path, signedBy } }` — installations require ≥1 serial **and** a customer signature (`path` = SVG path data on a 300×150 canvas) |
 | POST | `/tasks/:id/verify` | S A | `{ decision: VERIFIED \| REJECTED, note? }` |
 | POST | `/tasks/:id/cancel` | S A | |
+| GET | `/tasks/:id/track` | assignee, K S A | `{ job, tech: { position }, trail: [lat,lng][], route }` — the technician's live position, the path driven, and the road route with `distance` (m), `duration` (s), `arriveAt` |
+| GET | `/tasks/:id/nearby` | S A | Technicians ranked for this job: free and checked in first, then by driving time. `{ suggestedId, technicians: [{ user, onDuty, busy, openJobs, position, distanceKm, etaMinutes }] }` |
+| POST | `/tasks/:id/forward` | S A | `{ technicianId, note? }` — hand a not-started job to another technician (both and the customer are notified) |
+
+## Location
+Everyone signed in. Nothing is recorded until the person allows it.
+
+| Method | Path | Body / notes |
+|---|---|---|
+| POST | `/location/consent` | `{ granted }` — `false` also deletes the saved position and trail |
+| POST | `/location` | `{ lat, lng, accuracy?, heading?, speed? }` — 409 `LOCATION_OFF` without consent. Technicians' points form a trail (kept 3 days); a customer's point is their premises |
+| GET | `/location/route?from=lat,lng&to=lat,lng` | Road route with turn-by-turn `steps`. Uses `ROUTING_URL` (OSRM); falls back to a straight-line estimate (`source: "estimate"`) |
+
+## Chat
+Everyone signed in. Staff ↔ staff; supervisors/admins ↔ any customer; a technician ↔ a customer only while they have an open job for them (or one finished in the last 14 days); each customer has one **support** conversation every supervisor and admin can answer.
+
+| Method | Path | Body / notes |
+|---|---|---|
+| GET | `/chat/conversations` | Newest first, with `lastMessage` and `unread` |
+| GET | `/chat/unread` | `{ unread }` = conversations with something new |
+| GET | `/chat/contacts?q=` | People this account may message (`support: true` for customers) |
+| POST | `/chat/conversations` | `{ userId }` \| `{ support: true }` (customer) \| `{ customerId }` (S A) \| `{ taskId, with: customer\|technician }` — finds or starts the conversation |
+| GET | `/chat/conversations/:id?after=ISO` | Messages (newest 100, or only newer ones) and marks it read |
+| POST | `/chat/conversations/:id/messages` | `{ body }` — the other side gets a push notification |
 
 ## Inventory
 | Method | Path | Who | Body / notes |
@@ -136,6 +161,6 @@ Customers receive `JOB_UPDATE` notifications when a technician is assigned, star
 | Method | Path | Returns |
 |---|---|---|
 | GET | `/insights/leaderboard?range=week\|month` | Technicians ranked by score (jobs, rating, attendance) |
-| GET | `/insights/map` | Staff (last GPS photo today, state) and open jobs with coordinates |
+| GET | `/insights/map` | Staff (live phone position, else last GPS photo today; heading, state), open jobs and open customer requests with coordinates |
 | GET | `/insights/charts?days=7..30` | Per-day jobs, cash, attendance, stock movement, and job mix |
 | GET | `/insights/ratings` | Average, 1–5 spread, per-technician averages, latest comments |

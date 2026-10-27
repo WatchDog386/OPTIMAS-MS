@@ -22,6 +22,8 @@ import { customerRouter } from './modules/customer/customer.routes';
 import { requestsRouter } from './modules/requests/requests.routes';
 import { searchRouter } from './modules/search/search.routes';
 import { auditRouter } from './modules/audit/audit.routes';
+import { locationRouter } from './modules/location/location.routes';
+import { chatRouter } from './modules/chat/chat.routes';
 
 export function createApp() {
   const app = express();
@@ -54,7 +56,7 @@ export function createApp() {
       message: { error: { message: 'Too many requests. Slow down and try again in a minute.', code: 'RATE_LIMITED' } },
     }),
   );
-  // Customer logins can only reach /customer and /notifications.
+  // Customer logins can only reach /customer, /notifications, /location and /chat.
   const staff = requireRole(ROLES.STAFF);
   api.use(
     '/auth/login',
@@ -83,6 +85,9 @@ export function createApp() {
   api.use('/search', requireAuth, staff, searchRouter);
   api.use('/audit', requireAuth, requireRole(ROLES.ADMIN), auditRouter);
   api.use('/customer', requireAuth, requireRole(ROLES.CUSTOMER), customerRouter);
+  // Everyone signed in (staff and customers)
+  api.use('/location', requireAuth, locationRouter);
+  api.use('/chat', requireAuth, chatRouter);
   app.use('/api/v1', api);
 
   app.use(notFoundHandler);

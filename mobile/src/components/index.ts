@@ -34,3 +34,5 @@ export * from './SignInLoader';
 export * from './Loaders';
 export * from './NotchCards';
 export * from './PageHeader';
+export * from './map';
+export * from './LocationSetting';

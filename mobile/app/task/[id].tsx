@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Linking, Platform, StyleSheet, View } from 'react-native';
+import { Linking, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api, ApiError } from '../../src/api/client';
@@ -13,11 +13,14 @@ import { submitWithPhoto } from '../../src/offline/queue';
 import { colors, radius, space } from '../../src/theme';
 import { dateTime, duration, flagLabel, humanize, kes, priorityTone, taskStatusTone, taskTypeIcon, time } from '../../src/utils/format';
 import { celebrate, toast } from '../../src/store/feedback';
+import { openChatWith } from '../../src/utils/chat';
 
 export default function TaskDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const user = useAuth((s) => s.user)!;
   const manager = isManager(user.role);
+  // Supervisors and admins dispatch; the store only looks
+  const dispatcher = user.role === 'ADMIN' || user.role === 'SUPERVISOR';
   const { data, setData, refresh, refreshing } = useApi<{ task: Task }>(`/tasks/${id}`);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
@@ -62,10 +65,7 @@ export default function TaskDetail() {
     }
   };
 
-  const openMaps = () => {
-    const q = task.lat != null && task.lng != null ? `${task.lat},${task.lng}` : encodeURIComponent(task.address);
-    Linking.openURL(Platform.OS === 'ios' ? `http://maps.apple.com/?q=${q}` : `https://www.google.com/maps/search/?api=1&query=${q}`);
-  };
+  const open = task.status === 'ASSIGNED' || task.status === 'IN_PROGRESS';
   const materialsTotal = task.materials?.reduce((n, m) => n + m.amount, 0) ?? 0;
 
   const footer =
@@ -82,9 +82,12 @@ export default function TaskDetail() {
         </View>
       </View>
     ) : manager && task.status === 'ASSIGNED' ? (
-      <View style={{ flexDirection: 'row', gap: space.sm }}>
-        <Button label="Cancel" variant="danger" icon="close-circle-outline" loading={busy} onPress={cancel} style={{ flex: 1 }} />
-        <Button label="Edit / reassign" icon="create-outline" onPress={() => router.push(`/admin/task-edit?id=${task.id}`)} style={{ flex: 1.4 }} />
+      <View style={{ gap: space.sm }}>
+        {dispatcher ? <Button label="Forward to nearest technician" icon="git-branch-outline" onPress={() => router.push(`/admin/forward/${task.id}`)} /> : null}
+        <View style={{ flexDirection: 'row', gap: space.sm }}>
+          <Button label="Cancel" variant="danger" icon="close-circle-outline" loading={busy} onPress={cancel} style={{ flex: 1 }} />
+          <Button label="Edit / reassign" icon="create-outline" variant={dispatcher ? 'secondary' : 'primary'} onPress={() => router.push(`/admin/task-edit?id=${task.id}`)} style={{ flex: 1.4 }} />
+        </View>
       </View>
     ) : manager && task.status === 'IN_PROGRESS' ? (
       <Button label="Cancel job" variant="danger" icon="close-circle-outline" loading={busy} onPress={cancel} />
@@ -132,8 +135,18 @@ export default function TaskDetail() {
           {task.customerPhone ? (
             <Button label="Call" icon="call" variant="secondary" style={{ flex: 1 }} onPress={() => Linking.openURL(`tel:${task.customerPhone}`)} />
           ) : null}
-          <Button label="Navigate" icon="navigate" variant="secondary" style={{ flex: 1 }} onPress={openMaps} />
+          {mine ? (
+            <Button label="Directions" icon="navigate" variant="secondary" style={{ flex: 1 }} onPress={() => router.push(`/navigate/${task.id}`)} />
+          ) : open ? (
+            <Button label="Track" icon="navigate" variant="secondary" style={{ flex: 1 }} onPress={() => router.push(`/track/${task.id}`)} />
+          ) : null}
         </View>
+        {mine && open ? (
+          <View style={{ flexDirection: 'row', gap: space.sm }}>
+            <Button label="Message" icon="chatbubble-ellipses-outline" variant="secondary" style={{ flex: 1 }} onPress={() => openChatWith({ taskId: task.id, with: 'customer' })} />
+            <Button label="Onboard customer" icon="person-add-outline" variant="secondary" style={{ flex: 1.3 }} onPress={() => router.push(`/onboard?taskId=${task.id}`)} />
+          </View>
+        ) : null}
       </Card>
 
       {manager ? (
@@ -147,6 +160,7 @@ export default function TaskDetail() {
               {task.assignee.name} · {task.assignee.staffNo}
             </Text>
           </View>
+          <Button label="Message" icon="chatbubble-ellipses-outline" variant="secondary" onPress={() => openChatWith({ userId: task.assignee.id })} />
         </Card>
       ) : null}
 

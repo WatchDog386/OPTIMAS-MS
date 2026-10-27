@@ -18,6 +18,8 @@ export interface User {
   address?: string | null;
   active: boolean;
   mustChangePassword?: boolean;
+  /** Whether the person lets the app use their location; null until asked. */
+  locationConsent?: boolean | null;
   lastLoginAt?: string | null;
   createdAt?: string;
 }

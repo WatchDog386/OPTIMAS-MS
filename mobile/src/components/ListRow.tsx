@@ -13,7 +13,7 @@ interface Props {
   right?: ReactNode;
   onPress?: () => void;
   chevron?: boolean;
-  /** Plain row on the page (no card behind it, no arrow), separated by a hairline. */
+  /** Plain row on the page (no card behind it, no arrow, no dividing line). */
   flat?: boolean;
 }
 
@@ -59,6 +59,6 @@ const styles = StyleSheet.create({
     padding: space.md + 2,
     overflow: 'hidden',
   },
-  flat: { backgroundColor: 'transparent', borderWidth: 0, borderRadius: 0, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, paddingHorizontal: 2, paddingVertical: space.md },
+  flat: { backgroundColor: 'transparent', borderWidth: 0, borderRadius: 0, paddingHorizontal: 2, paddingVertical: space.md },
   icon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
 });

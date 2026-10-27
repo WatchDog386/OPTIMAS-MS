@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '../../lib/prisma';
+import { positionsOf } from '../location/location.service';
 import { workDateOf } from '../../lib/time';
 import { ah } from '../../middleware/async';
 
@@ -63,43 +64,46 @@ insightsRouter.get(
   '/map',
   ah(async (_req, res) => {
     const today = workDateOf();
-    const [staff, attendance, open, photos] = await Promise.all([
+    const [staff, attendance, open, requests] = await Promise.all([
       prisma.user.findMany({ where: { active: true, role: 'TECHNICIAN' }, select: { id: true, name: true, staffNo: true, phone: true } }),
       prisma.attendance.findMany({ where: { workDate: today }, select: { userId: true, checkOutAt: true } }),
       prisma.task.findMany({
         where: { status: { in: ['ASSIGNED', 'IN_PROGRESS'] } },
-        select: { id: true, code: true, title: true, status: true, priority: true, address: true, lat: true, lng: true, assigneeId: true, assignee: { select: { name: true } } },
+        select: { id: true, code: true, title: true, status: true, priority: true, address: true, lat: true, lng: true, assigneeId: true, customerName: true, assignee: { select: { name: true } } },
       }),
-      // Every GPS-tagged photo from today; the newest per person is where they last were
-      prisma.photo.findMany({
-        where: { receivedAt: { gte: new Date(Date.now() - DAY_MS) }, lat: { not: null }, lng: { not: null } },
-        orderBy: { receivedAt: 'desc' },
-        select: { userId: true, lat: true, lng: true, receivedAt: true, purpose: true },
+      // Customer requests nobody has scheduled yet, with where the customer is
+      prisma.serviceRequest.findMany({
+        where: { status: 'OPEN' },
+        select: { id: true, type: true, description: true, address: true, lat: true, lng: true, createdAt: true, customer: { select: { name: true, lastLat: true, lastLng: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: 200,
       }),
     ]);
-
-    const lastSeen = new Map<string, (typeof photos)[number]>();
-    for (const p of photos) if (!lastSeen.has(p.userId)) lastSeen.set(p.userId, p);
+    // Live phone position, or today's newest GPS-stamped photo
+    const where = await positionsOf(staff.map((u) => u.id));
 
     const people = staff.map((u) => {
       const att = attendance.find((a) => a.userId === u.id);
       const task = open.find((t) => t.assigneeId === u.id && t.status === 'IN_PROGRESS');
-      const seen = lastSeen.get(u.id);
+      const pos = where.get(u.id);
       const state = !att || att.checkOutAt ? 'OFFLINE' : task ? 'ON_JOB' : 'AVAILABLE';
       return {
         user: u,
         state,
-        lat: seen?.lat ?? null,
-        lng: seen?.lng ?? null,
-        seenAt: seen?.receivedAt ?? null,
-        currentTask: task ? { code: task.code, title: task.title } : null,
+        lat: pos?.lat ?? null,
+        lng: pos?.lng ?? null,
+        heading: pos?.heading ?? null,
+        seenAt: pos?.at ?? null,
+        live: pos?.kind === 'live',
+        currentTask: task ? { id: task.id, code: task.code, title: task.title } : null,
       };
     });
 
     res.json({
       generatedAt: new Date().toISOString(),
       staff: people,
-      jobs: open.map(({ assigneeId: _a, assignee, ...t }) => ({ ...t, assigneeName: assignee.name })),
+      jobs: open.map(({ assignee, ...t }) => ({ ...t, assigneeName: assignee.name })),
+      requests: requests.map(({ customer, ...r }) => ({ ...r, lat: r.lat ?? customer.lastLat, lng: r.lng ?? customer.lastLng, customerName: customer.name })),
     });
   }),
 );

@@ -28,11 +28,13 @@ export const notificationStyle: Record<string, { icon: keyof typeof Ionicons.gly
   UNIT_LOST: { icon: 'warning', tint: colors.danger },
   SERVICE_REQUEST: { icon: 'chatbubbles', tint: colors.info },
   JOB_UPDATE: { icon: 'construct', tint: colors.success },
+  CHAT_MESSAGE: { icon: 'chatbubble-ellipses', tint: colors.navy },
 };
 
 /** Where tapping a notification (in the inbox or from a push) should take the user. */
 export function openNotificationTarget(type: string, data?: Record<string, unknown> | null) {
   const customer = useAuth.getState().user?.role === 'CUSTOMER';
+  if (type === 'CHAT_MESSAGE' && typeof data?.conversationId === 'string') return router.push(`/chat/${data.conversationId}`);
   if (customer) {
     if (typeof data?.taskId === 'string') return router.push(`/visit/${data.taskId}`);
     return router.push('/requests');

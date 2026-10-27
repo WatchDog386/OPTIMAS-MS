@@ -7,6 +7,7 @@ import {
   AdminHero,
   AdminHeroBar,
   BrandFooter,
+  Button,
   CircleAction,
   Glass,
   GlassCircle,
@@ -27,6 +28,7 @@ import { useApi } from '../../src/hooks/useApi';
 import { useAuth } from '../../src/store/auth';
 import { colors, fonts } from '../../src/theme';
 import { call, whatsapp } from '../../src/utils/contact';
+import { openChatWith } from '../../src/utils/chat';
 import { date, duration, firstName, humanize, minutesSince, taskTypeIcon, time } from '../../src/utils/format';
 
 const RATE_WINDOW_DAYS = 30;
@@ -132,6 +134,7 @@ export default function Portal() {
           items={[
             { label: 'Report a fault', icon: 'construct-outline', onPress: () => router.push('/request-new?type=REPAIR') },
             { label: 'Move router', icon: 'swap-horizontal-outline', onPress: () => router.push('/request-new?type=RELOCATION') },
+            { label: 'Chat with us', icon: 'chatbubble-ellipses-outline', onPress: () => openChatWith({ support: true }) },
             { label: 'Call us', icon: 'call-outline', onPress: () => call(support?.phone) },
             { label: 'WhatsApp', icon: 'logo-whatsapp', onPress: () => support && whatsapp(support.whatsapp), tint: '#25D366' },
           ]}
@@ -270,7 +273,7 @@ function VisitTracker({ job }: { job: CustomerJob }) {
             {tech.name}
           </Text>
         </View>
-        <CircleAction icon="logo-whatsapp" label="Chat" onPress={tech.phone ? () => whatsapp(tech.phone!, `Hello ${tech.name.split(' ')[0]}, this is about job ${job.code}.`) : undefined} />
+        <CircleAction icon="chatbubble-ellipses" label="Message" onPress={() => openChatWith({ taskId: job.id, with: 'technician' })} />
         <CircleAction icon="call" label="Call" primary onPress={tech.phone ? () => call(tech.phone) : undefined} />
       </View>
       <View style={styles.where}>
@@ -279,6 +282,7 @@ function VisitTracker({ job }: { job: CustomerJob }) {
           {job.address}
         </Text>
       </View>
+      {working ? null : <Button label={`Follow ${tech.name.split(' ')[0]} on the map`} icon="map-outline" onPress={() => router.push(`/track/${job.id}`)} />}
     </Glass>
   );
 }
