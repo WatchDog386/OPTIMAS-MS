@@ -12,7 +12,9 @@ import { Text } from './Text';
  */
 
 const PIECES = 30;
-const PALETTE = [colors.highlight, colors.navy, colors.charcoal, '#FFFFFF', colors.success, colors.highlight];
+// Safaricom-style: a deep green screen with a white disc, and confetti in greens, white and a touch of lime
+const GREEN = '#008A3E';
+const PALETTE = ['#FFFFFF', '#7CE3A1', colors.highlight, '#B9F6CA', '#FFFFFF', '#2FCB6B'];
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 const R = 46;
@@ -124,8 +126,8 @@ function Burst({ title, message }: { title: string; message?: string }) {
           />
           <View style={styles.disc}>
             <Svg width={104} height={104} viewBox="0 0 104 104">
-              <AnimatedCircle cx={52} cy={52} r={R} stroke={colors.charcoal} strokeWidth={5} fill="none" strokeLinecap="round" strokeDasharray={`${CIRC} ${CIRC}`} strokeDashoffset={CIRC * (1 - drawn.ring)} transform="rotate(-90 52 52)" />
-              <AnimatedPath d="M33 54 L46 67 L72 39" stroke={colors.charcoal} strokeWidth={7} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeDasharray={`${TICK} ${TICK}`} strokeDashoffset={TICK * (1 - drawn.tick)} />
+              <AnimatedCircle cx={52} cy={52} r={R} stroke={colors.success} strokeWidth={5} fill="none" strokeLinecap="round" strokeDasharray={`${CIRC} ${CIRC}`} strokeDashoffset={CIRC * (1 - drawn.ring)} transform="rotate(-90 52 52)" />
+              <AnimatedPath d="M33 54 L46 67 L72 39" stroke={colors.success} strokeWidth={7} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeDasharray={`${TICK} ${TICK}`} strokeDashoffset={TICK * (1 - drawn.tick)} />
             </Svg>
           </View>
         </Animated.View>
@@ -145,8 +147,8 @@ function Burst({ title, message }: { title: string; message?: string }) {
 }
 
 const styles = StyleSheet.create({
-  backdrop: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 90, backgroundColor: 'rgba(17,18,19,0.62)' },
+  backdrop: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 90, backgroundColor: 'rgba(0,96,44,0.94)' },
   center: { position: 'absolute', left: 0, right: 0, alignItems: 'center', gap: 22 },
-  disc: { width: 124, height: 124, borderRadius: 62, backgroundColor: colors.highlight, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 28, shadowOffset: { width: 0, height: 14 } },
-  pulse: { position: 'absolute', width: 124, height: 124, borderRadius: 62, backgroundColor: colors.highlight },
+  disc: { width: 124, height: 124, borderRadius: 62, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', shadowColor: '#00391a', shadowOpacity: 0.4, shadowRadius: 28, shadowOffset: { width: 0, height: 14 } },
+  pulse: { position: 'absolute', width: 124, height: 124, borderRadius: 62, backgroundColor: '#FFFFFF' },
 });

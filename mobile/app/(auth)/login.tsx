@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ComponentRef } from 'react';
-import { Animated, Easing, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
+import { Animated, Easing, Image, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import { Button, GlassBackground, InstallButton, Input, Reveal, SignInLoader, Te
 import { afterLogin, useAuth } from '../../src/store/auth';
 import { alertDialog } from '../../src/store/feedback';
 import { colors, fonts, radius, space } from '../../src/theme';
+import { NATIVE, spring } from '../../src/utils/motion';
 
 const MAX_W = 480;
 /** Corner radius shared by the fields and the Sign in button */
@@ -33,6 +34,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signedIn, setSignedIn] = useState<User | null>(null);
+  const [menu, setMenu] = useState(false);
 
   // The picture eases in once, as soon as its space is known
   useEffect(() => {
@@ -64,7 +66,13 @@ export default function Login() {
     setSignedIn(demoAdmin);
   };
 
+  const openSite = () => {
+    setMenu(false);
+    void Linking.openURL('https://optimaswifi.co.ke');
+  };
+
   const help = () => {
+    setMenu(false);
     const msg = 'Staff: sign in with your staff number (e.g. OPT-TEC-001).\nCustomers: use your Optimas account number.\n\nForgot your password? Ask your supervisor or call Optimas support.';
     void alertDialog({ title: 'Signing in', message: msg, icon: 'help-buoy-outline', confirmLabel: 'Got it' });
   };
@@ -81,10 +89,15 @@ export default function Login() {
         <ScrollView contentContainerStyle={[styles.scroll, { minHeight: winH }]} keyboardShouldPersistTaps="handled" bounces={false} showsVerticalScrollIndicator={false}>
           <View style={[styles.column, { width: W, paddingTop: insets.top + 16, paddingBottom: insets.bottom + space.lg }]}>
             <View style={styles.topBar}>
-              <Text variant="title" color={colors.navy} style={styles.brandText}>
+              <Text variant="title" color={colors.text} style={styles.brandText}>
                 Optimas Networks
               </Text>
-              <InstallButton />
+              <View style={styles.topRight}>
+                <InstallButton />
+                <Pressable onPress={() => setMenu((m) => !m)} style={styles.helpBtn} hitSlop={8} accessibilityRole="button" accessibilityLabel="Help and website" accessibilityState={{ expanded: menu }}>
+                  <Ionicons name="help" size={20} color={colors.text} />
+                </Pressable>
+              </View>
             </View>
 
             {/* The Fiber-to-the-Home picture, as is — no frame, no mask; it fills the space above the form */}
@@ -178,8 +191,44 @@ export default function Login() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <HelpMenu open={menu} top={insets.top + 16 + 46 + 4} onClose={() => setMenu(false)} onHelp={help} onSite={openSite} />
       {signedIn ? <SignInLoader user={signedIn} onDone={() => router.replace(afterLogin(signedIn) as never)} /> : null}
     </View>
+  );
+}
+
+/** The two things the "?" button offers: sign-in help, or the company website. Springs open from the button. */
+function HelpMenu({ open, top, onClose, onHelp, onSite }: { open: boolean; top: number; onClose: () => void; onHelp: () => void; onSite: () => void }) {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!open) return void v.setValue(0);
+    Animated.spring(v, { toValue: 1, ...spring.pop, useNativeDriver: NATIVE }).start();
+  }, [open, v]);
+  return (
+    <Modal visible={open} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
+      <Pressable style={{ flex: 1 }} onPress={onClose} accessibilityLabel="Close menu">
+        <View style={{ position: 'absolute', top, right: space.lg }}>
+          <Animated.View
+            accessibilityRole="menu"
+            style={[styles.menu, { opacity: v.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 1, 1] }), transform: [{ translateX: v.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }) }, { translateY: v.interpolate({ inputRange: [0, 1], outputRange: [-18, 0] }) }, { scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }] }]}
+          >
+            <Pressable onPress={onHelp} style={({ pressed }) => [styles.menuRow, pressed && { backgroundColor: colors.surfaceAlt }]} accessibilityRole="menuitem">
+              <Ionicons name="help-buoy-outline" size={20} color={colors.text} />
+              <Text variant="title" style={{ fontFamily: fonts.semibold, fontSize: 15 }}>
+                Get help
+              </Text>
+            </Pressable>
+            <View style={styles.menuLine} />
+            <Pressable onPress={onSite} style={({ pressed }) => [styles.menuRow, pressed && { backgroundColor: colors.surfaceAlt }]} accessibilityRole="menuitem">
+              <Ionicons name="globe-outline" size={20} color={colors.text} />
+              <Text variant="title" style={{ fontFamily: fonts.semibold, fontSize: 15 }}>
+                Visit optimaswifi.co.ke
+              </Text>
+            </Pressable>
+          </Animated.View>
+        </View>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -187,10 +236,16 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgBottom },
   scroll: { flexGrow: 1, alignItems: 'center' },
   column: { flex: 1, paddingHorizontal: space.lg },
-  brandText: { fontFamily: fonts.bold, fontSize: 18 },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 46 },
+  brandText: { fontFamily: fonts.bold, fontSize: 24, lineHeight: 29, letterSpacing: -0.3 },
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 46, zIndex: 20 },
+  topRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  helpBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.glassStrong, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#1C1D1F', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
+  menu: { minWidth: 236, backgroundColor: '#FFFFFF', borderRadius: 18, paddingVertical: 6, borderWidth: 1, borderColor: 'rgba(28,29,31,0.06)', shadowColor: '#1C1D1F', shadowOpacity: 0.18, shadowRadius: 22, shadowOffset: { width: 0, height: 12 }, elevation: 12 },
+  menuRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 14 },
+  menuLine: { height: 1, marginHorizontal: 14, backgroundColor: colors.border },
   // Content sits in the lower part of the screen, within thumb reach
-  main: { gap: 18, paddingTop: 10, paddingBottom: space.lg },
+  // Sits a little higher than the very bottom so the form is easier to reach and read
+  main: { gap: 18, paddingTop: 10, paddingBottom: space.lg, marginBottom: 30 },
   intro: { alignItems: 'center', paddingHorizontal: 4 },
   // Same face and size as the dashboard card titles ("Jobs done / This week")
   headline: { fontFamily: fonts.medium, fontSize: 24, lineHeight: 29, letterSpacing: -0.3, color: colors.text, textAlign: 'center' },

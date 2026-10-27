@@ -48,6 +48,8 @@ function ToastCard({ toast }: { toast: Toast }) {
   const dismiss = useFeedback((s) => s.dismiss);
   const remove = useFeedback((s) => s.remove);
   const k = KIND[toast.kind];
+  // Success is a solid green card with white text (like M-Pesa's confirmation); the rest stay white
+  const ok = toast.kind === 'success';
 
   useEffect(() => {
     if (toast.kind === 'success') haptic.success();
@@ -88,22 +90,22 @@ function ToastCard({ toast }: { toast: Toast }) {
         transform: [{ translateY: Animated.add(enter.interpolate({ inputRange: [0, 1], outputRange: [-46, 0] }), drag) }, { scale: enter.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }],
       }}
     >
-      <Pressable onPress={() => dismiss(toast.id)} accessibilityRole="alert" style={styles.toast}>
-        <Animated.View style={[styles.toastIcon, { backgroundColor: k.bg, transform: [{ scale: icon.interpolate({ inputRange: [0, 1], outputRange: [0.2, 1] }) }] }]}>
-          <Ionicons name={k.icon} size={18} color={k.fg} />
+      <Pressable onPress={() => dismiss(toast.id)} accessibilityRole="alert" style={[styles.toast, ok && styles.toastOk]}>
+        <Animated.View style={[styles.toastIcon, { backgroundColor: ok ? '#FFFFFF' : k.bg, transform: [{ scale: icon.interpolate({ inputRange: [0, 1], outputRange: [0.2, 1] }) }] }]}>
+          <Ionicons name={k.icon} size={18} color={ok ? colors.success : k.fg} />
         </Animated.View>
         <View style={{ flex: 1 }}>
-          <Text variant="title" style={{ fontFamily: fonts.semibold, fontSize: 14.5 }} numberOfLines={2}>
+          <Text variant="title" color={ok ? '#FFFFFF' : undefined} fixedColor={ok} style={{ fontFamily: fonts.semibold, fontSize: 14.5 }} numberOfLines={2}>
             {toast.title}
           </Text>
           {toast.message ? (
-            <Text variant="label" color={colors.textMuted} numberOfLines={3} style={{ marginTop: 1 }}>
+            <Text variant="label" color={ok ? 'rgba(255,255,255,0.9)' : colors.textMuted} fixedColor={ok} numberOfLines={3} style={{ marginTop: 1 }}>
               {toast.message}
             </Text>
           ) : null}
         </View>
-        <View pointerEvents="none" style={styles.countTrack}>
-          <Animated.View style={[styles.countFill, { backgroundColor: k.bg, width: countdown.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }]} />
+        <View pointerEvents="none" style={[styles.countTrack, ok && { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+          <Animated.View style={[styles.countFill, { backgroundColor: ok ? '#FFFFFF' : k.bg, width: countdown.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }]} />
         </View>
       </Pressable>
     </Animated.View>
@@ -194,6 +196,7 @@ const styles = StyleSheet.create({
     elevation: 10,
     overflow: 'hidden',
   },
+  toastOk: { backgroundColor: colors.success, borderColor: 'rgba(0,0,0,0.04)', shadowColor: colors.success, shadowOpacity: 0.35 },
   toastIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   countTrack: { position: 'absolute', left: 14, right: 14, bottom: 0, height: 3, borderRadius: 2, overflow: 'hidden', backgroundColor: 'rgba(28,29,31,0.05)' },
   countFill: { height: 3, borderRadius: 2, opacity: 0.55 },
