@@ -69,3 +69,40 @@ captureRouter.get(
     res.sendFile(storage.absolutePath(photo.storageKey));
   }),
 );
+
+/** Everything known about a photo: who, when (phone and server time), where, how accurate, and what it was for. */
+captureRouter.get(
+  '/photos/:id/info',
+  ah(async (req, res) => {
+    const photo = await prisma.photo.findUnique({
+      where: { id: req.params.id },
+      include: {
+        user: { select: { id: true, name: true, staffNo: true } },
+        attendanceIn: { select: { id: true } },
+        attendanceOut: { select: { id: true } },
+        taskStart: { select: { id: true, code: true, title: true } },
+        taskEnd: { select: { id: true, code: true, title: true } },
+      },
+    });
+    if (!photo) throw notFound('Photo');
+    const user = me(req);
+    if (photo.userId !== user.id && !ROLES.STORE.includes(user.role)) throw forbidden();
+    const task = photo.taskStart ?? photo.taskEnd;
+    res.json({
+      photo: {
+        id: photo.id,
+        purpose: photo.purpose,
+        receivedAt: photo.receivedAt,
+        deviceTime: photo.deviceTime,
+        lat: photo.lat,
+        lng: photo.lng,
+        accuracyM: photo.accuracyM,
+        deviceId: photo.deviceId,
+        sizeBytes: photo.sizeBytes,
+        flags: photo.flags,
+        user: photo.user,
+        usedFor: task ? { kind: 'TASK', id: task.id, code: task.code, title: task.title } : photo.attendanceIn ?? photo.attendanceOut ? { kind: 'ATTENDANCE', id: (photo.attendanceIn ?? photo.attendanceOut)!.id } : null,
+      },
+    });
+  }),
+);

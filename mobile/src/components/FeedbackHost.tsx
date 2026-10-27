@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { Animated, BackHandler, Easing, PanResponder, Platform, Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, BackHandler, Easing, PanResponder, Platform, Pressable, StyleSheet, TextInput, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFeedback, type Toast, type ToastKind } from '../store/feedback';
@@ -123,12 +123,14 @@ function DialogView() {
   const v = useRef(new Animated.Value(reduced ? 1 : 0)).current;
   const icon = useRef(new Animated.Value(reduced ? 1 : 0)).current;
   const leaving = useRef(false);
+  const [text, setText] = useState('');
+  const needsText = !!dialog.input?.required && !text.trim();
 
   const finish = (ok: boolean) => {
-    if (leaving.current) return;
+    if (leaving.current || (ok && needsText)) return;
     leaving.current = true;
-    if (reduced) return close(ok);
-    Animated.timing(v, { toValue: 0, duration: 170, easing: EASE_IN, useNativeDriver: NATIVE }).start(() => close(ok));
+    if (reduced) return close(ok, text);
+    Animated.timing(v, { toValue: 0, duration: 170, easing: EASE_IN, useNativeDriver: NATIVE }).start(() => close(ok, text));
   };
 
   useEffect(() => {
@@ -166,9 +168,22 @@ function DialogView() {
             {dialog.message}
           </Text>
         ) : null}
+        {dialog.input ? (
+          <TextInput
+            value={text}
+            onChangeText={setText}
+            placeholder={dialog.input.placeholder}
+            placeholderTextColor={colors.textDim}
+            autoFocus
+            multiline
+            maxLength={500}
+            style={styles.input}
+            accessibilityLabel={dialog.input.placeholder ?? 'Text'}
+          />
+        ) : null}
         <View style={styles.actions}>
           {dialog.cancelLabel ? <Button label={dialog.cancelLabel} variant="secondary" onPress={() => finish(false)} style={{ flex: 1 }} /> : null}
-          <Button label={dialog.confirmLabel ?? 'OK'} variant={danger ? 'danger' : 'primary'} onPress={() => finish(true)} style={{ flex: 1 }} />
+          <Button label={dialog.confirmLabel ?? 'OK'} variant={danger ? 'danger' : 'primary'} disabled={needsText} onPress={() => finish(true)} style={{ flex: 1 }} />
         </View>
       </Animated.View>
     </Animated.View>
@@ -218,5 +233,6 @@ const styles = StyleSheet.create({
   cardIcon: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   title: { fontFamily: fonts.semibold, fontSize: 19, textAlign: 'center' },
   message: { textAlign: 'center', marginTop: 8, lineHeight: 20 },
+  input: { alignSelf: 'stretch', minHeight: 72, maxHeight: 140, marginTop: 16, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceAlt, paddingHorizontal: 14, paddingVertical: 12, fontFamily: fonts.regular, fontSize: 15, color: colors.text, textAlignVertical: 'top' },
   actions: { flexDirection: 'row', gap: 10, alignSelf: 'stretch', marginTop: 22 },
 });

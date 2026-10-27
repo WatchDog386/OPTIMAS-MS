@@ -25,6 +25,7 @@ import { Splash } from '../src/components/Splash';
 import { UpdateBanner } from '../src/components/UpdateBanner';
 import { NotificationWatcher } from '../src/components/NotificationWatcher';
 import { SyncStatus } from '../src/components/SyncStatus';
+import { PhotoViewerHost } from '../src/components/PhotoViewer';
 import { startSyncLoop } from '../src/offline/queue';
 import { prefetchWork } from '../src/offline/prefetch';
 import { FeedbackHost } from '../src/components/FeedbackHost';
@@ -120,6 +121,7 @@ function AppStack() {
       <UpdateBanner />
       <NotificationWatcher />
       <SyncStatus />
+      <PhotoViewerHost />
       <FeedbackHost />
     </>
   );

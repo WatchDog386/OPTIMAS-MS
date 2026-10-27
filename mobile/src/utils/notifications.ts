@@ -21,6 +21,7 @@ export const notificationStyle: Record<string, { icon: keyof typeof Ionicons.gly
   TASK_CANCELLED: { icon: 'close-circle', tint: colors.textMuted },
   STOCK_ISSUED: { icon: 'cube', tint: colors.warning },
   DRESS_REJECTED: { icon: 'shirt', tint: colors.danger },
+  CHECKOUT_REJECTED: { icon: 'log-out', tint: colors.danger },
   LATE_CHECK_IN: { icon: 'alarm', tint: colors.warning },
   PHOTO_FLAGGED: { icon: 'location', tint: colors.warning },
   STOCK_COUNT_MISMATCH: { icon: 'git-compare', tint: colors.danger },
@@ -39,7 +40,8 @@ export function openNotificationTarget(type: string, data?: Record<string, unkno
   if (type === 'SERVICE_REQUEST') return router.push('/admin/requests');
   if (typeof data?.taskId === 'string') return router.push(`/task/${data.taskId}`);
   if (type === 'STOCK_ISSUED') return router.push('/stock');
-  if (type === 'LATE_CHECK_IN' || type === 'PHOTO_FLAGGED') return router.push('/admin/attendance');
+  // Late or flagged check-ins open straight on the review desk, where the photo can be approved
+  if (type === 'LATE_CHECK_IN' || type === 'PHOTO_FLAGGED') return router.push('/admin/approvals?tab=checkins');
   if (type === 'STOCK_COUNT_MISMATCH') return router.push('/admin/reconciliation');
   if (type === 'UNIT_LOST' && typeof data?.serialNumber === 'string') return router.push(`/admin/unit?serial=${data.serialNumber}`);
   router.push('/notifications');

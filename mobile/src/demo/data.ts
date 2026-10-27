@@ -321,6 +321,12 @@ export const attendanceToday: Attendance[] = techs
   .filter((t) => t.id !== t6.id)
   .map((t) => attendanceFor(t, 0, t.id === t4.id || t.id === t2.id, false));
 export const absentToday: Person[] = [asPerson(t6)];
+// One photo with a warning, so the review desk shows how flagged items look
+{
+  const samuel = attendanceToday.find((a) => a.userId === t4.id);
+  if (samuel?.checkInPhoto) samuel.checkInPhoto.flags = ['OUTSIDE_GEOFENCE'];
+  if (samuel) samuel.dressReview = 'PENDING';
+}
 attendanceHistory.unshift(...attendanceToday);
 
 // ── Movements, requests, notifications, audit ─────────────────────────────────────────────────────

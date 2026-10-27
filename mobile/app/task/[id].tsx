@@ -265,7 +265,7 @@ function ProofPhoto({ label, photo }: { label: string; photo?: PhotoRef | null }
   return (
     <View style={{ flex: 1, gap: 6 }}>
       {photo ? (
-        <AuthImage photoId={photo.id} />
+        <AuthImage photoId={photo.id} title={`${label} photo`} flagged={photo.flags.length > 0} />
       ) : (
         <View style={styles.photoEmpty}>
           <Ionicons name="image-outline" size={26} color={colors.textDim} />

@@ -130,20 +130,25 @@ enum ReviewStatus {
 }
 
 model Attendance {
-  id              String           @id @default(cuid())
-  userId          String
-  workDate        DateTime         @db.Date
-  status          AttendanceStatus
-  checkInAt       DateTime
-  checkInPhotoId  String           @unique
-  checkOutAt      DateTime?
-  checkOutPhotoId String?          @unique
-  workedMinutes   Int?
-  dressChecklist  Json?
-  dressReview     ReviewStatus     @default(PENDING)
-  reviewNote      String?
-  reviewedById    String?
-  reviewedAt      DateTime?
+  id                   String           @id @default(cuid())
+  userId               String
+  workDate             DateTime         @db.Date
+  status               AttendanceStatus
+  checkInAt            DateTime
+  checkInPhotoId       String           @unique
+  checkOutAt           DateTime?
+  checkOutPhotoId      String?          @unique
+  workedMinutes        Int?
+  dressChecklist       Json?
+  dressReview          ReviewStatus     @default(PENDING)
+  reviewNote           String?
+  reviewedById         String?
+  reviewedAt           DateTime?
+  /// Check-out photo review: PENDING once checked out, then APPROVED or REJECTED by a supervisor.
+  checkOutReview       ReviewStatus?
+  checkOutNote         String?
+  checkOutReviewedById String?
+  checkOutReviewedAt   DateTime?
 
   user          User   @relation("AttendanceUser", fields: [userId], references: [id])
   reviewedBy    User?  @relation("AttendanceReviewer", fields: [reviewedById], references: [id])
@@ -386,6 +391,7 @@ enum NotificationType {
   TASK_CANCELLED
   STOCK_ISSUED
   DRESS_REJECTED
+  CHECKOUT_REJECTED
   LATE_CHECK_IN
   PHOTO_FLAGGED
   STOCK_COUNT_MISMATCH

@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { ReviewStatus } from '@prisma/client';
 import { env } from '../../config/env';
 import { prisma } from '../../lib/prisma';
-import { conflict, notFound } from '../../lib/http-error';
+import { badRequest, conflict, notFound } from '../../lib/http-error';
+import { audit } from '../../lib/audit';
 import { minutesBetween, shiftStartFor, workDateOf } from '../../lib/time';
 import { ah } from '../../middleware/async';
 import { ROLES, me, requireRole } from '../../middleware/auth';
@@ -14,7 +15,7 @@ import { time as fmtTime } from '../../lib/time';
 
 export const attendanceRouter = Router();
 
-const photoSelect = { select: { id: true, flags: true, lat: true, lng: true, receivedAt: true } } as const;
+const photoSelect = { select: { id: true, flags: true, lat: true, lng: true, accuracyM: true, receivedAt: true, deviceTime: true } } as const;
 
 /** What a technician is still responsible for — shown at check-out so nothing goes unaccounted. */
 async function custodySummary(userId: string) {
@@ -121,7 +122,7 @@ attendanceRouter.post(
       await consumePhoto(tx, photoId, userId, 'CHECK_OUT');
       return tx.attendance.update({
         where: { id: existing.id },
-        data: { checkOutAt: now, checkOutPhotoId: photoId, workedMinutes: minutesBetween(existing.checkInAt, now) },
+        data: { checkOutAt: now, checkOutPhotoId: photoId, workedMinutes: minutesBetween(existing.checkInAt, now), checkOutReview: 'PENDING' },
         include: { checkInPhoto: photoSelect, checkOutPhoto: photoSelect },
       });
     });
@@ -197,11 +198,39 @@ attendanceRouter.post(
       where: { id: existing.id },
       data: { dressReview: body.decision, reviewNote: body.note, reviewedById: me(req).id, reviewedAt: new Date() },
     });
+    await audit(me(req).id, `CHECK_IN_${body.decision}`, 'Attendance', record.id, `${body.decision === 'APPROVED' ? 'Approved' : 'Rejected'} a check-in photo${body.note ? `: ${body.note}` : ''}`);
     if (body.decision === 'REJECTED') {
       void notify([record.userId], {
         type: 'DRESS_REJECTED',
         title: 'Dress code not met',
         body: body.note ?? 'Your check-in photo did not meet the company dress code. See your supervisor.',
+        data: { attendanceId: record.id },
+      });
+    }
+    res.json({ record });
+  }),
+);
+
+/** A supervisor approves or rejects the check-out photo (a rejection needs a reason, which the person is told). */
+attendanceRouter.post(
+  '/:id/review-checkout',
+  requireRole(ROLES.MANAGERS),
+  ah(async (req, res) => {
+    const body = parse(reviewSchema, req.body);
+    if (body.decision === 'REJECTED' && !body.note) throw badRequest('Give a reason when rejecting a check-out');
+    const existing = await prisma.attendance.findUnique({ where: { id: req.params.id } });
+    if (!existing) throw notFound('Attendance record');
+    if (!existing.checkOutAt) throw conflict('This person has not checked out yet', 'NOT_CHECKED_OUT');
+    const record = await prisma.attendance.update({
+      where: { id: existing.id },
+      data: { checkOutReview: body.decision, checkOutNote: body.note, checkOutReviewedById: me(req).id, checkOutReviewedAt: new Date() },
+    });
+    await audit(me(req).id, `CHECK_OUT_${body.decision}`, 'Attendance', record.id, `${body.decision === 'APPROVED' ? 'Approved' : 'Rejected'} a check-out photo${body.note ? `: ${body.note}` : ''}`);
+    if (body.decision === 'REJECTED') {
+      void notify([record.userId], {
+        type: 'CHECKOUT_REJECTED',
+        title: 'Check-out not accepted',
+        body: body.note ?? 'Your supervisor did not accept your check-out photo.',
         data: { attendanceId: record.id },
       });
     }

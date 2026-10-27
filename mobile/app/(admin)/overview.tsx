@@ -22,6 +22,7 @@ import {
 } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { useAuth } from '../../src/store/auth';
+import type { ApprovalSummary } from '../../src/api/approvals';
 import { DemoNotice } from '../../src/components/DemoNotice';
 import { requestScan } from '../../src/store/bridge';
 import { colors, fonts } from '../../src/theme';
@@ -33,6 +34,8 @@ export default function Overview() {
   const { data: d, refresh, refreshing, loading, updatedAt } = useApi<Dashboard>('/reports/dashboard', { poll: 30_000 });
   const done = useApi<{ tasks: Task[] }>('/tasks?status=COMPLETED,VERIFIED');
   const unread = useApi<{ unread: number }>('/notifications/unread-count', { poll: 30_000 });
+  // Everything technicians sent that is waiting for a supervisor (photos, check-outs, finished jobs)
+  const approvals = useApi<ApprovalSummary>(managers ? '/approvals/summary' : null, { poll: 30_000 });
   const [tab, setTab] = useState<0 | 1>(managers ? 0 : 1);
 
   const techs = d?.attendance.technicians ?? 0;
@@ -216,10 +219,20 @@ export default function Overview() {
       ? {
           key: 'dress',
           icon: 'shirt-outline' as const,
-          title: 'Dress-code photos to review',
-          sub: 'Approve or reject check-in selfies',
+          title: 'Check-in photos to review',
+          sub: 'Approve or send back',
           n: d.attendance.pendingDressReviews,
-          go: '/admin/reviews',
+          go: '/admin/approvals?tab=checkins',
+        }
+      : null,
+    managers && approvals.data?.checkOuts
+      ? {
+          key: 'checkouts',
+          icon: 'log-out-outline' as const,
+          title: 'Check-out photos to review',
+          sub: 'End-of-day photos and hours worked',
+          n: approvals.data.checkOuts,
+          go: '/admin/approvals?tab=checkouts',
         }
       : null,
     managers && d?.tasks.awaitingVerification
@@ -227,9 +240,9 @@ export default function Overview() {
           key: 'verify',
           icon: 'shield-checkmark-outline' as const,
           title: 'Jobs awaiting verification',
-          sub: 'Check proof photos and materials',
+          sub: 'Before and after photos, materials, signature',
           n: d.tasks.awaitingVerification,
-          go: '/board?status=COMPLETED',
+          go: '/admin/approvals?tab=jobs',
         }
       : null,
     d?.routers.overdueInCustody
@@ -277,6 +290,7 @@ export default function Overview() {
         refresh();
         done.refresh();
         unread.refresh();
+        approvals.refresh();
       }}
       contentStyle={{ gap: 18, paddingTop: 0 }}
     >
@@ -344,6 +358,8 @@ export default function Overview() {
         <QuickActions
           title="Insights"
           items={[
+            { label: 'Approvals', icon: 'checkmark-done-circle-outline', onPress: () => router.push('/admin/approvals'), badge: approvals.data?.total },
+            { label: 'Activity', icon: 'time-outline', onPress: () => router.push('/admin/activity') },
             { label: 'Leaderboard', icon: 'trophy-outline', onPress: () => router.push('/admin/leaderboard') },
             { label: 'Live map', icon: 'map-outline', onPress: () => router.push('/admin/map') },
             { label: 'Charts', icon: 'bar-chart-outline', onPress: () => router.push('/admin/charts') },

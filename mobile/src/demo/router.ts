@@ -211,6 +211,73 @@ function ratings() {
   };
 }
 
+// ── Review desk (same shapes as /approvals/...) ────────────────────────────────────────────────────
+const who = (id: string) => {
+  const u = allUsers.find((x) => x.id === id)!;
+  return { id: u.id, name: u.name, staffNo: u.staffNo, phone: u.phone };
+};
+const DRESS = { uniform: true, idBadge: true, safetyBoots: true, groomed: true };
+// Yesterday's check-outs: the three most recent still wait for a look, the rest were approved
+const yesterday = dateOf(NOW - DAY);
+const checkOuts = () =>
+  attendanceHistory
+    .filter((a) => a.workDate === yesterday && a.checkOutAt)
+    .map((a, i) => ({ ...a, user: who(a.userId), checkOutReview: i < 3 ? 'PENDING' : 'APPROVED', checkOutNote: null, checkOutReviewedAt: i < 3 ? null : iso(NOW - 14 * 3_600_000), checkOutReviewedBy: i < 3 ? null : { id: 'demo-u2', name: 'Grace Achieng' } }));
+const checkIns = (status: string) =>
+  (status === 'PENDING' ? attendanceToday.filter((a) => a.dressReview === 'PENDING') : attendanceHistory.filter((a) => a.workDate === yesterday))
+    .map((a) => ({ ...a, user: who(a.userId), dressChecklist: DRESS, reviewedAt: status === 'PENDING' ? null : iso(NOW - 20 * 3_600_000), reviewedBy: status === 'PENDING' ? null : { id: 'demo-u2', name: 'Grace Achieng' }, dressReview: status === 'PENDING' ? 'PENDING' : 'APPROVED' }));
+const jobReview = (t: Task) => ({ ...t, customerSignature: undefined, signed: t.type === 'INSTALLATION', assignee: { ...t.assignee }, verifiedBy: t.verifiedBy ?? null, verifiedAt: t.status === 'VERIFIED' ? t.ratedAt ?? t.endedAt : null, materials: t.materials ?? [] });
+
+function activity(userId: string, date: string) {
+  const user = allUsers.find((u) => u.id === userId);
+  if (!user) throw new ApiError(404, 'Person not found', 'NOT_FOUND');
+  const att = attendanceHistory.find((a) => a.userId === userId && a.workDate === date);
+  const events: Record<string, unknown>[] = [];
+  if (att) {
+    events.push({ at: att.checkInAt, kind: 'CHECK_IN', title: att.status === 'LATE' ? 'Checked in late' : 'Checked in', photo: att.checkInPhoto, status: att.dressReview, attendanceId: att.id });
+    if (att.checkOutAt) events.push({ at: att.checkOutAt, kind: 'CHECK_OUT', title: 'Checked out', detail: att.workedMinutes != null ? `${Math.floor(att.workedMinutes / 60)} h ${att.workedMinutes % 60} min worked` : undefined, photo: att.checkOutPhoto, status: date === yesterday ? 'PENDING' : 'APPROVED', attendanceId: att.id });
+  }
+  for (const t of tasks.filter((x) => x.assignee.id === userId)) {
+    if (t.startedAt && dateOf(Date.parse(t.startedAt)) === date) events.push({ at: t.startedAt, kind: 'JOB_START', title: `Started ${t.code}`, detail: `${t.title} · ${t.customerName} · ${t.address}`, photo: t.startPhoto, taskId: t.id });
+    if (t.endedAt && dateOf(Date.parse(t.endedAt)) === date) {
+      events.push({ at: t.endedAt, kind: 'JOB_END', title: `Completed ${t.code}`, detail: `${t.durationMinutes ?? 0} min${t.amountCollected ? ` · KES ${t.amountCollected.toLocaleString('en-KE')} collected` : ''}`, photo: t.endPhoto, status: t.status, taskId: t.id });
+      if (t.status === 'VERIFIED') events.push({ at: iso(Date.parse(t.endedAt) + 50 * MIN), kind: 'JOB_VERIFIED', title: `${t.code} verified by Grace Achieng`, taskId: t.id });
+    }
+  }
+  events.sort((a, b) => String(a.at).localeCompare(String(b.at)));
+  const jobsDone = events.filter((e) => e.kind === 'JOB_END').length;
+  return {
+    user: { ...who(userId), role: user.role },
+    date,
+    summary: { jobsDone, minutesWorked: att?.workedMinutes ?? null, photos: events.filter((e) => e.photo).length, flags: events.filter((e) => ((e.photo as { flags?: string[] } | undefined)?.flags?.length ?? 0) > 0).length, checkedIn: !!att },
+    events,
+  };
+}
+
+function photoInfo(id: string) {
+  const owner = [...attendanceHistory].find((a) => a.checkInPhoto?.id === id || a.checkOutPhoto?.id === id);
+  const task = tasks.find((t) => t.startPhoto?.id === id || t.endPhoto?.id === id);
+  const p = owner ? (owner.checkInPhoto?.id === id ? owner.checkInPhoto : owner.checkOutPhoto) : task ? (task.startPhoto?.id === id ? task.startPhoto : task.endPhoto) : null;
+  if (!p) throw new ApiError(404, 'Photo not found', 'NOT_FOUND');
+  const userId = owner?.userId ?? task!.assignee.id;
+  return {
+    photo: {
+      id,
+      purpose: owner ? (owner.checkInPhoto?.id === id ? 'CHECK_IN' : 'CHECK_OUT') : task!.startPhoto?.id === id ? 'TASK_START' : 'TASK_END',
+      receivedAt: p.receivedAt,
+      deviceTime: p.receivedAt,
+      lat: p.lat,
+      lng: p.lng,
+      accuracyM: 8 + (id.length % 9),
+      deviceId: `a1b2c3${id.length}f9e8`,
+      sizeBytes: 412_000,
+      flags: p.flags,
+      user: who(userId),
+      usedFor: task ? { kind: 'TASK', id: task.id, code: task.code, title: task.title } : { kind: 'ATTENDANCE', id: owner!.id },
+    },
+  };
+}
+
 // ── Router ────────────────────────────────────────────────────────────────────────────────────────
 function profileOf(id: string) {
   const user = allUsers.find((u) => u.id === id);
@@ -326,6 +393,26 @@ export async function demoRequest<T>(path: string, options: { method?: string; b
   }
   if (route === '/audit') return body({ entries: auditEntries.slice(0, Number(q.get('limit') ?? 50)) });
   if (route === '/search') return body(search(q.get('q') ?? ''));
+
+  if (route === '/approvals/summary') {
+    const ins = checkIns('PENDING').length;
+    const outs = checkOuts().filter((r) => r.checkOutReview === 'PENDING').length;
+    const jobs = tasks.filter((t) => t.status === 'COMPLETED').length;
+    const flagged = checkIns('PENDING').filter((r) => r.checkInPhoto?.flags.length).length + tasks.filter((t) => t.status === 'COMPLETED' && (t.startPhoto?.flags.length || t.endPhoto?.flags.length)).length;
+    return body({ checkIns: ins, checkOuts: outs, jobs, total: ins + outs + jobs, flagged });
+  }
+  if (route === '/approvals/check-ins') return body({ records: checkIns(q.get('status') === 'DONE' ? 'DONE' : 'PENDING') });
+  if (route === '/approvals/check-outs') {
+    const done = q.get('status') === 'DONE';
+    return body({ records: checkOuts().filter((r) => (done ? r.checkOutReview !== 'PENDING' : r.checkOutReview === 'PENDING')) });
+  }
+  if (route === '/approvals/jobs') {
+    const done = q.get('status') === 'DONE';
+    return body({ tasks: tasks.filter((t) => (done ? t.status === 'VERIFIED' : t.status === 'COMPLETED')).slice(0, done ? 20 : 50).map(jobReview) });
+  }
+  if (route === '/approvals/activity') return body(activity(q.get('userId') ?? techs[0].id, q.get('date') ?? dateOf(NOW)));
+  const info = /^\/capture\/photos\/([^/]+)\/info$/.exec(route);
+  if (info) return body(photoInfo(info[1]));
 
   if (route === '/insights/leaderboard') return body(leaderboard(q.get('range') === 'month' ? 'month' : 'week'));
   if (route === '/insights/map') return body(liveMap());

@@ -33,9 +33,11 @@ export interface DialogSpec {
   confirmLabel?: string;
   /** Omit for a single-button message (alert). */
   cancelLabel?: string | null;
+  /** Ask for a line of text (e.g. the reason for a rejection). */
+  input?: { placeholder?: string; required?: boolean };
 }
 interface OpenDialog extends DialogSpec {
-  resolve: (ok: boolean) => void;
+  resolve: (ok: boolean, value?: string) => void;
 }
 
 interface FeedbackState {
@@ -49,7 +51,7 @@ interface FeedbackState {
   celebrate: (title: string, message?: string) => void;
   endCelebration: () => void;
   open: (d: OpenDialog) => void;
-  close: (ok: boolean) => void;
+  close: (ok: boolean, value?: string) => void;
 }
 
 let seq = 0;
@@ -80,10 +82,10 @@ export const useFeedback = create<FeedbackState>((set, get) => ({
     get().dialog?.resolve(false); // a new dialog replaces any open one
     set({ dialog: d });
   },
-  close: (ok) => {
+  close: (ok, value) => {
     const d = get().dialog;
     set({ dialog: null });
-    d?.resolve(ok);
+    d?.resolve(ok, value);
   },
 }));
 
@@ -100,6 +102,12 @@ export const toast = {
 /** Two-button dialog; resolves true when confirmed. */
 export const confirmDialog = (spec: DialogSpec) =>
   new Promise<boolean>((resolve) => useFeedback.getState().open({ cancelLabel: 'Cancel', confirmLabel: 'OK', ...spec, resolve }));
+
+/** Dialog with a text box; resolves the text, or null when cancelled. */
+export const promptDialog = (spec: DialogSpec) =>
+  new Promise<string | null>((resolve) =>
+    useFeedback.getState().open({ cancelLabel: 'Cancel', confirmLabel: 'OK', input: {}, ...spec, resolve: (ok, value) => resolve(ok ? (value ?? '').trim() : null) }),
+  );
 
 /** One-button message dialog. */
 export const alertDialog = (spec: Omit<DialogSpec, 'cancelLabel' | 'tone'>) =>

@@ -76,6 +76,7 @@ export default function UserProfile() {
         <Row label="Last sign-in" value={u.lastLoginAt ? dateTime(u.lastLoginAt) : 'Never'} />
         <Row label="Account created" value={date(u.createdAt)} />
         {u.phone ? <Button label="Call" icon="call" variant="secondary" onPress={() => call(u.phone)} style={{ marginTop: 8 }} /> : null}
+        {u.role === 'TECHNICIAN' ? <Button label="See their day, with photos" icon="time-outline" onPress={() => router.push(`/admin/activity?userId=${u.id}`)} style={{ marginTop: 8 }} /> : null}
       </Glass>
 
       {temp ? <TempPasswordCard loginId={u.staffNo} password={temp} name={u.name} /> : null}
