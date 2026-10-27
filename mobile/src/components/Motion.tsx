@@ -5,6 +5,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts } from '../theme';
 import { Text } from './Text';
+import { prefersReducedMotion } from '../utils/motion';
 
 /*
  * Motion kit for the dashboards: entrance, counting, progress, loading and live-sync cues.
@@ -16,8 +17,9 @@ const EASE = Easing.bezier(0.2, 0.8, 0.2, 1);
 
 /** Fades and lifts its children in on mount; `index` staggers siblings so a screen assembles top to bottom. */
 export function Reveal({ index = 0, children, style, from = 14 }: { index?: number; children: ReactNode; style?: StyleProp<ViewStyle>; from?: number }) {
-  const v = useRef(new Animated.Value(0)).current;
+  const v = useRef(new Animated.Value(prefersReducedMotion() ? 1 : 0)).current;
   useEffect(() => {
+    if (prefersReducedMotion()) return;
     Animated.timing(v, { toValue: 1, duration: 520, delay: 60 + index * 70, easing: EASE, useNativeDriver: NATIVE }).start();
   }, [v, index]);
   return (

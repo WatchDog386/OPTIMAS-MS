@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../src/api/client';
-import { Button, EmptyState, Glass, Screen, ScreenHeader, Text } from '../src/components';
+import { Button, EmptyState, Glass, Reveal, Screen, ScreenHeader, Text } from '../src/components';
 import { enableWebPush, webPushState, type WebPushState } from '../src/utils/webpush';
 import { toast } from '../src/store/feedback';
 import { useApi } from '../src/hooks/useApi';
@@ -48,10 +48,11 @@ export default function Notifications() {
       {!loading && !data?.notifications.length ? (
         <EmptyState icon="notifications-off-outline" title="No notifications yet" message="Job assignments, stock and approvals will show up here." />
       ) : null}
-      {data?.notifications.map((n) => {
+      {data?.notifications.map((n, idx) => {
         const style = notificationStyle[n.type] ?? { icon: 'notifications' as const, tint: colors.primary };
         return (
-          <Pressable key={n.id} onPress={() => openNotificationTarget(n.type, n.data)} style={({ pressed }) => [styles.row, !n.readAt && styles.unread, pressed && { opacity: 0.8 }]}>
+          <Reveal key={n.id} index={Math.min(idx, 8)}>
+          <Pressable onPress={() => openNotificationTarget(n.type, n.data)} style={({ pressed }) => [styles.row, !n.readAt && styles.unread, pressed && { opacity: 0.8 }]}>
             <View style={[styles.icon, { backgroundColor: `${style.tint}22` }]}>
               <Ionicons name={style.icon} size={20} color={style.tint} />
             </View>
@@ -66,6 +67,7 @@ export default function Notifications() {
             </View>
             {!n.readAt ? <View style={styles.dot} /> : null}
           </Pressable>
+          </Reveal>
         );
       })}
     </Screen>

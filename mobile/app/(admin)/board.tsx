@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { Task } from '../../src/api/types';
-import { EmptyState, Screen, Segmented, TaskCard, Text } from '../../src/components';
+import { EmptyState, Reveal, Screen, Segmented, TaskCard, Text } from '../../src/components';
 import { useAuth } from '../../src/store/auth';
 import { useApi } from '../../src/hooks/useApi';
 import { colors, shadow } from '../../src/theme';
@@ -28,7 +28,11 @@ export default function AdminJobs() {
       <Screen refreshing={refreshing} onRefresh={refresh}>
         <Text variant="h1">Jobs</Text>
         <Segmented options={FILTERS} value={filter} onChange={setFilter} />
-        {data?.tasks.map((t) => <TaskCard key={t.id} task={t} showAssignee />)}
+        {data?.tasks.map((t, i) => (
+          <Reveal key={t.id} index={Math.min(i, 8)}>
+            <TaskCard task={t} showAssignee />
+          </Reveal>
+        ))}
         {!loading && !data?.tasks.length ? <EmptyState icon="briefcase-outline" title="No jobs" message="Nothing matches this filter." /> : null}
       </Screen>
       {canCreate ? (

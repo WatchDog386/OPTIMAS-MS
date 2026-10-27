@@ -10,7 +10,7 @@ import { requestCapture, requestScan } from '../../src/store/bridge';
 import { submitWithPhoto } from '../../src/offline/queue';
 import { colors, fonts, radius, space } from '../../src/theme';
 import { kes } from '../../src/utils/format';
-import { toast } from '../../src/store/feedback';
+import { toast, celebrate } from '../../src/store/feedback';
 
 export default function CompleteTask() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -74,7 +74,7 @@ export default function CompleteTask() {
         },
       });
       if (sent.queued) toast.info('Saved on this phone', 'No signal. Your completion report will be sent automatically when you are back online.');
-      else toast.success('Job completed', 'Your report has been sent for verification.');
+      else celebrate('Job completed', 'Your report has been sent for verification.');
       router.back();
     } catch (e) {
       toast.error('Could not complete job', e instanceof ApiError ? e.message : 'Try again');

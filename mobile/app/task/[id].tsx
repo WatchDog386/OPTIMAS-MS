@@ -12,7 +12,7 @@ import { requestCapture } from '../../src/store/bridge';
 import { submitWithPhoto } from '../../src/offline/queue';
 import { colors, radius, space } from '../../src/theme';
 import { dateTime, duration, flagLabel, humanize, kes, priorityTone, taskStatusTone, taskTypeIcon, time } from '../../src/utils/format';
-import { toast } from '../../src/store/feedback';
+import { celebrate, toast } from '../../src/store/feedback';
 
 export default function TaskDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -29,8 +29,10 @@ export default function TaskDetail() {
     setBusy(true);
     try {
       setData(await fn());
+      return true;
     } catch (e) {
       toast.error('Action failed', e instanceof ApiError ? e.message : 'Try again');
+      return false;
     } finally {
       setBusy(false);
     }
@@ -50,8 +52,10 @@ export default function TaskDetail() {
     });
     if (savedOffline) toast.info('Saved on this phone', 'No signal. The job start will be sent automatically when you are back online.');
   };
-  const verify = (decision: 'VERIFIED' | 'REJECTED') =>
-    run(() => api(`/tasks/${task.id}/verify`, { body: { decision, note: note || undefined } }));
+  const verify = async (decision: 'VERIFIED' | 'REJECTED') => {
+    const ok = await run(() => api(`/tasks/${task.id}/verify`, { body: { decision, note: note || undefined } }));
+    if (ok && decision === 'VERIFIED') celebrate('Job verified', `${task.code} is closed.`);
+  };
   const cancel = async () => {
     if (await confirmAction('Cancel job', 'This job will be cancelled for the technician.', 'Cancel job')) {
       await run(() => api(`/tasks/${task.id}/cancel`, { body: {} }));

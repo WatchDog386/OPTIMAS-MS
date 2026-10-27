@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Task } from '../../src/api/types';
-import { EmptyState, Screen, Segmented, TaskCard, Text } from '../../src/components';
+import { EmptyState, Reveal, Screen, Segmented, TaskCard, Text } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { colors } from '../../src/theme';
 
@@ -21,7 +21,11 @@ export default function Jobs() {
         Take a photo when you start and when you finish every job.
       </Text>
       <Segmented options={FILTERS} value={filter} onChange={setFilter} />
-      {data?.tasks.map((t) => <TaskCard key={t.id} task={t} />)}
+      {data?.tasks.map((t, i) => (
+        <Reveal key={t.id} index={Math.min(i, 8)}>
+          <TaskCard task={t} />
+        </Reveal>
+      ))}
       {!loading && !data?.tasks.length ? <EmptyState icon="briefcase-outline" title="Nothing here" message="No jobs match this filter." /> : null}
     </Screen>
   );

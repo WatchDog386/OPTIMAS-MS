@@ -48,7 +48,8 @@ export async function api<T>(path: string, options: { method?: string; body?: Bo
 const demoPhoto = (id: string) => {
   const hue = [...id].reduce((n, c) => (n * 31 + c.charCodeAt(0)) % 360, 7);
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='600' height='800'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='hsl(${hue},45%,72%)'/><stop offset='1' stop-color='hsl(${(hue + 40) % 360},50%,38%)'/></linearGradient></defs><rect width='600' height='800' fill='url(#g)'/><circle cx='300' cy='380' r='86' fill='none' stroke='white' stroke-opacity='.85' stroke-width='10'/><rect x='214' y='330' width='172' height='116' rx='22' fill='none' stroke='white' stroke-opacity='.85' stroke-width='10'/><circle cx='300' cy='388' r='30' fill='white' fill-opacity='.85'/><text x='300' y='560' font-family='sans-serif' font-size='30' fill='white' fill-opacity='.9' text-anchor='middle'>Demo photo</text></svg>`;
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+  // base64 loads everywhere; the plain-text form is refused by some image loaders
+  return typeof btoa === 'function' ? `data:image/svg+xml;base64,${btoa(svg)}` : `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 };
 export const photoUrl = (id: string) => (id.startsWith('demo-') ? demoPhoto(id) : `${API_URL}/capture/photos/${id}`);
 export const authHeader = (): Record<string, string> => {

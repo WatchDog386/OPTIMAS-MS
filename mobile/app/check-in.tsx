@@ -9,7 +9,7 @@ import { useApi } from '../src/hooks/useApi';
 import { requestCapture } from '../src/store/bridge';
 import { colors, radius, space } from '../src/theme';
 import { duration, flagLabel, time } from '../src/utils/format';
-import { toast } from '../src/store/feedback';
+import { celebrate, toast } from '../src/store/feedback';
 import { submitWithPhoto } from '../src/offline/queue';
 
 const DRESS_CODE = [
@@ -46,7 +46,7 @@ export default function CheckIn() {
         return;
       }
       setDone({ record: res.data.record, flags: photo.flags });
-      toast.success(isIn ? 'Checked in' : 'Checked out', isIn ? 'Have a good shift.' : 'See you tomorrow.');
+      celebrate(isIn ? 'Checked in' : 'Checked out', isIn ? 'Have a good shift.' : 'See you tomorrow.');
     } catch (e) {
       toast.error(isIn ? 'Check-in failed' : 'Check-out failed', e instanceof ApiError ? e.message : 'Please try again.');
     } finally {

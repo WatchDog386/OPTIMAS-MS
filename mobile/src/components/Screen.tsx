@@ -1,9 +1,10 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { Animated, RefreshControl, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 import { colors, space } from '../theme';
 import { GlassBackground } from './Glass';
 import { usePullToRefresh } from './PullToRefresh';
+import { NATIVE, prefersReducedMotion, spring } from '../utils/motion';
 
 interface Props {
   children: ReactNode;
@@ -23,9 +24,16 @@ export const TAB_BAR_CLEARANCE = 112;
 
 export function Screen({ children, scroll = true, refreshing, onRefresh, edges = ['top'], contentStyle, footer, scrollEnabled = true, glow = true }: Props) {
   const ptr = usePullToRefresh(onRefresh, refreshing);
+  // Every page arrives the same way: it fades in while rising a few pixels into place
+  const enter = useRef(new Animated.Value(prefersReducedMotion() ? 1 : 0)).current;
+  useEffect(() => {
+    if (prefersReducedMotion()) return;
+    Animated.spring(enter, { toValue: 1, ...spring.settle, useNativeDriver: NATIVE }).start();
+  }, [enter]);
   return (
     <View style={styles.root}>
       {glow ? <GlassBackground /> : null}
+      <Animated.View style={{ flex: 1, opacity: enter.interpolate({ inputRange: [0, 1], outputRange: [0, 1], extrapolate: 'clamp' }), transform: [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) }] }}>
       <SafeAreaView style={{ flex: 1 }} edges={edges}>
         {scroll ? (
           <View style={{ flex: 1 }}>
@@ -48,6 +56,7 @@ export function Screen({ children, scroll = true, refreshing, onRefresh, edges =
         )}
         {footer ? <View style={styles.footer}>{footer}</View> : null}
       </SafeAreaView>
+      </Animated.View>
     </View>
   );
 }

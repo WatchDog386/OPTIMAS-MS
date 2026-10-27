@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
 import type { TeamMember } from '../../src/api/types';
-import { Avatar, Badge, Button, ListRow, Screen, Segmented, Text } from '../../src/components';
+import { Avatar, Badge, Button, ListRow, Reveal, Screen, Segmented, Text } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { useAuth } from '../../src/store/auth';
 import { colors } from '../../src/theme';
@@ -34,7 +34,7 @@ export default function Team() {
         value={filter}
         onChange={setFilter}
       />
-      {people.map((u) => {
+      {people.map((u, idx) => {
         const status = !u.today
           ? { label: 'Not in', tone: 'neutral' as const }
           : u.today.checkOutAt
@@ -43,14 +43,15 @@ export default function Team() {
               ? { label: `Late ${time(u.today.checkInAt)}`, tone: 'warning' as const }
               : { label: `In ${time(u.today.checkInAt)}`, tone: 'success' as const };
         return (
+          <Reveal key={u.id} index={Math.min(idx, 8)}>
           <ListRow
-            key={u.id}
             left={<Avatar name={u.name} tint={u.today ? colors.primary : colors.textDim} />}
             title={u.name}
             subtitle={`${humanize(u.role)} · ${u.openTasks} open job(s) · ${u.unitsInCustody} device(s)`}
             right={<Badge label={status.label} tone={status.tone} />}
             onPress={role === 'ADMIN' || role === 'SUPERVISOR' ? () => router.push(`/admin/user/${u.id}`) : undefined}
           />
+          </Reveal>
         );
       })}
     </Screen>

@@ -2,7 +2,7 @@ import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { Item } from '../../src/api/types';
-import { Badge, Card, Screen, SectionHeader, Text } from '../../src/components';
+import { Badge, Card, Reveal, Screen, SectionHeader, Text } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { colors, radius, space } from '../../src/theme';
 import { kes } from '../../src/utils/format';
@@ -50,8 +50,9 @@ export default function Store() {
       </View>
 
       <SectionHeader title="Inventory" action="Catalogue" onAction={() => router.push('/admin/items')} />
-      {data?.items.map((item) => (
-        <Card key={item.id} style={styles.item} onPress={() => router.push(`/admin/item/${item.id}`)}>
+      {data?.items.map((item, idx) => (
+        <Reveal key={item.id} index={Math.min(idx, 8)}>
+        <Card style={styles.item} onPress={() => router.push(`/admin/item/${item.id}`)}>
           <View style={styles.itemIcon}>
             <Ionicons name={categoryIcon[item.category]} size={20} color={colors.primary} />
           </View>
@@ -76,6 +77,7 @@ export default function Store() {
             </Text>
           </View>
         </Card>
+        </Reveal>
       ))}
     </Screen>
   );

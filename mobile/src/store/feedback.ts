@@ -13,6 +13,15 @@ export interface Toast {
   kind: ToastKind;
   title: string;
   message?: string;
+  /** Playing its exit animation; removed right after. */
+  leaving?: boolean;
+}
+
+/** A full-screen "well done" moment for the few things worth celebrating (checked in, job completed). */
+export interface Celebration {
+  id: number;
+  title: string;
+  message?: string;
 }
 
 export interface DialogSpec {
@@ -32,8 +41,13 @@ interface OpenDialog extends DialogSpec {
 interface FeedbackState {
   toasts: Toast[];
   dialog: OpenDialog | null;
+  celebration: Celebration | null;
   push: (t: Omit<Toast, 'id'>) => void;
+  /** Starts the exit animation (tap, swipe or timeout). */
   dismiss: (id: number) => void;
+  remove: (id: number) => void;
+  celebrate: (title: string, message?: string) => void;
+  endCelebration: () => void;
   open: (d: OpenDialog) => void;
   close: (ok: boolean) => void;
 }
@@ -44,13 +58,24 @@ const TOAST_MS: Record<ToastKind, number> = { success: 3200, info: 3600, warning
 export const useFeedback = create<FeedbackState>((set, get) => ({
   toasts: [],
   dialog: null,
+  celebration: null,
   push: (t) => {
+    // The same message twice in a row (a retried action) shows once
+    if (get().toasts.some((x) => !x.leaving && x.kind === t.kind && x.title === t.title && x.message === t.message)) return;
     const id = ++seq;
     // Newest on top; never stack more than three
     set((s) => ({ toasts: [{ ...t, id }, ...s.toasts].slice(0, 3) }));
     setTimeout(() => get().dismiss(id), TOAST_MS[t.kind]);
   },
-  dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
+  dismiss: (id) => {
+    if (!get().toasts.some((t) => t.id === id && !t.leaving)) return;
+    set((s) => ({ toasts: s.toasts.map((t) => (t.id === id ? { ...t, leaving: true } : t)) }));
+    // The toast animates out first; this is the safety net if it never gets to
+    setTimeout(() => get().remove(id), 600);
+  },
+  remove: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
+  celebrate: (title, message) => set({ celebration: { id: ++seq, title, message } }),
+  endCelebration: () => set({ celebration: null }),
   open: (d) => {
     get().dialog?.resolve(false); // a new dialog replaces any open one
     set({ dialog: d });
@@ -61,6 +86,9 @@ export const useFeedback = create<FeedbackState>((set, get) => ({
     d?.resolve(ok);
   },
 }));
+
+/** Full-screen success moment with confetti. Use sparingly: checked in, job completed. */
+export const celebrate = (title: string, message?: string) => useFeedback.getState().celebrate(title, message);
 
 export const toast = {
   success: (title: string, message?: string) => useFeedback.getState().push({ kind: 'success', title, message }),

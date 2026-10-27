@@ -1,8 +1,11 @@
-import { ActivityIndicator, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import { colors, fonts, radius, shadow, space, useInverse } from '../theme';
 import { Text } from './Text';
+import { NATIVE, haptic, prefersReducedMotion, spring } from '../utils/motion';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
@@ -40,25 +43,39 @@ const inverse: Record<Variant, { bg: string; fg: string; border?: string }> = {
 export function Button({ label, onPress, variant = 'primary', icon, trailingIcon, caps, loading, disabled, size = 'md', style }: Props) {
   const p = (useInverse() ? inverse : light)[variant];
   const inactive = disabled || loading;
+  const scale = useRef(new Animated.Value(1)).current;
+  const [down, setDown] = useState(false);
+  const to = (v: number) => {
+    if (!prefersReducedMotion()) Animated.spring(scale, { toValue: v, ...spring.press, useNativeDriver: NATIVE }).start();
+  };
   return (
-    <Pressable
+    <AnimatedPressable
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled: inactive, busy: loading }}
       disabled={inactive}
       android_ripple={{ color: 'rgba(255,255,255,0.18)', borderless: false }}
+      onPressIn={() => {
+        setDown(true);
+        to(0.96);
+      }}
+      onPressOut={() => {
+        setDown(false);
+        to(1);
+      }}
       onPress={() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+        haptic.tap();
         onPress?.();
       }}
-      style={({ pressed }) => [
+      style={[
         styles.base,
         size === 'lg' && styles.lg,
         { backgroundColor: p.bg, borderColor: p.border ?? 'transparent' },
         variant === 'primary' && !inactive && shadow.glow,
-        pressed && { opacity: 0.88 },
+        down && { opacity: 0.88 },
         inactive && { opacity: 0.45 },
         style,
+        { transform: [{ scale }] },
       ]}
     >
       {loading ? (
@@ -76,7 +93,7 @@ export function Button({ label, onPress, variant = 'primary', icon, trailingIcon
           {trailingIcon ? <Ionicons name={trailingIcon} size={size === 'lg' ? 20 : 18} color={p.fg} /> : null}
         </View>
       )}
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
