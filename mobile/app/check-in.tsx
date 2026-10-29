@@ -23,7 +23,7 @@ type Key = (typeof DRESS_CODE)[number]['key'];
 export default function CheckIn() {
   const { mode } = useLocalSearchParams<{ mode: 'in' | 'out' }>();
   const isIn = mode !== 'out';
-  const today = useApi<{ record: Attendance | null; custody: Custody }>(isIn ? null : '/attendance/today');
+  const today = useApi<{ record: Attendance | null; shiftStart: string; shiftEnd: string; graceMinutes: number; custody: Custody }>('/attendance/today');
   const [checks, setChecks] = useState<Record<Key, boolean>>({ uniform: false, idBadge: false, safetyBoots: false, groomed: false });
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<{ record: Attendance; flags: string[] } | null>(null);
@@ -113,6 +113,11 @@ export default function CheckIn() {
       }
     >
       <ScreenHeader title={isIn ? 'Morning check-in' : 'Evening check-out'} subtitle={isIn ? 'Confirm the dress code, then take a live photo' : 'Review what you still hold, then take a live photo'} />
+      {today.data ? (
+        <Text variant="label" color={colors.textMuted}>
+          {`Working hours ${time(today.data.shiftStart)} – ${time(today.data.shiftEnd)} · later than ${time(new Date(new Date(today.data.shiftStart).getTime() + today.data.graceMinutes * 60_000).toISOString())} counts as late`}
+        </Text>
+      ) : null}
 
       {isIn ? (
         <>

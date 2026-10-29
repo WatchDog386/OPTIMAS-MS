@@ -17,6 +17,8 @@ const schema = z.object({
   MAX_PHOTO_MB: z.coerce.number().default(8),
   TZ_OFFSET_MINUTES: z.coerce.number().default(180),
   SHIFT_START: z.string().regex(/^\d{2}:\d{2}$/).default('08:00'),
+  /** End of the working day (company local time); closes the check-in window and shows the shift span in the app. */
+  SHIFT_END: z.string().regex(/^\d{2}:\d{2}$/).default('17:00'),
   LATE_GRACE_MINUTES: z.coerce.number().default(15),
   CAPTURE_TTL_SECONDS: z.coerce.number().default(90),
   MIN_GPS_ACCURACY_M: z.coerce.number().default(100),

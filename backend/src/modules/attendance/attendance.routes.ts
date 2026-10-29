@@ -5,7 +5,7 @@ import { env } from '../../config/env';
 import { prisma } from '../../lib/prisma';
 import { badRequest, conflict, notFound } from '../../lib/http-error';
 import { audit } from '../../lib/audit';
-import { minutesBetween, shiftStartFor, workDateOf } from '../../lib/time';
+import { minutesBetween, shiftEndFor, shiftStartFor, workDateOf } from '../../lib/time';
 import { ah } from '../../middleware/async';
 import { ROLES, me, requireRole } from '../../middleware/auth';
 import { parse } from '../../middleware/validate';
@@ -49,6 +49,7 @@ attendanceRouter.get(
     res.json({
       workDate,
       shiftStart: shiftStartFor(workDate),
+      shiftEnd: shiftEndFor(workDate),
       graceMinutes: env.LATE_GRACE_MINUTES,
       record,
       custody: await custodySummary(userId),

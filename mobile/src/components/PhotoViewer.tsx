@@ -3,12 +3,13 @@ import { ActivityIndicator, Animated, Image, Linking, Modal, Pressable, ScrollVi
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { api, authHeader, photoUrl } from '../api/client';
+import { api } from '../api/client';
 import type { PhotoInfo } from '../api/approvals';
 import { closePhoto, usePhotoViewer } from '../store/photoViewer';
 import { colors, fonts, radius } from '../theme';
 import { dateTime, flagLabel, humanize } from '../utils/format';
 import { NATIVE, haptic, spring } from '../utils/motion';
+import { useAuthPhotoUri } from '../hooks/useAuthPhotoUri';
 import { Text } from './Text';
 
 /**
@@ -31,7 +32,7 @@ function Viewer({ id, title, subtitle }: { id: string; title?: string; subtitle?
   const [failed, setFailed] = useState(false);
   const [zoomed, setZoomed] = useState(false);
   const zoom = useRef(new Animated.Value(1)).current;
-  const uri = photoUrl(id);
+  const src = useAuthPhotoUri(id);
 
   useEffect(() => {
     api<{ photo: PhotoInfo }>(`/capture/photos/${id}/info`)
@@ -70,7 +71,7 @@ function Viewer({ id, title, subtitle }: { id: string; title?: string; subtitle?
 
       <Pressable onPress={toggleZoom} style={styles.stage} accessibilityLabel="Photo, tap to zoom">
         <Animated.View style={{ width: '100%', height: '100%', transform: [{ scale: zoom }] }}>
-          <Image source={{ uri, headers: uri.startsWith('data:') ? undefined : authHeader() }} style={StyleSheet.absoluteFill} resizeMode="contain" />
+          <Image source={src} style={StyleSheet.absoluteFill} resizeMode="contain" />
         </Animated.View>
       </Pressable>
 

@@ -175,6 +175,7 @@ npx expo start                # scan the QR code with Expo Go
 | Variable | Default | Purpose |
 |---|---|---|
 | `SHIFT_START` | `08:00` | Start of the working day (company local time) |
+| `SHIFT_END` | `17:00` | End of the working day — shown as the shift span, e.g. 08:00–17:00 |
 | `LATE_GRACE_MINUTES` | `15` | Check-ins after start + grace are marked **late** |
 | `TZ_OFFSET_MINUTES` | `180` | Company time zone offset (Nairobi = UTC+3) |
 | `CAPTURE_TTL_SECONDS` | `90` | How long a photo challenge is valid |

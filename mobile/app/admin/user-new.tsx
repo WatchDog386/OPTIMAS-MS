@@ -1,10 +1,35 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { api, ApiError } from '../../src/api/client';
 import type { Role, User } from '../../src/api/types';
 import { Button, Glass, Input, Screen, ScreenHeader, Segmented, TempPasswordCard, Text } from '../../src/components';
+import { useApi } from '../../src/hooks/useApi';
 import { useAuth } from '../../src/store/auth';
 import { colors } from '../../src/theme';
+
+/** Staff-number prefixes per role (OPT-TEC-001, OPT-ADM-002 …). */
+const STAFF_PREFIX: Partial<Record<Role, string>> = { ADMIN: 'ADM', SUPERVISOR: 'SUP', STOREKEEPER: 'STR', TECHNICIAN: 'TEC' };
+
+/** The next number of the form OPT-XXX-### that is not taken yet. */
+function suggestStaffNo(list: { staffNo: string }[], code: string): string {
+  let max = 0;
+  const re = new RegExp(`^OPT-${code}-(\\d+)$`);
+  for (const u of list) {
+    const m = re.exec(u.staffNo);
+    if (m) max = Math.max(max, Number(m[1]));
+  }
+  return `OPT-${code}-${String(max + 1).padStart(3, '0')}`;
+}
+
+/** The next five-digit account number after the highest one on record. */
+function suggestAccountNo(list: { staffNo: string }[]): string {
+  let max = 9999;
+  for (const u of list) {
+    const m = /^OPT-CUS-(\d+)$/.exec(u.staffNo);
+    if (m) max = Math.max(max, Number(m[1]));
+  }
+  return `OPT-CUS-${String(max + 1).padStart(5, '0')}`;
+}
 
 /** Create a staff member or a customer login. The server issues a one-time password. */
 export default function UserNew() {
@@ -30,6 +55,20 @@ export default function UserNew() {
   const [created, setCreated] = useState<{ user: User; temporaryPassword: string } | null>(null);
   const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
   const customer = role === 'CUSTOMER';
+  // Everyone already on the books, to number the person being created after the last one
+  const staff = useApi<{ users: { staffNo: string }[] }>('/users');
+  const customers = useApi<{ users: { staffNo: string }[] }>('/users?role=CUSTOMER');
+
+  // Pre-fill the number when the role turns (editable, so the office can follow its own scheme)
+  useEffect(() => {
+    if (customer) {
+      if (customers.data) setForm((f) => ({ ...f, customerAccount: suggestAccountNo(customers.data!.users) }));
+    } else {
+      const code = STAFF_PREFIX[role];
+      if (code && staff.data) setForm((f) => ({ ...f, staffNo: suggestStaffNo(staff.data!.users, code) }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role, staff.data, customers.data]);
 
   const submit = async () => {
     setBusy(true);

@@ -142,6 +142,19 @@ inventoryRouter.post(
   }),
 );
 
+const generateSchema = z.object({
+  itemId: z.string().min(1),
+  count: z.number().int().min(1).max(200),
+  prefix: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9-]{2,20}$/, 'Use letters, numbers and dashes only')
+    .optional(),
+});
+
+/** For unlabelled stock: the next free serial numbers of that product's series (SKU-0001…). */
+inventoryRouter.post('/serials/generate', store, ah(async (req, res) => res.json(await svc.generateSerials(parse(generateSchema, req.body)))));
+
 const transferSchema = z
   .object({
     userId: z.string().min(1),

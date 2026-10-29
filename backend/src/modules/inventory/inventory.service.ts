@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+import { prisma } from '../../lib/prisma';
 import { env } from '../../config/env';
 import { badRequest, conflict, notFound } from '../../lib/http-error';
 
@@ -50,6 +51,33 @@ export async function receiveStock(
   await tx.inventoryItem.update({ where: { id: item.id }, data: { storeQuantity: { increment: input.quantity } } });
   await tx.stockMovement.create({ data: { type: 'RECEIVE', itemId: item.id, quantity: input.quantity, actorId, note: input.note } });
   return { received: input.quantity };
+}
+
+/**
+ * Suggests the next free serial numbers of a product's series (SKU-0001…), continuing after whatever
+ * is already registered for that item. Numbers are just suggestions until they are received.
+ */
+export async function generateSerials(input: { itemId: string; count: number; prefix?: string }) {
+  const item = await prisma.inventoryItem.findUnique({ where: { id: input.itemId } });
+  if (!item) throw notFound('Item');
+  if (item.tracking !== 'SERIALIZED') throw badRequest('Only serialised items get generated serial numbers');
+  const base = (input.prefix ?? item.sku).trim().toUpperCase().replace(/-+$/, '');
+  const declared = await prisma.serialUnit.findMany({ where: { itemId: item.id }, select: { serialNumber: true } });
+  const taken = new Set(declared.map((u) => u.serialNumber));
+  const re = new RegExp(`^${base}-(\\d+)$`);
+  let next = 1;
+  for (const sn of taken) {
+    const m = re.exec(sn);
+    if (m) next = Math.max(next, Number(m[1]) + 1);
+  }
+  const serials: string[] = [];
+  while (serials.length < input.count) {
+    const sn = `${base}-${String(next).padStart(4, '0')}`;
+    if (!taken.has(sn)) serials.push(sn);
+    taken.add(sn);
+    next += 1;
+  }
+  return { serials, item: { id: item.id, name: item.name, sku: item.sku } };
 }
 
 // ───────────────────────────── Issuing ───────────────────────────────

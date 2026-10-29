@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import { api, ApiError } from '../../src/api/client';
 import type { Item } from '../../src/api/types';
 import { Button, Glass, Input, Screen, ScreenHeader, Segmented, Text } from '../../src/components';
+import { useApi } from '../../src/hooks/useApi';
 import { colors } from '../../src/theme';
 import { toast } from '../../src/store/feedback';
 import { requestScan } from '../../src/store/bridge';
@@ -19,6 +20,8 @@ const CATEGORIES: { value: Category; label: string }[] = [
   { value: 'TOOL', label: 'Tool' },
 ];
 
+const SKU_CODE: Record<Category, string> = { ROUTER: 'RTR', ONT: 'ONT', CABLE: 'CBL', CONNECTOR: 'CON', ACCESSORY: 'ACC', TOOL: 'TOL' };
+
 /** Add a catalogue item. Routers/ONTs are serial-tracked; cable and parts are counted in bulk. */
 export default function ItemNew() {
   const [category, setCategory] = useState<Category>('ROUTER');
@@ -27,6 +30,7 @@ export default function ItemNew() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const catalogue = useApi<{ items: Item[] }>('/inventory/items');
 
   const pickCategory = (c: Category) => {
     setCategory(c);
@@ -34,6 +38,14 @@ export default function ItemNew() {
     setTracking(serial ? 'SERIALIZED' : 'BULK');
     setForm((f) => ({ ...f, unit: serial ? 'pcs' : c === 'CABLE' ? 'm' : f.unit }));
   };
+
+  // Suggest the next SKU of the category (RTR-001 …) whenever the code field is empty — editable after
+  useEffect(() => {
+    if (form.sku.trim()) return;
+    const n = (catalogue.data?.items.filter((i) => i.category === category).length ?? 0) + 1;
+    setForm((f) => (f.sku.trim() ? f : { ...f, sku: `${SKU_CODE[category]}-${String(n).padStart(3, '0')}` }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [category, catalogue.data]);
 
   const submit = async () => {
     setBusy(true);

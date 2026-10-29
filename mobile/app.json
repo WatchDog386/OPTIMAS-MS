@@ -22,7 +22,7 @@
       "package": "ke.co.optimas.ms",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#FFFFFF"
+        "backgroundColor": "#F3F3F3"
       },
       "permissions": [
         "CAMERA",

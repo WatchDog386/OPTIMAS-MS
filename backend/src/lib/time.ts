@@ -14,6 +14,12 @@ export function shiftStartFor(workDate: Date): Date {
   return new Date(workDate.getTime() + (h * 60 + m) * 60_000 - offsetMs());
 }
 
+/** The instant the working day ends on the given work date. */
+export function shiftEndFor(workDate: Date): Date {
+  const [h, m] = env.SHIFT_END.split(':').map(Number);
+  return new Date(workDate.getTime() + (h * 60 + m) * 60_000 - offsetMs());
+}
+
 export const minutesBetween = (a: Date, b: Date) => Math.max(0, Math.round((b.getTime() - a.getTime()) / 60_000));
 
 /** HH:mm in company local time, for human-readable messages. */

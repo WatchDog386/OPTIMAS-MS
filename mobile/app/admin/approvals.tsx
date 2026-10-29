@@ -114,7 +114,7 @@ export default function Approvals() {
             <Reveal key={r.id} index={Math.min(i, 6)}>
               <Glass strong style={styles.card}>
                 <Header name={r.user.name} sub={`${r.user.staffNo} · ${dateTime(r.checkInAt)}`} userId={r.user.id} date={r.workDate} right={<Badge label={r.status === 'LATE' ? 'Late' : 'On time'} tone={r.status === 'LATE' ? 'warning' : 'success'} />} />
-                <AuthImage photoId={r.checkInPhoto.id} title="Check-in photo" subtitle={`${r.user.name} · ${dateTime(r.checkInAt)}`} flagged={hasFlags(r.checkInPhoto)} style={styles.photo} />
+                <AuthImage photoId={r.checkInPhoto?.id} title="Check-in photo" subtitle={`${r.user.name} · ${dateTime(r.checkInAt)}`} flagged={hasFlags(r.checkInPhoto)} style={styles.photo} />
                 <Flags photo={r.checkInPhoto} />
                 {r.dressChecklist ? (
                   <View style={styles.ticks}>
@@ -152,7 +152,7 @@ export default function Approvals() {
                 <Header name={r.user.name} sub={`${r.user.staffNo} · out ${dateTime(r.checkOutAt)}`} userId={r.user.id} date={r.workDate} right={<Badge label={duration(r.workedMinutes)} tone="info" dot={false} />} />
                 <View style={styles.pair}>
                   <View style={{ flex: 1, gap: 6 }}>
-                    <AuthImage photoId={r.checkInPhoto.id} title="Check-in photo" subtitle={`${r.user.name} · ${dateTime(r.checkInAt)}`} flagged={hasFlags(r.checkInPhoto)} />
+                    <AuthImage photoId={r.checkInPhoto?.id} title="Check-in photo" subtitle={`${r.user.name} · ${dateTime(r.checkInAt)}`} flagged={hasFlags(r.checkInPhoto)} />
                     <Text variant="label" color={colors.textMuted}>
                       In · {time(r.checkInAt)}
                     </Text>
