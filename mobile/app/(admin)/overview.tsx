@@ -173,6 +173,11 @@ export default function Overview() {
       icon: 'people-outline',
       onPress: () => router.push('/admin/users'),
     },
+    managers && {
+      label: 'Teams',
+      icon: 'people-outline',
+      onPress: () => router.push('/admin/team-new'),
+    },
     {
       label: 'Issue stock',
       icon: 'arrow-up-circle-outline',

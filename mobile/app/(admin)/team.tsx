@@ -27,6 +27,7 @@ export default function Team() {
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <Button label="Register" icon="calendar-outline" variant="secondary" style={{ flex: 1 }} onPress={() => router.push('/admin/attendance')} />
         {role === 'ADMIN' || role === 'SUPERVISOR' ? <Button label="People" icon="people-outline" style={{ flex: 1 }} onPress={() => router.push('/admin/users')} /> : null}
+        {role === 'ADMIN' || role === 'SUPERVISOR' ? <Button label="Create team" icon="people-outline" style={{ flex: 1 }} onPress={() => router.push('/admin/team-new')} /> : null}
       </View>
       <Segmented<Filter>
         options={[
