@@ -8,7 +8,7 @@
     "userInterfaceStyle": "light",
     "backgroundColor": "#FFFFFF",
     "splash": {
-      "backgroundColor": "#F3F3F3"
+      "backgroundColor": "#FFFFFF"
     },
     "ios": {
       "bundleIdentifier": "ke.co.optimas.ms",
@@ -22,7 +22,7 @@
       "package": "ke.co.optimas.ms",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#F3F3F3"
+        "backgroundColor": "#FFFFFF"
       },
       "permissions": [
         "CAMERA",
@@ -73,7 +73,7 @@
       "name": "Optimas MS",
       "shortName": "Optimas MS",
       "themeColor": "#F3F3F3",
-      "backgroundColor": "#F3F3F3"
+      "backgroundColor": "#FFFFFF"
     }
   }
 }

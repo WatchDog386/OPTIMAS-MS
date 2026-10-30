@@ -7,6 +7,8 @@ import { Text } from './Text';
 
 const LOGO = require('../../assets/logo.png');
 const MIN_VISIBLE_MS = 1400;
+/** The close, minimise and zoom buttons of a Mac window: red, yellow, green. */
+export const MAC_DOTS = ['#FF5F57', '#FEBC2E', '#28C840'];
 
 /**
  * Opening splash. Mirrors the static splash in public/index.html (removed once fonts are in, so there is
@@ -46,7 +48,7 @@ export function Splash({ fontsReady, ready, onDone }: { fontsReady: boolean; rea
         </Text>
       </Animated.View>
       <View style={styles.dots}>
-        <DotsLoader />
+        <DotsLoader colors={MAC_DOTS} />
       </View>
     </Animated.View>
   );
