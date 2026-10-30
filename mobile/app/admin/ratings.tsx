@@ -31,7 +31,7 @@ export default function RatingsScreen() {
 
       <Glass strong style={styles.hero}>
         <View style={{ alignItems: 'center', gap: 4, width: 110 }}>
-          <Text variant="h1" style={{ fontFamily: fonts.bold, fontSize: 46, lineHeight: 52 }}>
+          <Text variant="h1" style={{ fontFamily: fonts.bold, fontSize: 32, lineHeight: 38 }}>
             {data?.average != null ? data.average.toFixed(1) : '–'}
           </Text>
           <Stars value={data?.average ?? 0} size={16} />

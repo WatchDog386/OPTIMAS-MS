@@ -58,7 +58,7 @@ export default function LeaderboardScreen() {
                     {l.jobs} jobs
                   </Text>
                   <View style={[styles.block, { height: heights[place], backgroundColor: place === 0 ? colors.highlight : colors.surfaceAlt }]}>
-                    <Text variant="h1" style={{ fontFamily: fonts.bold, fontSize: 26 }}>
+                    <Text variant="h1" style={{ fontFamily: fonts.bold, fontSize: 22 }}>
                       {l.rank}
                     </Text>
                     <Text variant="label" color={colors.textMuted}>
@@ -117,7 +117,7 @@ function Summary({ value, label, icon }: { value: string; label: string; icon?: 
   return (
     <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-        <Text variant="h1" style={{ fontFamily: fonts.semibold, fontSize: 26 }}>
+        <Text variant="h1" style={{ fontFamily: fonts.semibold, fontSize: 22 }}>
           {value}
         </Text>
         {icon ? <Ionicons name={icon} size={16} color="#F5B400" /> : null}

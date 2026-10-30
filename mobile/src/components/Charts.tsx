@@ -185,7 +185,7 @@ export function Donut({ slices, size = 140, total }: { slices: { label: string; 
           return el;
         })}
       </Svg>
-      <Text variant="h1" style={{ fontFamily: fonts.semibold, fontSize: 26 }}>
+      <Text variant="h1" style={{ fontFamily: fonts.semibold, fontSize: 22 }}>
         {total}
       </Text>
     </View>

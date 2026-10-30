@@ -73,7 +73,7 @@ export function ActionCardRow({ items }: { items: ActionCardItem[] }) {
           style={({ pressed }) => [styles.action, { backgroundColor: c.color }, c.selected && styles.selected, pressed && { transform: [{ scale: 0.97 }] }]}
         >
           <View style={styles.actionTop}>
-            <Ionicons name={c.icon} size={30} color="#FFFFFF" />
+            <Ionicons name={c.icon} size={24} color="#FFFFFF" />
             {c.badge ? (
               <View style={styles.badge}>
                 <Text variant="label" color={colors.onHighlight} fixedColor style={{ fontFamily: fonts.bold }}>
@@ -82,18 +82,18 @@ export function ActionCardRow({ items }: { items: ActionCardItem[] }) {
               </View>
             ) : null}
           </View>
-          <Text variant="h2" color="#FFFFFF" fixedColor numberOfLines={1} style={{ fontSize: 19 }}>
+          <Text variant="h2" color="#FFFFFF" fixedColor numberOfLines={1} style={{ fontSize: 15, lineHeight: 20 }}>
             {c.title}
           </Text>
-          <Text variant="bodySm" color="rgba(255,255,255,0.8)" fixedColor numberOfLines={1}>
+          <Text variant="label" color="rgba(255,255,255,0.8)" fixedColor numberOfLines={1} style={{ fontSize: 12 }}>
             {c.status}
           </Text>
           <View style={styles.link}>
-            <Text variant="bodySm" color="#FFFFFF" fixedColor style={{ fontFamily: fonts.semibold, textDecorationLine: 'underline' }}>
+            <Text variant="label" color="#FFFFFF" fixedColor style={{ fontFamily: fonts.semibold, fontSize: 13, textDecorationLine: 'underline' }}>
               {c.action}
             </Text>
             <View style={styles.linkArrow}>
-              <Ionicons name="chevron-forward" size={14} color="#FFFFFF" />
+              <Ionicons name="chevron-forward" size={11} color="#FFFFFF" />
             </View>
           </View>
         </Pressable>
@@ -181,12 +181,13 @@ const styles = StyleSheet.create({
   ring: { position: 'absolute', borderWidth: 2, borderColor: 'rgba(255,255,255,0.35)' },
   artCore: { width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' },
   row: { gap: 14, paddingHorizontal: 16, paddingVertical: 4 },
-  action: { width: 228, borderRadius: 18, padding: 18, gap: 6, borderWidth: 3, borderColor: 'transparent' },
+  // Compact, like a banking app's loan cards
+  action: { width: 172, borderRadius: 14, padding: 14, gap: 3, borderWidth: 2, borderColor: 'transparent' },
   selected: { borderColor: colors.highlight },
-  actionTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 },
+  actionTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 },
   badge: { minWidth: 26, height: 26, borderRadius: 13, paddingHorizontal: 6, backgroundColor: colors.highlight, alignItems: 'center', justifyContent: 'center' },
-  link: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
-  linkArrow: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  link: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+  linkArrow: { width: 17, height: 17, borderRadius: 9, borderWidth: 1.5, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   tiles: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
   tile: { minHeight: 118, borderRadius: 14, padding: 14, justifyContent: 'space-between', backgroundColor: colors.glassStrong, borderWidth: 1.5, borderColor: colors.glassBorder },
   tileOn: { borderColor: colors.brand, backgroundColor: colors.brandSoft },

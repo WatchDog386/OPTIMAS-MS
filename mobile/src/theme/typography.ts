@@ -11,11 +11,12 @@ export const fonts = {
 
 /** Phone proportions from the Business-SME app. */
 export const type = {
-  display: { fontFamily: fonts.semibold, fontSize: 32, lineHeight: 36, letterSpacing: -0.6 },
-  h1: { fontFamily: fonts.semibold, fontSize: 24, lineHeight: 30, letterSpacing: -0.4 },
-  h2: { fontFamily: fonts.semibold, fontSize: 17, lineHeight: 22, letterSpacing: -0.2 },
+  // One scale everywhere (as on the dashboard): page headings match the "Hello …" greeting, SemiBold 17
+  display: { fontFamily: fonts.semibold, fontSize: 24, lineHeight: 29, letterSpacing: -0.3 },
+  h1: { fontFamily: fonts.semibold, fontSize: 17, lineHeight: 22 },
+  h2: { fontFamily: fonts.semibold, fontSize: 16, lineHeight: 21 },
   title: { fontFamily: fonts.semibold, fontSize: 14.5, lineHeight: 20 },
-  body: { fontFamily: fonts.regular, fontSize: 14.5, lineHeight: 21 },
+  body: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },
   bodySm: { fontFamily: fonts.regular, fontSize: 12.5, lineHeight: 17 },
   label: { fontFamily: fonts.medium, fontSize: 12, lineHeight: 16 },
   overline: { fontFamily: fonts.medium, fontSize: 12, lineHeight: 16 },

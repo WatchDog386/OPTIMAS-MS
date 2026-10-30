@@ -15,8 +15,8 @@ export default function Requests() {
   const { data, refresh, refreshing, loading } = useApi<{ requests: ServiceRequest[] }>('/customer/requests');
   return (
     <Screen refreshing={refreshing} onRefresh={refresh}>
-      <Text variant="display" style={{ fontFamily: fonts.medium, fontSize: 34 }}>
-        {'My\nrequests'}
+      <Text variant="display" style={{ fontFamily: fonts.semibold, fontSize: 17, lineHeight: 22 }}>
+        My requests
       </Text>
       <Button label="Request service" icon="add" onPress={() => router.push('/request-new')} />
       {!loading && !data?.requests.length ? <EmptyState icon="chatbubbles-outline" title="No requests yet" message="Report a fault or ask us to move your router." /> : null}

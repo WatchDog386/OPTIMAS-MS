@@ -20,7 +20,7 @@ export default function Visit() {
     <Screen refreshing={refreshing} onRefresh={refresh}>
       <ScreenHeader title={job.code} subtitle={humanize(job.type)} right={<Badge label={done ? 'Completed' : humanize(job.status)} tone={taskStatusTone[job.status]} />} />
       <Glass strong style={{ gap: 14 }}>
-        <Text variant="h1" style={{ fontFamily: fonts.medium, fontSize: 24, lineHeight: 29 }}>
+        <Text variant="h1" style={{ fontFamily: fonts.semibold, fontSize: 17, lineHeight: 22 }}>
           {job.title}
         </Text>
         <HatchedProgress value={STAGE[job.status] ?? 0} label={done ? 'Done' : job.status === 'IN_PROGRESS' ? 'Working now' : 'Assigned'} />

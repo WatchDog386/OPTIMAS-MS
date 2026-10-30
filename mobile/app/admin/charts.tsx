@@ -89,7 +89,7 @@ function ChartCard({ title, big, note, children }: { title: string; big: string;
           {title}
         </Text>
         <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-          <Text variant="h1" style={{ fontFamily: fonts.semibold, fontSize: 26 }}>
+          <Text variant="h1" style={{ fontFamily: fonts.semibold, fontSize: 22 }}>
             {big}
           </Text>
           <Text variant="label" color={colors.textMuted}>

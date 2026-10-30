@@ -112,7 +112,7 @@ export default function Portal() {
               Report a problem or ask us to move your router. You can follow the visit live, right here.
             </Text>
             <View style={styles.footer}>
-              <Text variant="h1" style={{ flex: 1, fontFamily: fonts.medium, fontSize: 22 }}>
+              <Text variant="h1" style={{ flex: 1, fontFamily: fonts.semibold, fontSize: 17, lineHeight: 22 }}>
                 Request service
               </Text>
               <GlassCircle size={48} highlight onPress={() => router.push('/request-new')} label="Request service">
@@ -318,7 +318,7 @@ function RequestTracker({ request }: { request: ServiceRequest }) {
 const NODE = 22;
 
 const styles = StyleSheet.create({
-  title: { fontFamily: fonts.medium, fontSize: 24, lineHeight: 29, letterSpacing: -0.3 },
+  title: { fontFamily: fonts.semibold, fontSize: 17, lineHeight: 22 },
   footer: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   live: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingRight: 10, height: 26, borderRadius: 13, backgroundColor: 'rgba(28,29,31,0.05)' },

@@ -162,7 +162,7 @@ export default function TechHome() {
         ) : (
           <Glass strong style={styles.shift}>
             <ProgressRing progress={shift === 'OFF' ? 0 : worked / SHIFT_MINUTES} size={126} stroke={12} color={shift === 'DONE' ? colors.success : colors.highlight}>
-              <Text variant="h2" style={{ fontFamily: fonts.semibold, fontSize: 22 }}>
+              <Text variant="h2" style={{ fontFamily: fonts.semibold, fontSize: 17, lineHeight: 22 }}>
                 {shift === 'OFF' ? '0h' : duration(worked)}
               </Text>
               <Text variant="label" color={colors.textMuted}>
@@ -330,7 +330,7 @@ function NextJob({ job }: { job: Task }) {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   shift: { flexDirection: 'row', alignItems: 'center', gap: 18 },
-  cardTitle: { fontFamily: fonts.medium, fontSize: 24, lineHeight: 29 },
+  cardTitle: { fontFamily: fonts.semibold, fontSize: 17, lineHeight: 22 },
   kicker: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, height: 26, borderRadius: 13, backgroundColor: colors.highlight },
   typeIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.highlight, alignItems: 'center', justifyContent: 'center' },
   meta: { gap: 8, padding: 12, borderRadius: 18, backgroundColor: 'rgba(28,29,31,0.04)' },

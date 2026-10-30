@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
   value: { fontFamily: fonts.semibold, fontSize: 17, lineHeight: 22 },
   footer: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
   hero: { flexDirection: 'row', gap: 12, minHeight: 200 },
-  name: { fontFamily: fonts.medium, fontSize: 36, lineHeight: 40, letterSpacing: -0.8 },
+  name: { fontFamily: fonts.semibold, fontSize: 24, lineHeight: 29, letterSpacing: -0.3 },
   role: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   check: { width: 20, height: 20, borderRadius: 10, backgroundColor: colors.highlight, alignItems: 'center', justifyContent: 'center' },
   portrait: { width: 150, alignItems: 'center', justifyContent: 'flex-end' },

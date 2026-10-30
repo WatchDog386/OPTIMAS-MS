@@ -31,7 +31,7 @@ export default function CareHome() {
         <BellButton />
       </View>
       <View style={{ gap: 2 }}>
-        <Text variant="title" style={{ fontFamily: fonts.bold, fontSize: 20 }}>
+        <Text variant="title" style={{ fontFamily: fonts.semibold, fontSize: 17, lineHeight: 22 }}>
           Hello {firstName(user.name)}
         </Text>
         <Text variant="bodySm" color={colors.textMuted}>

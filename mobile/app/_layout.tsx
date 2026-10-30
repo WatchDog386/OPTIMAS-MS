@@ -31,6 +31,7 @@ import { prefetchWork } from '../src/offline/prefetch';
 import { FeedbackHost } from '../src/components/FeedbackHost';
 import { LocationHost } from '../src/components/LocationHost';
 import { LockHost } from '../src/components/LockHost';
+import { BackGuard } from '../src/components/BackGuard';
 import { PageLoader } from '../src/components/PageLoader';
 import { RouteLoader } from '../src/components/RouteLoader';
 import { unlockAudioOnFirstTouch } from '../src/utils/chime';
@@ -120,6 +121,7 @@ function AppStack() {
         <Stack.Screen name="scan" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
       </Stack>
       <RouteLoader />
+      <BackGuard />
       <InstallPrompt />
       <UpdateBanner />
       <NotificationWatcher />
@@ -132,3 +134,4 @@ function AppStack() {
     </>
   );
 }
+

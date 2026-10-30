@@ -55,7 +55,7 @@ export function RateVisit({ job, onRated }: { job: CustomerJob; onRated: (job: C
       <Text variant="label" color={colors.textMuted} style={{ fontFamily: fonts.semibold, letterSpacing: 0.6 }}>
         RATE YOUR VISIT
       </Text>
-      <Text variant="h2" style={{ fontFamily: fonts.medium, fontSize: 21, lineHeight: 26 }}>
+      <Text variant="h2" style={{ fontFamily: fonts.semibold, fontSize: 17, lineHeight: 22 }}>
         How did {job.assignee.name.split(' ')[0]} do?
       </Text>
       <Text variant="label" color={colors.textMuted}>
