@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { goBack } from '../src/utils/nav';
 import { Ionicons } from '@expo/vector-icons';
 import { api, ApiError } from '../src/api/client';
 import type { Attendance, Custody } from '../src/api/types';
@@ -68,7 +69,7 @@ export default function CheckIn() {
             {`You have no signal. Your ${isIn ? 'check-in' : 'check-out'} is recorded with the time you took the photo and will be sent automatically when you are back online.`}
           </Text>
         </View>
-        <Button label="Back to home" onPress={() => router.back()} />
+        <Button label="Back to home" onPress={goBack} />
       </Screen>
     );
   }
@@ -93,7 +94,7 @@ export default function CheckIn() {
             <Badge key={f} label={flagLabel[f] ?? f} tone="warning" />
           ))}
         </View>
-        <Button label="Back to home" onPress={() => router.back()} />
+        <Button label="Back to home" onPress={goBack} />
       </Screen>
     );
   }

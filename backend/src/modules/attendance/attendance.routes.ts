@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { ReviewStatus } from '@prisma/client';
 import { env } from '../../config/env';
 import { prisma } from '../../lib/prisma';
-import { badRequest, conflict, notFound } from '../../lib/http-error';
+import { badRequest, conflict, forbidden, notFound } from '../../lib/http-error';
 import { audit } from '../../lib/audit';
 import { minutesBetween, shiftEndFor, shiftStartFor, workDateOf } from '../../lib/time';
 import { ah } from '../../middleware/async';
@@ -70,6 +70,7 @@ attendanceRouter.post(
   '/check-in',
   ah(async (req, res) => {
     const userId = me(req).id;
+    if (!ROLES.CHECK_IN.includes(me(req).role)) throw forbidden('Admins do not check in');
     const body = parse(checkInSchema, req.body);
     const now = await eventTime(body.photoId);
     const workDate = workDateOf(now);
@@ -160,7 +161,7 @@ attendanceRouter.get(
         },
       }),
       prisma.user.findMany({
-        where: { active: true, role: { in: ['TECHNICIAN', 'STOREKEEPER'] } },
+        where: { active: true, role: { in: ROLES.CHECK_IN } },
         select: { id: true, name: true, staffNo: true, role: true },
       }),
     ]);

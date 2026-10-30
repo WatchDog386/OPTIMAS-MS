@@ -40,3 +40,4 @@ export * from './PrivacyRows';
 export * from './BankCards';
 export * from './AssignPicker';
 export * from './QrCode';
+export * from './ShiftCard';

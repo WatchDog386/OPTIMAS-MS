@@ -14,6 +14,7 @@ import {
   Pill,
   PillChart,
   QuickActions,
+  useShift,
   Reveal,
   Screen,
   Section,
@@ -32,6 +33,7 @@ import { duration, firstName } from '../../src/utils/format';
 export default function Overview() {
   const user = useAuth((s) => s.user)!;
   const managers = user.role === 'ADMIN' || user.role === 'SUPERVISOR';
+  const shift = useShift();
   const { data: d, refresh, refreshing, loading, updatedAt } = useApi<Dashboard>('/reports/dashboard', { poll: 30_000 });
   const done = useApi<{ tasks: Task[] }>('/tasks?status=COMPLETED,VERIFIED');
   const unread = useApi<{ unread: number }>('/notifications/unread-count', { poll: 30_000 });
@@ -153,6 +155,8 @@ export default function Overview() {
   ];
 
   const all: (QuickAction | false)[] = [
+    // Supervisors and the store check in like everyone else (admins do not)
+    !!shift.action && { label: shift.action.label, icon: shift.action.icon, onPress: shift.action.onPress },
     managers && {
       label: 'New job',
       icon: 'add-circle-outline',

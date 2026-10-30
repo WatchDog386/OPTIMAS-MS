@@ -10,6 +10,8 @@ import { Button, Text } from '../src/components';
 import { resolveScan } from '../src/store/bridge';
 import { colors, fonts, radius, space } from '../src/theme';
 import { useStatusBarColor } from '../src/utils/statusBar';
+import { readBarcode, scanWithPhoneCamera } from '../src/utils/barcode';
+import { WebScanner } from '../src/components/WebScanner';
 
 /**
  * Every barcode a product or device can carry: shop barcodes (EAN/UPC), shipping and carton codes,
@@ -55,19 +57,54 @@ export default function Scan() {
     goBack();
   };
 
-  const add = (raw: string) => {
-    const value = raw.trim().toUpperCase();
-    if (!value) return;
-    if (!multiple) return finish([value]);
+  const [hint, setHint] = useState<string | null>(null);
+  const lastAccepted = useRef(0);
+  const [reading, setReading] = useState(false);
+
+  /** `typed`: entered by hand, taken as it is. Scanned codes must be the SN (or an Optimas label). */
+  const add = (raw: string, typed = false) => {
+    const code = readBarcode(raw);
+    if (!code.value) return;
+    if (!typed && (code.kind === 'mac' || code.kind === 'product')) {
+      // The same frame often holds the SN too: only nag when no SN came in just now
+      if (Date.now() - lastAccepted.current > 3000) setHint(`That is the ${code.kind === 'mac' ? 'MAC' : 'PROD ID'} barcode. Point at the one marked SN.`);
+      return false;
+    }
+    setHint(null);
+    lastAccepted.current = Date.now();
+    const value = code.value;
+    if (!multiple) {
+      finish([value]);
+      return true;
+    }
     setSerials((s) => (s.includes(value) ? s : [value, ...s]));
+    return true;
+  };
+
+  /** The phone's own camera: take a sharp photo of the sticker; every SN barcode in it is read. */
+  const photo = async () => {
+    setReading(true);
+    try {
+      const found = await scanWithPhoneCamera();
+      if (found === null) return;
+      const serialsInPhoto = found.map(readBarcode).filter((c) => c.kind === 'serial' || c.kind === 'label');
+      if (!serialsInPhoto.length) {
+        setHint(found.length ? 'No SN barcode in the photo, only MAC / PROD ID. Take it again with the SN barcode in view.' : 'No barcode found. Take the photo closer, flat on, and in focus.');
+        return;
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+      if (!multiple) return finish([serialsInPhoto[0].value]);
+      serialsInPhoto.forEach((c) => add(c.value, true));
+    } finally {
+      setReading(false);
+    }
   };
 
   const onScanned = ({ data }: BarcodeScanningResult) => {
     const now = Date.now();
     if (data === lastScan.current.value && now - lastScan.current.at < 2500) return;
     lastScan.current = { value: data, at: now };
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
-    add(data);
+    if (add(data) !== false) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
   };
 
   if (!permission) return <View style={styles.root} />;
@@ -86,14 +123,19 @@ export default function Scan() {
 
   return (
     <View style={styles.root}>
-      <CameraView
-        style={StyleSheet.absoluteFill}
-        facing="back"
-        enableTorch={torch}
-        barcodeScannerSettings={{ barcodeTypes: BARCODE_TYPES }}
-        onBarcodeScanned={onScanned}
-        onMountError={({ message }) => setCameraError(message || 'The camera could not start.')}
-      />
+      {Platform.OS === 'web' ? (
+        // Full-resolution video and the phone's own barcode reader (the SN barcode is too fine for a small preview)
+        <WebScanner torch={torch} onCodes={(codes) => codes.forEach((data) => onScanned({ data } as BarcodeScanningResult))} onError={setCameraError} />
+      ) : (
+        <CameraView
+          style={StyleSheet.absoluteFill}
+          facing="back"
+          enableTorch={torch}
+          barcodeScannerSettings={{ barcodeTypes: BARCODE_TYPES }}
+          onBarcodeScanned={onScanned}
+          onMountError={({ message }) => setCameraError(message || 'The camera could not start.')}
+        />
+      )}
       <SafeAreaView style={styles.overlay} edges={['top', 'bottom']}>
         <View style={styles.topBar}>
           <Pressable onPress={() => router.back()} style={styles.round} accessibilityLabel="Close scanner">
@@ -102,23 +144,22 @@ export default function Scan() {
           <Text variant="title" color={colors.white}>
             {params.title || 'Scan serial number'}
           </Text>
-          {Platform.OS === 'web' ? (
-            <View style={{ width: 44 }} />
-          ) : (
-            <Pressable onPress={() => setTorch((t) => !t)} style={styles.round} accessibilityLabel={torch ? 'Turn torch off' : 'Turn torch on'}>
-              <Ionicons name={torch ? 'flash' : 'flash-outline'} size={22} color={colors.white} />
-            </Pressable>
-          )}
+          <Pressable onPress={() => setTorch((t) => !t)} style={styles.round} accessibilityLabel={torch ? 'Turn torch off' : 'Turn torch on'}>
+            <Ionicons name={torch ? 'flash' : 'flash-outline'} size={22} color={colors.white} />
+          </Pressable>
         </View>
 
         <View style={styles.windowWrap}>
           <View style={styles.window} />
           <Text variant="label" color={colors.white} align="center" style={styles.windowHint}>
-            {cameraError ?? 'Hold the barcode inside the frame'}
+            {hint ?? cameraError ?? 'Hold the SN barcode inside the frame'}
           </Text>
         </View>
 
         <View style={styles.sheet}>
+          {Platform.OS === 'web' ? (
+            <Button label={reading ? 'Reading the photo…' : 'Use phone camera'} icon="camera-outline" loading={reading} onPress={photo} />
+          ) : null}
           <View style={styles.manualRow}>
             <TextInput
               value={manual}
@@ -129,14 +170,14 @@ export default function Scan() {
               autoCorrect={false}
               style={styles.manualInput}
               onSubmitEditing={() => {
-                add(manual);
+                add(manual, true);
                 setManual('');
               }}
             />
             <Pressable
               style={styles.addBtn}
               onPress={() => {
-                add(manual);
+                add(manual, true);
                 setManual('');
               }}
             >

@@ -19,7 +19,8 @@ reportsRouter.get(
 
     const [staff, attendance, taskGroups, completedWeek, unitGroups, overdueUnits, pendingReviews, lowStock, recentLost, countsWithMissing, openRequests] =
       await Promise.all([
-        prisma.user.count({ where: { active: true, role: 'TECHNICIAN' } }),
+        // Everyone expected to check in today (all staff but admins)
+        prisma.user.count({ where: { active: true, role: { in: ROLES.CHECK_IN } } }),
         prisma.attendance.findMany({ where: { workDate: today }, select: { status: true, checkOutAt: true } }),
         prisma.task.groupBy({ by: ['status'], _count: { _all: true } }),
         prisma.task.aggregate({

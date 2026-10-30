@@ -240,3 +240,8 @@ Anyone can open **Check a device** (Store, or My stock) and scan a label to see 
 
 The label key (`ASSET_TAG_SECRET`) is created once by `deploy.sh` and kept in `deploy/.env`. Back that file up and never change the key: if it changes, every printed label reads as fake.
 
+## Check-in and scanning
+
+- Everyone checks in and out except admins: technicians, supervisors, storekeepers and customer care. Supervisors and the store find **Check in** first in the dashboard's Quick Actions and as **My shift** on their Profile; customer care has it on their home page. All of them appear in the daily attendance register.
+- Scanning router/ONT stickers uses the **SN** barcode. The PROD ID and MAC barcodes are recognised and skipped. On Android, Chrome's own barcode reader (the same one the phone's scanner uses) is used at full camera resolution. **Use phone camera** takes a photo with the phone's camera app and reads the SN from it.
+

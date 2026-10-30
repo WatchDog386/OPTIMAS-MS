@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { uriToBlob } from '../utils/upload';
 
 /*
  * Where the waiting work is kept so it survives closing the app: IndexedDB in the browser (room for photos),
@@ -74,7 +75,7 @@ export const saveQueue = <T>(items: T[]) => saveKv('queue', items);
 export async function toDataUri(uri: string): Promise<string> {
   if (uri.startsWith('data:')) return uri;
   if (Platform.OS === 'web') {
-    const blob = await (await fetch(uri)).blob();
+    const blob = await uriToBlob(uri);
     return new Promise((resolve, reject) => {
       const r = new FileReader();
       r.onload = () => resolve(String(r.result));

@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 import type { User } from '../../src/api/types';
-import { GlassBackground, Text, usePrivacyItems } from '../../src/components';
+import { GlassBackground, ShiftCard, Text, usePrivacyItems } from '../../src/components';
 import { TAB_BAR_CLEARANCE } from '../../src/components/Screen';
 import { useApi } from '../../src/hooks/useApi';
 import { useAuth } from '../../src/store/auth';
@@ -87,6 +87,10 @@ export default function More() {
             {humanize(user.role)} · {user.staffNo}
             {user.region ? ` · ${user.region}` : ''}
           </Text>
+        </View>
+
+        <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
+          <ShiftCard />
         </View>
 
         <View style={styles.grid}>
