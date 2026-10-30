@@ -74,12 +74,38 @@ export async function enableBiometricLock(userId: string) {
   const device = typeof navigator !== 'undefined' ? navigator.userAgent.replace(/\s*\(.*?\)\s*/g, ' ').slice(0, 70) : undefined;
   const { id } = await api<{ id: string }>('/auth/passkeys/register', { body: { response: response as unknown as Record<string, unknown>, deviceName: device } });
   storage()?.setItem(KEY(userId), id);
+  const u = useAuth.getState().user;
+  if (u?.id === userId) rememberFingerprintAccount(u);
+}
+
+/**
+ * The account whose fingerprint is set up on this phone. Kept after the sign-in expires or after
+ * signing out, so the person comes back in with the fingerprint (or phone screen lock), never a password.
+ */
+const ACCOUNT = 'optimas.fp.account';
+type FingerprintAccount = { userId: string; staffNo: string; name: string };
+export function rememberFingerprintAccount(u: { id: string; staffNo: string; name: string }) {
+  try {
+    storage()?.setItem(ACCOUNT, JSON.stringify({ userId: u.id, staffNo: u.staffNo, name: u.name } satisfies FingerprintAccount));
+  } catch {
+    /* storage blocked: the password still works */
+  }
+}
+/** The remembered account, if its fingerprint key is still on this phone. */
+export function fingerprintAccount(): FingerprintAccount | null {
+  try {
+    const a = JSON.parse(storage()?.getItem(ACCOUNT) ?? 'null') as FingerprintAccount | null;
+    return a && lockKeyOnThisDevice(a.userId) ? a : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Turns the lock off on this device and forgets its key on the server. */
 export async function disableBiometricLock(userId: string) {
   const id = lockKeyOnThisDevice(userId);
   storage()?.removeItem(KEY(userId));
+  if (fingerprintAccount()?.userId === userId || !fingerprintAccount()) storage()?.removeItem(ACCOUNT);
   if (id) await api(`/auth/passkeys/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => undefined);
 }
 

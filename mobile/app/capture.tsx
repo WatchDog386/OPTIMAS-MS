@@ -12,9 +12,9 @@ import { api, ApiError } from '../src/api/client';
 import type { CapturePurpose } from '../src/api/types';
 import { Button, Text } from '../src/components';
 import { resolveCapture, type CaptureResult } from '../src/store/bridge';
-import { colors, radius, space } from '../src/theme';
+import { colors, fonts, radius, space } from '../src/theme';
 import { useStatusBarColor } from '../src/utils/statusBar';
-import { appendFile, grabCameraFrame } from '../src/utils/upload';
+import { appendFile, grabCameraFrame, photoFromPhoneCamera } from '../src/utils/upload';
 
 /**
  * Camera-only proof capture. There is deliberately NO gallery picker in this app:
@@ -64,8 +64,9 @@ export default function Capture() {
     };
   }, []);
 
-  const shoot = async () => {
-    if (!camera.current || busy) return;
+  /** `given`: a photo already taken with the phone's own camera app; otherwise the live camera here. */
+  const shoot = async (given?: { blob: Blob; uri: string; dataUri: () => string | Promise<string> }) => {
+    if ((!given && !camera.current) || busy) return;
     setError(null);
     setBusy(true);
     try {
@@ -82,8 +83,8 @@ export default function Capture() {
       // 2. Take the photo live.
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
       // Web: the frame straight from the live picture as a JPEG file; phones: the camera's own photo
-      const frame = await grabCameraFrame();
-      const photo = frame ? { uri: frame.uri } : await camera.current.takePictureAsync({ quality: 0.6, exif: false, shutterSound: false, imageType: 'jpg' });
+      const frame = given ?? (await grabCameraFrame());
+      const photo = frame ? { uri: frame.uri } : await camera.current!.takePictureAsync({ quality: 0.6, exif: false, shutterSound: false, imageType: 'jpg' });
       setPreview(photo.uri);
       // 3. Upload with location + device metadata.
       const loc = location.current ?? (await Location.getLastKnownPositionAsync().catch(() => null));
@@ -92,7 +93,7 @@ export default function Capture() {
         resolveCapture({
           photoId: '',
           // Kept on the phone until there is signal again, so it must be a lasting copy
-          uri: frame ? frame.dataUri() : photo.uri,
+          uri: frame ? await frame.dataUri() : photo.uri,
           flags: ['OFFLINE_CAPTURE'],
           pending: {
             capturedAt: new Date().toISOString(),
@@ -130,6 +131,17 @@ export default function Capture() {
       setError(e instanceof ApiError ? e.message : `Could not take the photo${why}. Try again.`);
     } finally {
       setBusy(false);
+    }
+  };
+
+  // The phone's own camera app (sharper, works on every phone); the photo must be taken now
+  const phoneCamera = async () => {
+    setError(null);
+    try {
+      const p = await photoFromPhoneCamera(facing);
+      if (p) await shoot(p);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not open the camera');
     }
   };
 
@@ -192,9 +204,17 @@ export default function Capture() {
               </Text>
             ) : null}
           </View>
-          <Pressable onPress={shoot} disabled={busy} style={styles.shutterOuter} accessibilityLabel="Take photo">
+          <Pressable onPress={() => void shoot()} disabled={busy} style={styles.shutterOuter} accessibilityLabel="Take photo">
             <View style={styles.shutterInner}>{busy ? <ActivityIndicator color={colors.onBrand} /> : null}</View>
           </Pressable>
+          {Platform.OS === 'web' ? (
+            <Pressable onPress={phoneCamera} disabled={busy} style={({ pressed }) => [styles.phoneCam, pressed && { opacity: 0.8 }]} accessibilityRole="button" accessibilityLabel="Use phone camera">
+              <Ionicons name="camera-outline" size={18} color={colors.white} />
+              <Text variant="bodySm" color={colors.white} fixedColor style={{ fontFamily: fonts.semibold }}>
+                Use phone camera
+              </Text>
+            </Pressable>
+          ) : null}
           <Text variant="label" color={colors.white} align="center">
             {busy ? 'Verifying photo…' : 'Time, GPS and device are recorded with this photo'}
           </Text>
@@ -212,6 +232,7 @@ const styles = StyleSheet.create({
   round: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.scrim, alignItems: 'center', justifyContent: 'center' },
   liveTag: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.scrim, paddingHorizontal: space.md, paddingVertical: 6, borderRadius: radius.pill },
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.danger },
+  phoneCam: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, alignSelf: 'center', height: 40, paddingHorizontal: 18, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.45)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)' },
   frame: { alignSelf: 'center', width: '78%', aspectRatio: 3 / 4, borderRadius: radius.xl, borderWidth: 2, borderColor: 'rgba(184,245,59,0.7)' },
   frameSelfie: { borderRadius: 999, width: '70%', aspectRatio: 0.8 },
   bottom: { padding: space.xl, gap: space.lg, alignItems: 'center' },

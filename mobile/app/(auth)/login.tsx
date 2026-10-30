@@ -5,11 +5,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, ApiError } from '../../src/api/client';
 import type { User } from '../../src/api/types';
-import { Button, GlassBackground, InstallButton, Input, Reveal, SignInLoader, Text } from '../../src/components';
+import { Button, GlassBackground, Input, Reveal, SignInLoader, Text } from '../../src/components';
 import { afterLogin, useAuth } from '../../src/store/auth';
 import { colors, fonts, radius, space } from '../../src/theme';
-import { biometricAvailable, loginWithBiometric } from '../../src/utils/biometric';
-import { useInstallPrompt } from '../../src/utils/install';
+import { biometricAvailable, biometricProblem, fingerprintAccount, loginWithBiometric } from '../../src/utils/biometric';
+import { LockedView } from '../../src/components/LockHost';
+import { runningAsApp } from '../../src/utils/install';
+import { useInstallAction } from '../../src/components/InstallPrompt';
 import { toast } from '../../src/store/feedback';
 
 const MAX_W = 480;
@@ -59,7 +61,9 @@ export default function Login() {
     }
   };
 
-  const { canInstall, install } = useInstallPrompt();
+  // Install: one tap where the browser has offered it; otherwise this browser's steps
+  const installer = useInstallAction();
+  const showInstall = Platform.OS === 'web' && !runningAsApp();
 
   // The picture eases in once, as soon as its space is known
   useEffect(() => {
@@ -97,6 +101,40 @@ export default function Login() {
     if (error) setError(null);
   };
 
+  // Fingerprint set up on this phone: come back in with it (or the phone's screen lock), no password
+  const [fp, setFp] = useState(() => (Platform.OS === 'web' ? fingerprintAccount() : null));
+  const [fpBusy, setFpBusy] = useState(false);
+  const [fpOther, setFpOther] = useState(false);
+  const fpUnlock = async () => {
+    if (!fp || fpBusy) return;
+    setFpBusy(true);
+    try {
+      setSignedIn(await loginWithBiometric(fp.staffNo));
+    } catch (e) {
+      setFpOther(true);
+      const n = (e as { name?: string })?.name;
+      if (n !== 'NotAllowedError' && n !== 'AbortError') toast.error('Not unlocked', biometricProblem(e));
+    } finally {
+      setFpBusy(false);
+    }
+  };
+  if (fp && !signedIn) {
+    return (
+      <LockedView
+        busy={fpBusy}
+        onUnlock={fpUnlock}
+        links={
+          fpOther
+            ? [
+                { label: 'Use password instead', onPress: () => (setIdentifier(fp.staffNo), setFp(null)) },
+                { label: 'Use another account', onPress: () => setFp(null), dim: true },
+              ]
+            : []
+        }
+      />
+    );
+  }
+
   return (
     <View style={styles.root}>
       <GlassBackground />
@@ -108,7 +146,6 @@ export default function Login() {
                 Optimas Networks
               </Text>
               <View style={styles.topRight}>
-                <InstallButton stepsOnly />
                 {/* Capsule like a mini-app's: ··· opens help, ⊗ clears the form */}
                 <View style={styles.capsule}>
                   <Pressable onPress={help} hitSlop={6} style={styles.capsuleHalf} accessibilityRole="button" accessibilityLabel="Help for customers and technicians">
@@ -204,8 +241,8 @@ export default function Login() {
 
                 <Button label="Sign in" size="lg" trailingIcon="arrow-forward-circle-outline" loading={loading} onPress={submit} style={styles.signIn} />
 
-                {canInstall ? (
-                  <Pressable onPress={install} style={styles.install} accessibilityLabel="Install the Optimas MS app">
+                {showInstall ? (
+                  <Pressable onPress={installer.start} style={styles.install} accessibilityLabel="Install the Optimas MS app">
                     <Ionicons name="download-outline" size={20} color={colors.white} />
                     <Text variant="label" style={{ color: colors.white, fontWeight: '600' }}>
                       Install
@@ -236,6 +273,7 @@ export default function Login() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      {installer.sheet}
       {signedIn ? <SignInLoader user={signedIn} onDone={() => router.replace(afterLogin(signedIn) as never)} /> : null}
     </View>
   );

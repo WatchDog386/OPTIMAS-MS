@@ -8,6 +8,9 @@ export type BarcodeKind = 'label' | 'serial' | 'mac' | 'product';
  * Only the SN (or an Optimas label) identifies the device; the other two are recognised and skipped.
  */
 export function readBarcode(raw: string): { kind: BarcodeKind; value: string } {
+  // An Optimas label holds a link to the app (…/verify?c=OPTIMAS:…): the code is in it
+  const link = /[?&]c=([^&#\s]+)/i.exec(raw);
+  if (link) raw = decodeURIComponent(link[1]);
   const v = raw
     .trim()
     .toUpperCase()

@@ -50,3 +50,38 @@ export async function grabCameraFrame(quality = 0.7): Promise<{ blob: Blob; uri:
   if (!blob) return null;
   return { blob, uri: URL.createObjectURL(blob), dataUri: () => canvas.toDataURL('image/jpeg', quality) };
 }
+
+/** A photo taken with the phone's own camera app counts only if it was taken just now (not from the gallery). */
+const FRESH_PHOTO_MS = 3 * 60_000;
+
+/**
+ * Web: opens the phone's own camera app (front for check-in selfies, back for jobs) and returns the photo
+ * as a JPEG file. Refuses a picture older than a few minutes, so an old photo from the gallery cannot be
+ * used instead of a live one. Resolves null when cancelled.
+ */
+export function photoFromPhoneCamera(facing: 'front' | 'back'): Promise<{ blob: Blob; uri: string; dataUri: () => Promise<string> } | null> {
+  if (Platform.OS !== 'web' || typeof document === 'undefined') return Promise.resolve(null);
+  return new Promise((resolve, reject) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.setAttribute('capture', facing === 'front' ? 'user' : 'environment');
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return resolve(null);
+      if (Date.now() - file.lastModified > FRESH_PHOTO_MS) return reject(new Error('Take a new photo now; pictures from the gallery are not accepted'));
+      resolve({
+        blob: file,
+        uri: URL.createObjectURL(file),
+        dataUri: () =>
+          new Promise<string>((ok, fail) => {
+            const r = new FileReader();
+            r.onload = () => ok(String(r.result));
+            r.onerror = () => fail(r.error);
+            r.readAsDataURL(file);
+          }),
+      });
+    };
+    input.click();
+  });
+}

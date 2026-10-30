@@ -8,7 +8,7 @@ import { useAuth } from '../store/auth';
 import { useLock } from '../store/lock';
 import { promptDialog, toast } from '../store/feedback';
 import { fonts } from '../theme';
-import { biometricProblem, lockKeyOnThisDevice, prepareBiometric, unlockWithBiometric } from '../utils/biometric';
+import { biometricProblem, lockKeyOnThisDevice, prepareBiometric, rememberFingerprintAccount, unlockWithBiometric } from '../utils/biometric';
 import { firstName } from '../utils/format';
 import { setThemeColor, STATUS_BAR_COLOR } from '../utils/install';
 import { Text } from './Text';
@@ -39,6 +39,11 @@ export function LockHost() {
     if (!user) setLocked(false);
   }, [user, setLocked]);
 
+  // Fingerprint already on (set up before accounts were remembered): remember the account now
+  useEffect(() => {
+    if (enabled && user) rememberFingerprintAccount(user);
+  }, [enabled, user]);
+
   // Lock again after a while in the background
   useEffect(() => {
     if (!enabled || typeof document === 'undefined') return;
@@ -56,21 +61,18 @@ export function LockHost() {
 }
 
 /** Lock-screen colours (like WhatsApp's): near-black page, green lock and green "Unlock". */
-const LOCK = { bg: '#0B141A', green: '#25D366', text: '#E9EDEF', line: '#3B4A54', dim: '#8696A0' };
+const LOCK = { bg: '#FFFFFF', icon: '#111111', green: '#1DAA61', text: '#111B21', line: '#D1D7DB', dim: '#667781' };
 
 /**
  * The lock screen, as in WhatsApp: a green lock, "Optimas Locked" and one Unlock button. Tapping Unlock
  * brings up the phone's fingerprint prompt; the app opens by itself as soon as the finger is accepted.
  */
 function LockScreen({ onUnlocked }: { name: string; onUnlocked: () => void }) {
-  const insets = useSafeAreaInsets();
   const [busy, setBusy] = useState(false);
   // The password and sign-out ways in show after a fingerprint attempt does not work
   const [other, setOther] = useState(false);
   useEffect(() => {
     void prepareBiometric('unlock');
-    setThemeColor(LOCK.bg);
-    return () => setThemeColor(STATUS_BAR_COLOR);
   }, []);
 
   const unlock = async () => {
@@ -106,30 +108,66 @@ function LockScreen({ onUnlocked }: { name: string; onUnlocked: () => void }) {
   };
 
   return (
+    <LockedView
+      busy={busy}
+      onUnlock={unlock}
+      links={
+        other
+          ? [
+              { label: 'Use password instead', onPress: password },
+              { label: 'Sign out', onPress: signOut, dim: true },
+            ]
+          : []
+      }
+    />
+  );
+}
+
+/**
+ * The look of the lock (WhatsApp's): a green lock, "Optimas Locked" and one Unlock button, with optional
+ * small links underneath. Used by the in-app lock and by the sign-in page when fingerprint is set up.
+ */
+export function LockedView({ busy, onUnlock, links }: { busy: boolean; onUnlock: () => void; links: { label: string; onPress: () => void; dim?: boolean }[] }) {
+  const insets = useSafeAreaInsets();
+  // The fingerprint prompt opens by itself: when the lock appears and whenever the app comes back to the
+  // front, so a touch on the sensor is all it takes. The button is there if the prompt was closed.
+  const unlockRef = useRef(onUnlock);
+  unlockRef.current = onUnlock;
+  useEffect(() => {
+    const t = setTimeout(() => unlockRef.current(), 250);
+    const onShow = () => document.visibilityState === 'visible' && unlockRef.current();
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', onShow);
+    return () => {
+      clearTimeout(t);
+      if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onShow);
+    };
+  }, []);
+  useEffect(() => {
+    setThemeColor(LOCK.bg);
+    return () => setThemeColor(STATUS_BAR_COLOR);
+  }, []);
+  return (
     <View style={[StyleSheet.absoluteFill, styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom + 24 }]} accessibilityViewIsModal>
       <View style={styles.middle}>
-        <Ionicons name="lock-closed" size={72} color={LOCK.green} accessibilityElementsHidden />
+        <Ionicons name="finger-print" size={76} color={LOCK.icon} accessibilityElementsHidden />
         <Text variant="h2" color={LOCK.text} fixedColor align="center" style={styles.title}>
           Optimas Locked
         </Text>
-        <Pressable onPress={unlock} disabled={busy} accessibilityRole="button" accessibilityLabel="Unlock with fingerprint" style={({ pressed }) => [styles.unlock, pressed && { backgroundColor: 'rgba(37,211,102,0.08)' }]}>
+        <Pressable onPress={onUnlock} disabled={busy} accessibilityRole="button" accessibilityLabel="Unlock with fingerprint" style={({ pressed }) => [styles.unlock, pressed && { backgroundColor: 'rgba(37,211,102,0.08)' }]}>
           <Text variant="body" color={LOCK.green} fixedColor style={{ fontFamily: fonts.medium, fontSize: 16 }}>
-            {busy ? 'Waiting for fingerprint…' : 'Unlock'}
+            Unlock
           </Text>
         </Pressable>
       </View>
-      {other ? (
+      {links.length ? (
         <View style={styles.other}>
-          <Pressable onPress={password} hitSlop={8} accessibilityRole="button">
-            <Text variant="bodySm" color={LOCK.green} fixedColor style={styles.link}>
-              Use password instead
-            </Text>
-          </Pressable>
-          <Pressable onPress={signOut} hitSlop={8} accessibilityRole="button">
-            <Text variant="bodySm" color={LOCK.dim} fixedColor style={styles.link}>
-              Sign out
-            </Text>
-          </Pressable>
+          {links.map((l) => (
+            <Pressable key={l.label} onPress={l.onPress} hitSlop={8} accessibilityRole="button">
+              <Text variant="bodySm" color={l.dim ? LOCK.dim : LOCK.green} fixedColor style={styles.link}>
+                {l.label}
+              </Text>
+            </Pressable>
+          ))}
         </View>
       ) : null}
     </View>

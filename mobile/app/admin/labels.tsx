@@ -8,6 +8,9 @@ import { colors, fonts } from '../../src/theme';
 /** data-* attributes on the web (react-native-web's dataSet), for the print stylesheet. */
 const web = (data: Record<string, string>) => ({ dataSet: data }) as object;
 
+/** What the label's QR code holds: a link to "Check a device" for this code, on this app's address. */
+const labelLink = (code: string) => `${typeof window !== 'undefined' ? window.location.origin : 'https://ms.optimaswifi.co.ke'}/verify?c=${encodeURIComponent(code)}`;
+
 interface Label {
   serial: string;
   mac: string | null;
@@ -49,7 +52,8 @@ export default function Labels() {
       <View style={styles.sheet}>
         {labels.map((l) => (
           <View key={l.serial} style={styles.label} {...web({ label: '1' })}>
-            <QrCode value={l.code} size={92} />
+            {/* A link, so any phone's own camera / QR scanner opens Optimas on this device's check */}
+            <QrCode value={labelLink(l.code)} size={110} />
             <View style={{ flex: 1, gap: 2 }}>
               <Text variant="label" style={styles.brand}>
                 OPTIMAS NETWORKS

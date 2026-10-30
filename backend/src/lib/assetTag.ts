@@ -19,7 +19,9 @@ export const tagFor = (serial: string) => `${PREFIX}${serial}:${sign(serial)}`;
  * one is refused); a plain serial or maker's barcode is taken as it is (`labelled: false`).
  */
 export function readCode(raw: string): { serial: string; labelled: boolean } {
-  const s = raw.trim().toUpperCase();
+  // Labels hold a link (…/verify?c=OPTIMAS:…) so the phone's own QR scanner opens the app: take the code out
+  const link = /[?&]c=([^&#\s]+)/i.exec(raw);
+  const s = (link ? decodeURIComponent(link[1]) : raw).trim().toUpperCase();
   if (!s.startsWith(PREFIX)) return { serial: s, labelled: false };
   const cut = s.lastIndexOf(':');
   const serial = s.slice(PREFIX.length, cut);

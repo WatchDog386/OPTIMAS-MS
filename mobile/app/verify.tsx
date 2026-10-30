@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api, ApiError } from '../src/api/client';
 import { Button, Glass, Input, PageHeader, Screen, Text } from '../src/components';
@@ -38,7 +38,9 @@ const TONE: Record<Tone, { bg: string; fg: string; icon: keyof typeof Ionicons.g
 /** "Is this the one we issued?" Scan a device's label (or type its serial or MAC) for a plain answer. */
 export default function Verify() {
   const role = useAuth((s) => s.user?.role);
-  const [code, setCode] = useState('');
+  // Opened from a label scanned with the phone's own camera / QR scanner: check it straight away
+  const { c } = useLocalSearchParams<{ c?: string }>();
+  const [code, setCode] = useState(c ?? '');
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<Check | null>(null);
 
@@ -60,6 +62,15 @@ export default function Verify() {
       await check(r[0]);
     }
   };
+
+  const opened = useRef(false);
+  useEffect(() => {
+    if (c && !opened.current) {
+      opened.current = true;
+      void check(c);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [c]);
 
   const t = result ? TONE[result.verdict.tone] : null;
   const u = result?.unit;
