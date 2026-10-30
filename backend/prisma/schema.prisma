@@ -72,6 +72,7 @@ model User {
   chatMemberships      ConversationMember[]
   messagesSent         Message[]
   supportConversation  Conversation?         @relation("SupportCustomer")
+  passkeys             Passkey[]
 
   @@index([customerAccount])
 }
@@ -575,4 +576,24 @@ model Message {
   sender       User         @relation(fields: [senderId], references: [id])
 
   @@index([conversationId, createdAt])
+}
+
+// ─────────────────────────── Fingerprint lock ─────────────────────────
+
+/// A phone's built-in fingerprint/face sensor registered to unlock the app (WebAuthn). Only the public
+/// key is stored; the fingerprint itself never leaves the phone.
+model Passkey {
+  /// The credential id (base64url) the phone gave when it was registered.
+  id         String    @id
+  userId     String
+  publicKey  Bytes
+  counter    Int       @default(0)
+  transports String[]
+  deviceName String?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

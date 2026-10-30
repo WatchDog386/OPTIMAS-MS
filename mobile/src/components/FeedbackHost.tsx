@@ -5,7 +5,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFeedback, type Toast, type ToastKind } from '../store/feedback';
 import { colors, fonts } from '../theme';
 import { EASE_IN, EASE_OUT, NATIVE, haptic, prefersReducedMotion, spring } from '../utils/motion';
-import { Button } from './Button';
 import { CelebrationHost } from './Celebration';
 import { Text } from './Text';
 
@@ -148,7 +147,8 @@ function DialogView() {
   }, []);
 
   const danger = dialog.tone === 'danger';
-  const iconName = dialog.icon ?? (danger ? 'alert-circle' : dialog.cancelLabel ? 'help-circle' : 'information-circle');
+  // A friendly face for the question, like a banking app's pop-ups
+  const emoji = dialog.emoji ?? (danger ? '⚠️' : dialog.input ? '✍️' : dialog.cancelLabel ? '🤔' : '👍');
   const blur = Platform.OS === 'web' ? ({ backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' } as unknown as ViewStyle) : null;
   return (
     <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, blur, { opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0, 1], extrapolate: 'clamp' }) }]}>
@@ -157,14 +157,14 @@ function DialogView() {
         accessibilityViewIsModal
         style={[styles.card, { transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [28, 0] }) }, { scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.88, 1] }) }] }]}
       >
-        <Animated.View style={[styles.cardIcon, { backgroundColor: danger ? colors.dangerSoft : colors.highlight, transform: [{ scale: icon.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }) }] }]}>
-          <Ionicons name={iconName} size={26} color={danger ? colors.danger : colors.onHighlight} />
-        </Animated.View>
-        <Text variant="h2" style={styles.title}>
+        <Text variant="h2" color="#FFFFFF" fixedColor style={styles.title}>
           {dialog.title}
         </Text>
+        <Animated.Text style={[styles.emoji, { transform: [{ scale: icon.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }) }] }]} accessibilityElementsHidden importantForAccessibility="no">
+          {emoji}
+        </Animated.Text>
         {dialog.message ? (
-          <Text variant="bodySm" color={colors.textMuted} style={styles.message}>
+          <Text variant="body" color="rgba(255,255,255,0.78)" fixedColor style={styles.message}>
             {dialog.message}
           </Text>
         ) : null}
@@ -173,7 +173,7 @@ function DialogView() {
             value={text}
             onChangeText={setText}
             placeholder={dialog.input.placeholder}
-            placeholderTextColor={colors.textDim}
+            placeholderTextColor="rgba(255,255,255,0.45)"
             autoFocus
             multiline={!dialog.input.secret}
             secureTextEntry={!!dialog.input.secret}
@@ -184,13 +184,33 @@ function DialogView() {
           />
         ) : null}
         <View style={styles.actions}>
-          {dialog.cancelLabel ? <Button label={dialog.cancelLabel} variant="secondary" onPress={() => finish(false)} style={{ flex: 1 }} /> : null}
-          <Button label={dialog.confirmLabel ?? 'OK'} variant={danger ? 'danger' : 'primary'} disabled={needsText} onPress={() => finish(true)} style={{ flex: 1 }} />
+          {dialog.cancelLabel ? (
+            <Pressable onPress={() => finish(false)} accessibilityRole="button" style={({ pressed }) => [styles.btn, styles.btnOutline, pressed && styles.pressed]}>
+              <Text variant="title" color="#FFFFFF" fixedColor style={styles.btnText}>
+                {dialog.cancelLabel}
+              </Text>
+            </Pressable>
+          ) : null}
+          <Pressable
+            onPress={() => finish(true)}
+            disabled={needsText}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: needsText }}
+            style={({ pressed }) => [styles.btn, { backgroundColor: danger ? colors.danger : DIALOG_GREEN }, needsText && { opacity: 0.45 }, pressed && styles.pressed]}
+          >
+            <Text variant="title" color="#FFFFFF" fixedColor style={styles.btnText}>
+              {dialog.confirmLabel ?? 'OK'}
+            </Text>
+          </Pressable>
         </View>
       </Animated.View>
     </Animated.View>
   );
 }
+
+/** Pop-up colours: a dark card with lime-green actions. */
+const DIALOG_BG = '#1E1F21';
+const DIALOG_GREEN = '#7CB82F';
 
 const styles = StyleSheet.create({
   toasts: { position: 'absolute', left: 14, right: 14, zIndex: 70, gap: 8 },
@@ -220,22 +240,27 @@ const styles = StyleSheet.create({
   backdrop: { zIndex: 80, backgroundColor: 'rgba(17,18,19,0.45)', alignItems: 'center', justifyContent: 'center', padding: 24 },
   card: {
     width: '100%',
-    maxWidth: 400,
+    maxWidth: 420,
     alignItems: 'center',
-    padding: 22,
-    paddingTop: 26,
-    borderRadius: 28,
-    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 22,
+    paddingTop: 30,
+    paddingBottom: 22,
+    borderRadius: 18,
+    backgroundColor: DIALOG_BG,
     shadowColor: '#000',
     shadowOpacity: 0.25,
     shadowRadius: 30,
     shadowOffset: { width: 0, height: 16 },
     elevation: 24,
   },
-  cardIcon: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
-  title: { fontFamily: fonts.semibold, fontSize: 19, textAlign: 'center' },
-  message: { textAlign: 'center', marginTop: 8, lineHeight: 20 },
+  emoji: { fontSize: 64, lineHeight: 76, textAlign: 'center', marginVertical: 14 },
+  title: { fontFamily: fonts.bold, fontSize: 24, lineHeight: 30, textAlign: 'center' },
+  message: { textAlign: 'center', marginTop: 4, lineHeight: 24, fontSize: 16 },
+  btn: { flex: 1, height: 54, borderRadius: 12, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10 },
+  btnOutline: { borderWidth: 1.5, borderColor: DIALOG_GREEN, backgroundColor: 'transparent' },
+  btnText: { fontFamily: fonts.bold, fontSize: 16 },
+  pressed: { opacity: 0.8, transform: [{ scale: 0.98 }] },
   secret: { minHeight: 48 },
-  input: { alignSelf: 'stretch', minHeight: 72, maxHeight: 140, marginTop: 16, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceAlt, paddingHorizontal: 14, paddingVertical: 12, fontFamily: fonts.regular, fontSize: 15, color: colors.text, textAlignVertical: 'top' },
+  input: { alignSelf: 'stretch', minHeight: 72, maxHeight: 140, marginTop: 16, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)', backgroundColor: '#2A2B2E', paddingHorizontal: 14, paddingVertical: 12, fontFamily: fonts.regular, fontSize: 15, color: '#FFFFFF', textAlignVertical: 'top' },
   actions: { flexDirection: 'row', gap: 10, alignSelf: 'stretch', marginTop: 22 },
 });

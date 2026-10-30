@@ -59,6 +59,14 @@ const CUSTOMER: Topic[] = [
       'Location sharing can be turned off any time in Account.',
     ],
   },
+  {
+    icon: 'finger-print',
+    title: 'Fingerprint lock',
+    steps: [
+      'Account → Fingerprint lock turns it on for this phone. The app then asks for your fingerprint when it opens and after a minute in the background.',
+      'If the fingerprint does not work, tap "Use password instead". Your fingerprint never leaves the phone.',
+    ],
+  },
 ];
 
 const TECHNICIAN: Topic[] = [
@@ -118,6 +126,14 @@ const TECHNICIAN: Topic[] = [
     steps: [
       'Your position is shared only while the Optimas app is open, and only if you allowed it.',
       'It is used for directions, sending you the nearest jobs, and showing customers you are on the way. You can turn it off in Profile.',
+    ],
+  },
+  {
+    icon: 'finger-print',
+    title: 'Fingerprint lock',
+    steps: [
+      'Profile → Fingerprint lock turns it on for this phone. The app then asks for your fingerprint when it opens and after a minute in the background.',
+      'If the fingerprint does not work, tap "Use password instead". Your fingerprint never leaves the phone.',
     ],
   },
 ];

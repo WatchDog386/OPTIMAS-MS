@@ -47,7 +47,7 @@ export function QuickActions({ items, title = 'Quick Actions', action }: { items
         {items.map((a) => (
           <Pressable key={a.label} onPress={a.onPress} style={({ pressed }) => [styles.item, pressed && { transform: [{ scale: 0.94 }], opacity: 0.8 }]} accessibilityRole="button" accessibilityLabel={a.label}>
             <View style={styles.circle}>
-              <Ionicons name={a.icon} size={24} color={a.tint ?? colors.text} />
+              <Ionicons name={a.icon} size={24} color={a.tint ?? colors.brand} />
               {a.badge ? (
                 <View style={styles.badge}>
                   <Text variant="label" color={colors.white} fixedColor style={{ fontSize: 10, lineHeight: 12, fontFamily: fonts.bold }}>

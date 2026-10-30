@@ -177,7 +177,8 @@ export function AdminHero(p: Props) {
 const CARD_W = 158;
 const CARD_H = 178;
 const FILLS = ['#C3A6FF', '#E6F45A', '#A8E6C4', '#FFD08A'];
-const LINK_GREEN = '#2DA043';
+/** Brand green: the "New Job" link and the Quick Actions icons share it. */
+const LINK_GREEN = colors.brand;
 
 /** Rounded rectangle with a concave bite out of the top-right corner (where the arrow button sits). */
 function notchedPath(w: number, h: number, r = 26, bite = 46, f = 10) {

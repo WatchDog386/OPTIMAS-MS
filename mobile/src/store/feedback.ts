@@ -28,6 +28,8 @@ export interface DialogSpec {
   title: string;
   message?: string;
   icon?: keyof typeof Ionicons.glyphMap;
+  /** Big emoji shown above the title (one is picked from the kind of question when omitted). */
+  emoji?: string;
   /** 'danger' paints the confirm button red (sign out, cancel job, deactivate…). */
   tone?: 'default' | 'danger';
   confirmLabel?: string;

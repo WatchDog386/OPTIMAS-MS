@@ -5,6 +5,7 @@ import { api, ApiError, API_URL, authHeader } from '../api/client';
 import { useAuth } from '../store/auth';
 import { promptDialog, toast } from '../store/feedback';
 import { colors } from '../theme';
+import { BiometricSetting } from './BiometricSetting';
 import { ListRow } from './ListRow';
 
 /** Saves the person's own data export (JSON) to their device. */
@@ -73,6 +74,7 @@ export function PrivacyRows() {
 
   return (
     <>
+      <BiometricSetting />
       <ListRow icon="download-outline" iconTint={colors.text} title="Download my data" subtitle="A copy of everything the app holds about you" onPress={busy ? undefined : download} />
       <ListRow icon="shield-checkmark-outline" iconTint={colors.text} title="Privacy Policy" onPress={() => router.push('/privacy')} />
       <ListRow icon="document-text-outline" iconTint={colors.text} title="Terms of Service" onPress={() => router.push('/terms')} />

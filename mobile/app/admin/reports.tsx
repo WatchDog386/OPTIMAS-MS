@@ -1,21 +1,21 @@
 import { useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import type { Ionicons } from '@expo/vector-icons';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { API_URL, authHeader } from '../../src/api/client';
-import { Button, Card, Screen, ScreenHeader, SectionHeader, Segmented, Text } from '../../src/components';
-import { colors, radius, space } from '../../src/theme';
+import { FeatureCard, PageHeader, Screen, Segmented, Text, type CardTone } from '../../src/components';
+import { colors } from '../../src/theme';
 import { toast } from '../../src/store/feedback';
 
 type Period = '7' | '30' | 'month' | 'last-month';
 const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
-const REPORTS = [
-  { key: 'attendance', icon: 'calendar', tint: colors.info, title: 'Attendance & hours', desc: 'Daily check-in/out, lateness, hours worked and dress-code results, with a per-person payroll summary.', dated: true },
-  { key: 'jobs', icon: 'briefcase', tint: colors.primary, title: 'Jobs & materials', desc: 'Every job with durations, devices installed, materials value, cash collected and customer sign-off.', dated: true },
-  { key: 'reconciliation', icon: 'git-compare', tint: colors.warning, title: 'Stock reconciliation', desc: 'Issued vs. installed vs. returned per technician, plus the location of every serialised device right now.', dated: false },
-] as const;
+const REPORTS: { key: string; icon: keyof typeof Ionicons.glyphMap; tone: CardTone; title: string; desc: string; dated: boolean }[] = [
+  { key: 'attendance', icon: 'calendar', tone: 'teal', title: 'Attendance & hours', desc: 'Check-in/out, lateness, hours worked and dress-code results, with a payroll summary per person.', dated: true },
+  { key: 'jobs', icon: 'briefcase', tone: 'graphite', title: 'Jobs & materials', desc: 'Every job with durations, devices installed, materials, cash collected and customer sign-off.', dated: true },
+  { key: 'reconciliation', icon: 'git-compare', tone: 'green', title: 'Stock reconciliation', desc: 'Issued vs installed vs returned per technician, and where every serialised device is now.', dated: false },
+];
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
@@ -65,8 +65,17 @@ export default function Reports() {
 
   return (
     <Screen>
-      <ScreenHeader title="Reports & exports" subtitle="Excel workbooks for payroll and audits" />
-      <SectionHeader title="Period" />
+      <PageHeader title="Reports" right={null} />
+      <View style={{ gap: 6 }}>
+        <Text variant="h1" style={{ fontSize: 24 }}>
+          Welcome to Reports
+        </Text>
+        <Text variant="bodySm" color={colors.textMuted}>
+          Excel workbooks for payroll and audits, all in one place. Tap a report to download it.
+        </Text>
+      </View>
+      <View style={styles.divider} />
+      <Text variant="h2">Period</Text>
       <Segmented<Period>
         options={[
           { value: '7', label: 'Last 7 days' },
@@ -80,30 +89,29 @@ export default function Reports() {
       <Text variant="label" color={colors.textDim}>
         {range(period).from} → {range(period).to}
       </Text>
+      <Text variant="h2" style={{ marginTop: 4 }}>
+        Workbooks
+      </Text>
       {REPORTS.map((r) => (
-        <Card key={r.key} style={{ gap: space.md }}>
-          <View style={styles.row}>
-            <View style={[styles.icon, { backgroundColor: `${r.tint}22` }]}>
-              <Ionicons name={r.icon} size={22} color={r.tint} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text variant="title">{r.title}</Text>
-              <Text variant="label" color={colors.textDim}>
-                {r.dated ? 'Uses selected period' : 'Current snapshot'}
-              </Text>
-            </View>
-          </View>
-          <Text variant="bodySm" color={colors.textMuted}>
-            {r.desc}
-          </Text>
-          <Button label="Download .xlsx" icon="download-outline" variant="secondary" loading={busy === r.key} onPress={() => download(r.key, r.dated)} />
-        </Card>
+        <FeatureCard
+          key={r.key}
+          title={r.title}
+          subtitle={r.desc}
+          icon={r.icon}
+          tone={r.tone}
+          busy={busy === r.key}
+          onPress={() => download(r.key, r.dated)}
+          footer={
+            <Text variant="label" color="rgba(255,255,255,0.75)" fixedColor>
+              {r.dated ? 'Uses the period above · .xlsx' : 'Current snapshot · .xlsx'}
+            </Text>
+          }
+        />
       ))}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  icon: { width: 44, height: 44, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderStrong },
 });

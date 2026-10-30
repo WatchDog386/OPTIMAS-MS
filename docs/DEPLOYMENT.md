@@ -195,3 +195,13 @@ The app has a **Privacy Policy** (`/privacy`), **Terms of Service** (`/terms`) a
 ## Staff and customer numbers (FBI-)
 
 New numbers are `FBI-ADM-001`, `FBI-SUP-001`, `FBI-STR-001`, `FBI-TEC-001` and customers `FBI-CUS-10000` upwards. The update renames existing `OPT-…` logins (and app-made `OPT-CUS-…` account numbers on jobs, requests and devices) automatically. Anyone who still types their old `OPT-…` number is signed in to the same account, so tell people their new number at your own pace.
+
+## Fingerprint lock
+
+Anyone can turn on **Fingerprint lock** in Profile / Account (shown only on phones with a fingerprint or face sensor). The app then opens on a lock screen and locks again after a minute in the background; "Use password instead" always works.
+
+- It needs the real `https://` address (it does not work over plain `http://`).
+- The phone's sensor signs a one-time challenge and the server checks it, so nothing about the fingerprint is ever stored on the server.
+- It is turned on per phone. Signing in on a new phone needs it turned on again there.
+- If the app is served under a second address (another domain pointing at the same server), list it in `backend/.env` as `WEBAUTHN_ORIGINS=https://other.example.com`. The normal address needs nothing.
+

@@ -88,46 +88,113 @@ export default function TrackJob() {
           </Pressable>
         ) : null}
         <View style={styles.card}>
-          {/* Arrival */}
-          {working ? (
-            <Headline icon="construct" tint={colors.success} big="On site" small={`${first} started work${job.startedAt ? ` at ${time(job.startedAt)}` : ''}`} />
-          ) : finished ? (
-            <Headline icon="checkmark-done" tint={colors.success} big="Visit finished" small={job.title} />
-          ) : !pos ? (
-            <Headline icon="location-outline" tint={colors.textMuted} big="Waiting for location" small={`${first} has not shared a location yet. Call or message them for an update.`} />
-          ) : route && arrive ? (
-            <View style={styles.etaRow}>
-              <Text variant="display" style={styles.eta}>
-                {minutesLabel(Math.max(60, (arrive - Date.now()) / 1000))}
-              </Text>
+          <View style={styles.handle} />
+          {/* Arrival, with the technician on the right (ride-hailing style) */}
+          <View style={styles.sheetTop}>
+            <View style={{ flex: 1 }}>
+              {working ? (
+                <>
+                  <Text variant="bodySm" color={colors.textMuted}>
+                    On site
+                  </Text>
+                  <Text variant="display" style={styles.big}>
+                    Working
+                  </Text>
+                  <Text variant="label" color={colors.textMuted}>
+                    Started {job.startedAt ? time(job.startedAt) : 'just now'}
+                  </Text>
+                </>
+              ) : finished ? (
+                <>
+                  <Text variant="bodySm" color={colors.textMuted}>
+                    Visit
+                  </Text>
+                  <Text variant="display" style={styles.big}>
+                    Finished
+                  </Text>
+                </>
+              ) : !pos ? (
+                <>
+                  <Text variant="bodySm" color={colors.textMuted}>
+                    Arriving in
+                  </Text>
+                  <Text variant="display" style={[styles.big, { fontSize: 26 }]}>
+                    Waiting for location
+                  </Text>
+                  <Text variant="label" color={colors.textMuted}>
+                    {first} has not shared a location yet
+                  </Text>
+                </>
+              ) : route && arrive ? (
+                <>
+                  <Text variant="bodySm" color={colors.textMuted}>
+                    Arriving in
+                  </Text>
+                  <Text variant="display" style={styles.big}>
+                    {minutesLabel(Math.max(60, (arrive - Date.now()) / 1000))}
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text variant="bodySm" color={colors.textMuted}>
+                    On the way
+                  </Text>
+                  <Text variant="display" style={[styles.big, { fontSize: 26 }]}>
+                    {job.lat == null ? 'Time unknown' : 'Working it out…'}
+                  </Text>
+                </>
+              )}
+            </View>
+            <View style={styles.avatarRing}>
+              <Avatar name={tech.name} size={58} />
+              {pos?.kind === 'live' ? <View style={styles.liveBadge} /> : null}
+            </View>
+          </View>
+
+          <View style={{ gap: 2 }}>
+            <Text variant="title" numberOfLines={1} style={{ fontFamily: fonts.semibold }}>
+              {job.code} · {job.title}
+            </Text>
+            <Text variant="bodySm" color={colors.textMuted} numberOfLines={1}>
+              {tech.name} · {pos ? `${pos.kind === 'live' ? 'live' : pos.kind === 'photo' ? 'from a photo' : 'last seen'} ${ago(pos.at)}` : customer ? 'your technician' : 'technician'}
+            </Text>
+          </View>
+
+          {/* Message box and call button */}
+          <View style={styles.contactRow}>
+            {tech.id ? (
+              <Pressable onPress={() => openChatWith({ userId: tech.id! })} style={({ pressed }) => [styles.notes, pressed && { opacity: 0.75 }]} accessibilityRole="button" accessibilityLabel={`Message ${first}`}>
+                <Ionicons name="chatbubble-ellipses" size={20} color={colors.text} />
+                <Text variant="body" color={colors.textMuted}>
+                  Message {first}…
+                </Text>
+              </Pressable>
+            ) : (
+              <View style={{ flex: 1 }} />
+            )}
+            {tech.phone ? (
+              <Pressable onPress={() => call(tech.phone)} style={({ pressed }) => [styles.callBtn, pressed && { opacity: 0.75 }]} accessibilityRole="button" accessibilityLabel={`Call ${first}`}>
+                <Ionicons name="call" size={20} color={colors.text} />
+              </Pressable>
+            ) : null}
+          </View>
+
+          <View style={styles.route}>
+            <Text variant="h2" style={{ fontSize: 19 }}>
+              Route
+            </Text>
+            <View style={styles.dest}>
+              <View style={styles.destDot} />
               <View style={{ flex: 1 }}>
-                <Text variant="title">Arriving about {clockAt(arrive)}</Text>
-                <Text variant="bodySm" color={colors.textMuted}>
-                  {distanceLabel(route.distance)} away{route.source === 'estimate' ? ' (estimated)' : ''}
+                <Text variant="bodySm" numberOfLines={1} style={{ fontFamily: fonts.semibold }}>
+                  {job.customerName}
+                </Text>
+                <Text variant="label" color={colors.textMuted} numberOfLines={1}>
+                  {job.address}
+                  {route && arrive && !working && !finished ? ` · arriving about ${clockAt(arrive)} · ${distanceLabel(route.distance)}${route.source === 'estimate' ? ' (estimated)' : ''}` : ''}
                 </Text>
               </View>
             </View>
-          ) : (
-            <Headline icon="navigate" tint={colors.navy} big="On the way" small={job.lat == null ? 'This job has no map pin, so arrival time is unknown.' : 'Working out the arrival time…'} />
-          )}
-
-          <View style={styles.person}>
-            <Avatar name={tech.name} />
-            <View style={{ flex: 1 }}>
-              <Text variant="title">{tech.name}</Text>
-              <Text variant="label" color={colors.textMuted}>
-                {pos ? `${pos.kind === 'live' ? 'Live' : pos.kind === 'photo' ? 'From a photo' : 'Last seen'} · ${ago(pos.at)}` : customer ? 'Your technician' : 'Technician'}
-              </Text>
-            </View>
-            {tech.phone ? <HeaderButton icon="call" label={`Call ${first}`} onPress={() => call(tech.phone)} /> : null}
-            {tech.id ? <HeaderButton icon="chatbubble-ellipses" label={`Message ${first}`} onPress={() => openChatWith({ userId: tech.id! })} /> : null}
-          </View>
-
-          <View style={styles.dest}>
-            <Ionicons name="home-outline" size={16} color={colors.textMuted} />
-            <Text variant="bodySm" color={colors.textMuted} numberOfLines={1} style={{ flex: 1 }}>
-              {job.customerName} · {job.address}
-            </Text>
           </View>
           {managers && job.status === 'ASSIGNED' ? (
             <Pressable onPress={() => router.push(`/admin/forward/${job.id}`)} style={({ pressed }) => [styles.forward, pressed && { opacity: 0.8 }]} accessibilityRole="button">
@@ -143,33 +210,23 @@ export default function TrackJob() {
   );
 }
 
-function Headline({ icon, tint, big, small }: { icon: keyof typeof Ionicons.glyphMap; tint: string; big: string; small: string }) {
-  return (
-    <View style={styles.etaRow}>
-      <View style={[styles.headIcon, { backgroundColor: `${tint}1A` }]}>
-        <Ionicons name={icon} size={22} color={tint} />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text variant="h2">{big}</Text>
-        <Text variant="bodySm" color={colors.textMuted}>
-          {small}
-        </Text>
-      </View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
+  handle: { alignSelf: 'center', width: 44, height: 5, borderRadius: 3, backgroundColor: colors.borderStrong, marginTop: -6, marginBottom: 2 },
+  sheetTop: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  big: { fontSize: 36, lineHeight: 42, color: colors.text, fontFamily: fonts.bold },
+  avatarRing: { padding: 3, borderRadius: 40, borderWidth: 3, borderColor: '#F2B705' },
+  liveBadge: { position: 'absolute', right: 2, top: 2, width: 16, height: 16, borderRadius: 8, backgroundColor: colors.success, borderWidth: 3, borderColor: colors.white },
+  contactRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  notes: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, height: 56, borderRadius: 28, paddingHorizontal: 18, backgroundColor: colors.surfaceAlt },
+  callBtn: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
+  route: { gap: 10, paddingTop: 12, borderTopWidth: 8, borderTopColor: colors.bgTop, marginHorizontal: -16, paddingHorizontal: 16 },
+  destDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.brand, borderWidth: 2, borderColor: colors.white, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 2 },
   root: { flex: 1, backgroundColor: colors.bgTop },
   top: { position: 'absolute', left: 0, right: 0, top: 0, paddingHorizontal: space.lg, flexDirection: 'row', alignItems: 'center', gap: 10 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.glassStrong, borderRadius: 20, height: 40, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.glassBorder },
   bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: space.md, gap: 10 },
   recenter: { alignSelf: 'flex-end', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.surface, borderRadius: 20, paddingHorizontal: 14, height: 38, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 10 },
   card: { backgroundColor: colors.surface, borderRadius: radius.xl + 2, padding: space.lg, gap: 14, shadowColor: '#000', shadowOpacity: 0.16, shadowRadius: 20, shadowOffset: { width: 0, height: -2 } },
-  etaRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  eta: { fontSize: 32, lineHeight: 38, color: colors.success },
-  headIcon: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center' },
-  person: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  dest: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  dest: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   forward: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 48, borderRadius: 24, backgroundColor: colors.primary },
 });

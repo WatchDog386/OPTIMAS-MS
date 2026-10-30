@@ -12,6 +12,11 @@ Roles: **T** technician · **K** storekeeper · **S** supervisor · **A** admin.
 | GET | `/auth/me` | all | current user |
 | POST | `/auth/change-password` | all | `{ currentPassword, newPassword }` — min 8 chars with a letter and a digit, must differ; clears `mustChangePassword` |
 | GET | `/auth/my-data` | all | Everything held about the signed-in person, as a JSON download (Data Protection Act s.26) |
+| POST | `/auth/verify-password` | all | `{ password }` — unlocks the app lock screen with the password (shares the sign-in lockout) |
+| GET | `/auth/passkeys` | all | Fingerprint keys registered for the signed-in person |
+| POST | `/auth/passkeys/register-options` → `/auth/passkeys/register` | all | Turn on fingerprint lock for this phone (WebAuthn) |
+| POST | `/auth/passkeys/unlock-options` → `/auth/passkeys/unlock` | all | Unlock with the fingerprint; the server checks the signature |
+| DELETE | `/auth/passkeys/:id` | all | Turn fingerprint lock off for that phone |
 | POST | `/auth/delete-account` | customers | `{ password }` — anonymises and closes the account; visit/payment records stay without the name. Staff → `STAFF_ACCOUNT` |
 | GET | `/public/info` | anyone | Company name, address, support contacts, privacy e-mail, retention periods (no sign-in) |
 

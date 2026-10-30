@@ -2,18 +2,18 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { Item } from '../../src/api/types';
-import { Badge, HeaderButton, PageHeader, Reveal, Screen, SectionHeader, Text } from '../../src/components';
+import { ActionCardRow, Badge, HeaderButton, PageHeader, Reveal, Screen, SectionHeader, Text } from '../../src/components';
 import { requestScan } from '../../src/store/bridge';
 import { useApi } from '../../src/hooks/useApi';
 import { colors, radius, space } from '../../src/theme';
 import { kes } from '../../src/utils/format';
 
 const ACTIONS = [
-  { icon: 'arrow-up-circle', label: 'Issue', href: '/admin/transfer?direction=issue', tint: colors.primary },
-  { icon: 'arrow-down-circle', label: 'Return', href: '/admin/transfer?direction=return', tint: colors.accent },
-  { icon: 'add-circle', label: 'Receive', href: '/admin/receive', tint: colors.info },
-  { icon: 'search', label: 'Find unit', href: '/admin/unit', tint: colors.warning },
-  { icon: 'list', label: 'Ledger', href: '/admin/movements', tint: colors.text },
+  { icon: 'arrow-up-circle-outline', label: 'Issue', status: 'Give devices to a technician', action: 'Issue', href: '/admin/transfer?direction=issue', color: '#0D5C3E' },
+  { icon: 'arrow-down-circle-outline', label: 'Return', status: 'Take devices back to store', action: 'Return', href: '/admin/transfer?direction=return', color: '#2E3A5C' },
+  { icon: 'add-circle-outline', label: 'Receive', status: 'Add new stock', action: 'Receive', href: '/admin/receive', color: '#0D5C3E' },
+  { icon: 'search-outline', label: 'Find unit', status: 'Trace a serial number', action: 'Search', href: '/admin/unit', color: '#2E3A5C' },
+  { icon: 'list-outline', label: 'Ledger', status: 'Every stock movement', action: 'Open', href: '/admin/movements', color: '#0D5C3E' },
 ] as const;
 
 const categoryIcon: Record<Item['category'], keyof typeof Ionicons.glyphMap> = {
@@ -43,22 +43,7 @@ export default function Store() {
   return (
     <Screen refreshing={refreshing} onRefresh={refresh}>
       <PageHeader title="Store" right={<HeaderButton icon="scan-outline" label="Scan a device" onPress={scan} />} />
-      <View style={styles.actions}>
-        {ACTIONS.map((a) => (
-          <Pressable
-            key={a.label}
-            onPress={() => router.push(a.href)}
-            accessibilityRole="button"
-            accessibilityLabel={a.label}
-            style={({ pressed }) => [styles.action, pressed && { transform: [{ scale: 0.94 }], opacity: 0.8 }]}
-          >
-            <View style={styles.circle}>
-              <Ionicons name={a.icon} size={24} color={a.tint} />
-            </View>
-            <Text variant="label">{a.label}</Text>
-          </Pressable>
-        ))}
-      </View>
+      <ActionCardRow items={ACTIONS.map((a) => ({ key: a.label, title: a.label, status: a.status, icon: a.icon, color: a.color, action: a.action, onPress: () => router.push(a.href) }))} />
 
       <SectionHeader title="Inventory" action="Catalogue" onAction={() => router.push('/admin/items')} />
       <View>
@@ -97,9 +82,6 @@ export default function Store() {
 }
 
 const styles = StyleSheet.create({
-  actions: { flexDirection: 'row', gap: space.sm },
-  action: { flex: 1, alignItems: 'center', gap: 6 },
-  circle: { width: 54, height: 54, borderRadius: 27, backgroundColor: colors.glassStrong, borderWidth: 1, borderColor: colors.glassBorder, alignItems: 'center', justifyContent: 'center' },
   // Plain rows on the page (no card behind each item, no dividing lines)
   item: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md, paddingHorizontal: 2 },
   itemIcon: { width: 42, height: 42, borderRadius: radius.sm, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },

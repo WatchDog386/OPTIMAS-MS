@@ -2,7 +2,7 @@
   "name": "optimas-ms-api",
   "version": "1.0.0",
   "private": true,
-  "description": "Optimas MS \u2014 field workforce, attendance, task and inventory API",
+  "description": "Optimas MS — field workforce, attendance, task and inventory API",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "@simplewebauthn/server": "^13.3.3",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^18.0.9",

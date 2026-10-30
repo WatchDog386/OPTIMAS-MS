@@ -21,7 +21,9 @@ export function PageHeader({ title, subtitle, right, onBack }: { title: string; 
   const back = onBack ?? (() => (router.canGoBack() ? router.back() : router.replace(home() as never)));
   return (
     <View style={styles.row}>
-      <HeaderButton icon="chevron-back" label="Back" onPress={back} />
+      <View style={styles.side}>
+        <HeaderButton icon="chevron-back" label="Back" onPress={back} />
+      </View>
       <View style={styles.middle}>
         <Text variant="title" numberOfLines={1} style={styles.title}>
           {title}
@@ -32,8 +34,8 @@ export function PageHeader({ title, subtitle, right, onBack }: { title: string; 
           </Text>
         ) : null}
       </View>
-      {/* An invisible spacer keeps the title centred when there is no action */}
-      {right === undefined ? <BellButton /> : right ?? <View style={styles.spacer} />}
+      {/* Both sides take the same width, so the title stays centred whatever the action is */}
+      <View style={[styles.side, { alignItems: 'flex-end' }]}>{right === undefined ? <BellButton /> : right}</View>
     </View>
   );
 }
@@ -62,10 +64,10 @@ export function BellButton() {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  middle: { flex: 1, alignItems: 'center' },
+  side: { flex: 1, flexBasis: 0, alignItems: 'flex-start' },
+  middle: { flexShrink: 1, maxWidth: '64%', alignItems: 'center' },
   title: { textAlign: 'center', fontFamily: fonts.semibold, fontSize: 18 },
   btn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.glassStrong, borderWidth: 1, borderColor: colors.glassBorder },
-  spacer: { width: 40, height: 40 },
   primary: { backgroundColor: colors.primary, borderColor: colors.primary },
   badge: { position: 'absolute', top: -3, right: -3, minWidth: 17, height: 17, borderRadius: 9, paddingHorizontal: 3, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.white },
 });

@@ -25,6 +25,7 @@ import { auditRouter } from './modules/audit/audit.routes';
 import { locationRouter } from './modules/location/location.routes';
 import { chatRouter } from './modules/chat/chat.routes';
 import { publicRouter } from './modules/public/public.routes';
+import { passkeyRouter } from './modules/auth/passkey.routes';
 
 export function createApp() {
   const app = express();
@@ -71,6 +72,7 @@ export function createApp() {
       message: { error: { message: 'Too many sign-in attempts. Try again in 15 minutes.', code: 'RATE_LIMITED' } },
     }),
   );
+  api.use('/auth/passkeys', requireAuth, passkeyRouter);
   api.use('/auth', authRouter);
   api.use('/public', publicRouter);
   api.use('/users', requireAuth, staff, usersRouter);

@@ -187,3 +187,21 @@ authRouter.post(
     res.json({ ok: true });
   }),
 );
+
+/** "Use password instead" on the lock screen: checks the signed-in person's password (same lockout as sign-in). */
+authRouter.post(
+  '/verify-password',
+  requireAuth,
+  ah(async (req, res) => {
+    const { password } = parse(z.object({ password: z.string().min(1, 'Enter your password').max(200) }), req.body);
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: me(req).id } });
+    const key = user.staffNo.toLowerCase();
+    if (lockedOut(key)) throw new HttpError(429, 'Too many wrong passwords. Try again in 15 minutes.', 'ACCOUNT_LOCKED');
+    if (!(await bcrypt.compare(password, user.passwordHash))) {
+      recordFail(key);
+      throw badRequest('Password is incorrect', 'WRONG_PASSWORD');
+    }
+    fails.delete(key);
+    res.json({ ok: true });
+  }),
+);

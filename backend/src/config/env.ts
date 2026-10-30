@@ -44,6 +44,8 @@ const schema = z.object({
   ROUTING_URL: z.string().default('https://router.project-osrm.org'),
   /** Nominatim server used to find coordinates for typed addresses. Empty switches it off. */
   GEOCODING_URL: z.string().default('https://nominatim.openstreetmap.org'),
+  /** Extra page addresses allowed to use fingerprint lock when the web app is not on the API's own address (comma-separated). */
+  WEBAUTHN_ORIGINS: z.string().default(''),
   /** Shown to customers and on the help, privacy and terms pages. Leave empty to hide a contact. */
   SUPPORT_PHONE: z.string().default(''),
   SUPPORT_WHATSAPP: z.string().default(''),
