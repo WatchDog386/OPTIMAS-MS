@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { goBack } from '../../src/utils/nav';
 import { api, ApiError } from '../../src/api/client';
 import type { Item } from '../../src/api/types';
@@ -14,6 +14,7 @@ import { toast } from '../../src/store/feedback';
 /** Goods received from a supplier into the store. */
 export default function Receive() {
   const { data } = useApi<{ items: Item[] }>('/inventory/items');
+  const params = useLocalSearchParams<{ itemId?: string }>();
   const [itemId, setItemId] = useState<string | null>(null);
   const [serials, setSerials] = useState<string[]>([]);
   const [manual, setManual] = useState('');
@@ -23,6 +24,10 @@ export default function Receive() {
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const item = data?.items.find((i) => i.id === itemId);
+
+  useEffect(() => {
+    if (params.itemId && !itemId) setItemId(params.itemId);
+  }, [params.itemId, itemId]);
 
   const addSerials = (more: string[]) => {
     if (!more.length) return;

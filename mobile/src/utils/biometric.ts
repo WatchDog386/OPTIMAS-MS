@@ -1,6 +1,8 @@
 import { Platform } from 'react-native';
 import { browserSupportsWebAuthn, platformAuthenticatorIsAvailable, startAuthentication, startRegistration } from '@simplewebauthn/browser';
 import { api, ApiError } from '../api/client';
+import { useAuth } from '../store/auth';
+import type { User } from '../api/types';
 
 /**
  * Fingerprint lock with the phone's own sensor (WebAuthn). The server checks every unlock; this device
@@ -87,6 +89,17 @@ export async function unlockWithBiometric(): Promise<boolean> {
   const response = await startAuthentication({ optionsJSON });
   await api('/auth/passkeys/unlock', { body: { response: response as unknown as Record<string, unknown> } });
   return true;
+}
+
+/** Sign in with fingerprint alone: enter the staff/account number, tap the sensor, get a session. */
+export async function loginWithBiometric(identifier: string): Promise<User> {
+  const optionsJSON = await api<AuthOptions>('/auth/passkeys/login-options', { body: { identifier } });
+  const response = await startAuthentication({ optionsJSON: optionsJSON as unknown as AuthOptions });
+  const { token, user } = await api<{ token: string; user: User }>('/auth/passkeys/login', {
+    body: { identifier, response: response as unknown as Record<string, unknown> },
+  });
+  await useAuth.getState().setSession(token, user);
+  return user;
 }
 
 /** A plain-words reason for a failed fingerprint step (the phone's own errors are cryptic). */

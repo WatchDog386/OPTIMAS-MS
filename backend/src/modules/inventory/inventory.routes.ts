@@ -278,10 +278,12 @@ inventoryRouter.get(
   store,
   ah(async (req, res) => {
     const status = typeof req.query.status === 'string' && req.query.status in UnitStatus ? (req.query.status as UnitStatus) : undefined;
+    const itemId = typeof req.query.itemId === 'string' ? req.query.itemId : undefined;
     const q = typeof req.query.q === 'string' ? req.query.q.trim().toUpperCase() : undefined;
     const units = await prisma.serialUnit.findMany({
       where: {
         status,
+        itemId,
         holderId: typeof req.query.holderId === 'string' ? req.query.holderId : undefined,
         ...(q ? { OR: [{ serialNumber: { contains: q } }, { customerAccount: { contains: q, mode: 'insensitive' } }] } : {}),
       },

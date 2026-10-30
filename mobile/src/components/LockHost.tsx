@@ -17,6 +17,15 @@ const LOGO = require('../../assets/logo.png');
 /** Coming back to the app after this long in the background asks for the fingerprint again. */
 const RELOCK_AFTER_MS = 60_000;
 
+/** WhatsApp's light-theme colours, used for the fingerprint unlock screen. */
+const WA = {
+  wallpaper: '#EFEAE2',
+  green: '#25D366',
+  greenDark: '#128C7E',
+  ink: '#111B21',
+  meta: '#667781',
+};
+
 /**
  * The fingerprint lock: when it is on for this device, the app opens locked and locks again after a
  * minute in the background. The fingerprint is checked by the phone and confirmed by the server.
@@ -103,10 +112,10 @@ function LockScreen({ name, onUnlocked }: { name: string; onUnlocked: () => void
     <View style={[StyleSheet.absoluteFill, styles.root, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]} accessibilityViewIsModal>
       <Image source={LOGO} style={styles.logo} resizeMode="contain" accessibilityLabel="Optimas Networks" />
       <View style={{ alignItems: 'center', gap: 6 }}>
-        <Text variant="h2" align="center">
+        <Text variant="h2" align="center" style={{ color: WA.ink, fontFamily: fonts.semibold }}>
           Welcome back, {name}
         </Text>
-        <Text variant="bodySm" color={colors.textMuted} align="center">
+        <Text variant="bodySm" color={WA.meta} align="center">
           Optimas MS is locked
         </Text>
       </View>
@@ -114,21 +123,21 @@ function LockScreen({ name, onUnlocked }: { name: string; onUnlocked: () => void
       <Pressable onPress={fingerprint} accessibilityRole="button" accessibilityLabel="Unlock with fingerprint" style={({ pressed }) => [styles.touch, pressed && { transform: [{ scale: 0.96 }] }]}>
         <Animated.View style={[styles.wave, { opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0] }), transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.6] }) }] }]} />
         <View style={styles.circle}>
-          <Ionicons name="finger-print" size={64} color={busy ? colors.textDim : colors.brand} />
+          <Ionicons name="finger-print" size={64} color={busy ? colors.textDim : WA.green} />
         </View>
       </Pressable>
-      <Text variant="title" align="center" style={{ fontFamily: fonts.semibold }}>
+      <Text variant="title" align="center" style={{ fontFamily: fonts.semibold, color: WA.ink }}>
         {busy ? 'Checking…' : 'Touch to unlock with your fingerprint'}
       </Text>
 
       <View style={{ flex: 1 }} />
       <Pressable onPress={password} hitSlop={8} accessibilityRole="button">
-        <Text variant="bodySm" color={colors.brand} style={styles.link}>
+        <Text variant="bodySm" color={WA.greenDark} style={styles.link}>
           Use password instead
         </Text>
       </Pressable>
       <Pressable onPress={signOut} hitSlop={8} accessibilityRole="button">
-        <Text variant="bodySm" color={colors.textMuted} style={styles.link}>
+        <Text variant="bodySm" color={WA.meta} style={styles.link}>
           Sign out
         </Text>
       </Pressable>
@@ -137,11 +146,10 @@ function LockScreen({ name, onUnlocked }: { name: string; onUnlocked: () => void
 }
 
 const styles = StyleSheet.create({
-  // Above the app and its alert banners (60), below toasts (70) and dialogs (80) so the password prompt shows
-  root: { zIndex: 65, backgroundColor: colors.white, alignItems: 'center', gap: space.xl, paddingHorizontal: 28 },
+  root: { zIndex: 65, backgroundColor: WA.wallpaper, alignItems: 'center', gap: space.xl, paddingHorizontal: 28 },
   logo: { width: 200, height: 76 },
   touch: { width: 150, height: 150, alignItems: 'center', justifyContent: 'center', marginTop: 20 },
-  wave: { position: 'absolute', width: 130, height: 130, borderRadius: 65, backgroundColor: colors.brand },
-  circle: { width: 130, height: 130, borderRadius: 65, backgroundColor: colors.brandSoft, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.brand },
+  wave: { position: 'absolute', width: 130, height: 130, borderRadius: 65, backgroundColor: WA.green },
+  circle: { width: 130, height: 130, borderRadius: 65, backgroundColor: 'rgba(37, 211, 102, 0.14)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: WA.green },
   link: { fontFamily: fonts.semibold, paddingVertical: 4 },
 });

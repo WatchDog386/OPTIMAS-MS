@@ -109,6 +109,7 @@ export default function ItemDetail() {
           <Text variant="bodySm" color={colors.textMuted}>
             Serialised units are added with Receive (scan each serial). Damaged or missing units are recorded from Trace device (report lost) or Returns (faulty).
           </Text>
+          <Button label="Receive stock" icon="add-circle" variant="secondary" onPress={() => router.push(`/admin/receive?itemId=${item.id}`)} />
         </Glass>
       )}
 

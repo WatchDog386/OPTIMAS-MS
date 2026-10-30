@@ -11,10 +11,12 @@ import {
 } from '@simplewebauthn/server';
 import { env } from '../../config/env';
 import { prisma } from '../../lib/prisma';
-import { badRequest, forbidden, notFound } from '../../lib/http-error';
+import { signToken } from '../../lib/jwt';
+import { badRequest, forbidden, notFound, unauthorized } from '../../lib/http-error';
 import { ah } from '../../middleware/async';
 import { me } from '../../middleware/auth';
 import { parse } from '../../middleware/validate';
+import { publicUser } from '../users/users.routes';
 
 /**
  * Fingerprint (or face) lock with the phone's own sensor, using WebAuthn. The sensor signs a fresh
@@ -147,5 +149,66 @@ passkeyRouter.delete(
     const { count } = await prisma.passkey.deleteMany({ where: { id: req.params.id, userId: me(req).id } });
     if (!count) throw notFound('Fingerprint');
     res.json({ ok: true });
+  }),
+);
+
+/** Sign in with fingerprint instead of a password. The person gives their staff/account number first. */
+const loginOptionsSchema = z.object({
+  identifier: z.string().trim().min(1, 'Staff number or account number is required').max(120),
+});
+
+passkeyRouter.post(
+  '/login-options',
+  ah(async (req, res) => {
+    const { identifier } = parse(loginOptionsSchema, req.body);
+    const id = identifier.toUpperCase();
+    const user =
+      (await prisma.user.findFirst({ where: { OR: [{ staffNo: id }, { email: identifier.toLowerCase() }] } })) ??
+      (id.startsWith('OPT-') ? await prisma.user.findUnique({ where: { staffNo: `FBI-${id.slice(4)}` } }) : null);
+    if (!user || !user.active) throw notFound('Account');
+    const keys = await prisma.passkey.findMany({ where: { userId: user.id }, select: { id: true, transports: true } });
+    if (!keys.length) throw notFound('No fingerprint is registered on this account');
+    const { rpID } = site(req);
+    const options = await generateAuthenticationOptions({
+      rpID,
+      userVerification: 'required',
+      allowCredentials: keys.map((k) => ({ id: k.id, transports: k.transports as AuthenticatorTransportFuture[] })),
+    });
+    challenges.set(user.id, { value: options.challenge, at: Date.now(), kind: 'unlock' });
+    res.json(options);
+  }),
+);
+
+const loginSchema = z.object({
+  identifier: z.string().trim().min(1, 'Staff number or account number is required').max(120),
+  response: z.record(z.string(), z.unknown()),
+});
+
+passkeyRouter.post(
+  '/login',
+  ah(async (req, res) => {
+    const { identifier, response } = parse(loginSchema, req.body);
+    const id = identifier.toUpperCase();
+    const user =
+      (await prisma.user.findFirst({ where: { OR: [{ staffNo: id }, { email: identifier.toLowerCase() }] } })) ??
+      (id.startsWith('OPT-') ? await prisma.user.findUnique({ where: { staffNo: `FBI-${id.slice(4)}` } }) : null);
+    if (!user || !user.active) throw unauthorized('Invalid account or fingerprint');
+    const key = await prisma.passkey.findUnique({ where: { id: String((response as { id?: unknown })?.id ?? '') } });
+    if (!key || key.userId !== user.id) throw forbidden('That fingerprint is not registered to this account');
+    const { origin, rpID } = site(req);
+    const expectedChallenge = takeChallenge(user.id, 'unlock');
+    const result = await verifyAuthenticationResponse({
+      response: response as unknown as AuthenticationResponseJSON,
+      expectedChallenge,
+      expectedOrigin: origin,
+      expectedRPID: rpID,
+      requireUserVerification: true,
+      credential: { id: key.id, publicKey: new Uint8Array(key.publicKey), counter: key.counter, transports: key.transports as AuthenticatorTransportFuture[] },
+    }).catch(() => null);
+    if (!result?.verified) throw forbidden('Fingerprint not recognised');
+    await prisma.passkey.update({ where: { id: key.id }, data: { counter: result.authenticationInfo.newCounter, lastUsedAt: new Date() } });
+    await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+    const token = signToken({ sub: user.id, role: user.role, name: user.name, sv: user.sessionVersion });
+    res.json({ token, user: publicUser(user) });
   }),
 );

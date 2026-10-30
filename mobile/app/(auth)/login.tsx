@@ -8,6 +8,8 @@ import type { User } from '../../src/api/types';
 import { Button, GlassBackground, InstallButton, Input, Reveal, SignInLoader, Text } from '../../src/components';
 import { afterLogin, useAuth } from '../../src/store/auth';
 import { colors, fonts, radius, space } from '../../src/theme';
+import { biometricAvailable, loginWithBiometric } from '../../src/utils/biometric';
+import { toast } from '../../src/store/feedback';
 
 const MAX_W = 480;
 /** Corner radius shared by the fields and the Sign in button */
@@ -32,6 +34,29 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signedIn, setSignedIn] = useState<User | null>(null);
+  const [bioAvailable, setBioAvailable] = useState(false);
+  const [bioBusy, setBioBusy] = useState(false);
+
+  useEffect(() => {
+    void biometricAvailable().then(setBioAvailable);
+  }, []);
+
+  const signInWithFingerprint = async () => {
+    if (!identifier.trim()) {
+      setError('Enter your staff or account number first.');
+      return;
+    }
+    setError(null);
+    setBioBusy(true);
+    try {
+      const user = await loginWithBiometric(identifier.trim());
+      setSignedIn(user);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Fingerprint sign-in failed');
+    } finally {
+      setBioBusy(false);
+    }
+  };
 
   // The picture eases in once, as soon as its space is known
   useEffect(() => {
@@ -157,6 +182,23 @@ export default function Login() {
                   </View>
                 ) : null}
 
+                {bioAvailable ? (
+                  <View style={styles.bioRow}>
+                    <Pressable
+                      onPress={signInWithFingerprint}
+                      disabled={bioBusy || !identifier.trim()}
+                      accessibilityRole="button"
+                      accessibilityLabel="Sign in with your fingerprint"
+                      style={[{ ...styles.bioButton, backgroundColor: '#25D366' }, !identifier.trim() && styles.bioButtonOff]}
+                    >
+                      <Ionicons name={bioBusy ? 'reload-circle' : 'finger-print'} size={22} color={colors.white} />
+                      <Text variant="label" style={[styles.bioText, { color: colors.white, fontWeight: '600' }]}>
+                        {bioBusy ? 'Touch the sensor…' : 'Sign in with fingerprint'}
+                      </Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+
                 <Button label="Sign in" size="lg" trailingIcon="arrow-forward-circle-outline" loading={loading} onPress={submit} style={styles.signIn} />
               </Reveal>
 
@@ -211,6 +253,10 @@ const styles = StyleSheet.create({
   field: { backgroundColor: '#FFFFFF', minHeight: 56, borderRadius: CORNER, shadowColor: '#1C1D1F', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
   signIn: { borderRadius: CORNER, marginTop: 4 },
   eye: { position: 'absolute', right: space.lg, bottom: 18 },
+  bioRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: 10 },
+  bioButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 52, borderRadius: CORNER, paddingHorizontal: space.md, shadowColor: '#1C1D1F', shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
+  bioButtonOff: { opacity: 0.55 },
+  bioText: { fontFamily: fonts.semibold, fontSize: 15 },
   error: { flexDirection: 'row', gap: space.sm, alignItems: 'center', backgroundColor: colors.dangerSoft, padding: space.md, borderRadius: radius.md },
   legal: { marginTop: 4, paddingHorizontal: 12, lineHeight: 18 },
   legalLink: { textDecorationLine: 'underline', color: colors.textMuted },
