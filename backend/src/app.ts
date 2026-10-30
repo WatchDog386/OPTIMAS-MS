@@ -27,7 +27,7 @@ import { auditRouter } from './modules/audit/audit.routes';
 import { locationRouter } from './modules/location/location.routes';
 import { chatRouter } from './modules/chat/chat.routes';
 import { publicRouter } from './modules/public/public.routes';
-import { passkeyRouter } from './modules/auth/passkey.routes';
+import { passkeyLoginRouter, passkeyRouter } from './modules/auth/passkey.routes';
 
 export function createApp() {
   const app = express();
@@ -75,18 +75,21 @@ export function createApp() {
   );
   // Customer logins can only reach /customer, /notifications, /location and /chat.
   const staff = requireRole(ROLES.STAFF);
-  api.use(
-    '/auth/login',
-    rateLimit({
-      windowMs: 15 * 60_000,
-      limit: env.LOGIN_RATE_LIMIT,
-      // Only wrong passwords count: a whole office signing in from one Wi-Fi in the morning must not lock itself out
-      skipSuccessfulRequests: true,
-      standardHeaders: 'draft-7',
-      legacyHeaders: false,
-      message: { error: { message: 'Too many sign-in attempts. Try again in 15 minutes.', code: 'RATE_LIMITED' } },
-    }),
-  );
+  const loginLimit = rateLimit({
+    windowMs: 15 * 60_000,
+    limit: env.LOGIN_RATE_LIMIT,
+    // Only wrong passwords count: a whole office signing in from one Wi-Fi in the morning must not lock itself out
+    skipSuccessfulRequests: true,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    message: { error: { message: 'Too many sign-in attempts. Try again in 15 minutes.', code: 'RATE_LIMITED' } },
+  });
+  api.use('/auth/login', loginLimit);
+  // Fingerprint sign-in (no session yet): same limit as the password, then its own router before the signed-in one
+  api.use('/auth/passkeys/login', loginLimit);
+  api.use('/auth/passkeys/login-options', loginLimit);
+
+  api.use('/auth/passkeys', passkeyLoginRouter);
   api.use('/auth/passkeys', requireAuth, passkeyRouter);
   api.use('/auth', authRouter);
   api.use('/public', publicRouter);

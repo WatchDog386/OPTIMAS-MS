@@ -38,3 +38,16 @@ describe('fingerprint lock (server side)', () => {
     expect((await api().delete('/api/v1/auth/passkeys/not-mine').set(auth(tech.token))).status).toBe(404);
   });
 });
+
+describe('fingerprint sign-in (no session yet)', () => {
+  it('is reachable while signed out, but needs a registered fingerprint and a real signature', async () => {
+    const opts = await api().post('/api/v1/auth/passkeys/login-options').set(site).send({ identifier: 'FBI-TEC-002' });
+    expect(opts.status).toBe(404); // reachable (not 401), but no fingerprint registered for this account
+    const fake = { id: 'abc', rawId: 'abc', type: 'public-key', response: { clientDataJSON: 'e30', authenticatorData: 'AA', signature: 'AA' }, clientExtensionResults: {} };
+    const login = await api().post('/api/v1/auth/passkeys/login').set(site).send({ identifier: 'FBI-TEC-002', response: fake });
+    expect([401, 403]).toContain(login.status);
+    expect(login.body.token).toBeUndefined();
+    // the signed-in fingerprint routes still need a session
+    expect((await api().get('/api/v1/auth/passkeys').set(site)).status).toBe(401);
+  });
+});
