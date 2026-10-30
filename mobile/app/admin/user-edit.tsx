@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
+import { goBack } from '../../src/utils/nav';
 import { api, ApiError } from '../../src/api/client';
 import type { Role, User } from '../../src/api/types';
 import { Button, Glass, Input, Loading, Screen, ScreenHeader, Segmented, Text } from '../../src/components';
@@ -40,7 +41,7 @@ export default function UserEdit() {
       if (actor.role === 'ADMIN' && !customer && role !== u.role) body.role = role;
       await api(`/users/${u.id}`, { method: 'PATCH', body });
       toast.success('Changes saved');
-      router.back();
+      goBack();
     } catch (e) {
       if (e instanceof ApiError && e.details) setErrors(Object.fromEntries(e.details.map((d) => [d.field, d.message])));
       else setErrors({ _: e instanceof ApiError ? e.message : 'Could not save' });

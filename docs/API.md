@@ -11,6 +11,12 @@ Roles: **T** technician · **K** storekeeper · **S** supervisor · **A** admin.
 | POST | `/auth/login` | all | `{ identifier: staffNo \| email, password }` → `{ token, user }` |
 | GET | `/auth/me` | all | current user |
 | POST | `/auth/change-password` | all | `{ currentPassword, newPassword }` — min 8 chars with a letter and a digit, must differ; clears `mustChangePassword` |
+| GET | `/auth/my-data` | all | Everything held about the signed-in person, as a JSON download (Data Protection Act s.26) |
+| POST | `/auth/delete-account` | customers | `{ password }` — anonymises and closes the account; visit/payment records stay without the name. Staff → `STAFF_ACCOUNT` |
+| GET | `/public/info` | anyone | Company name, address, support contacts, privacy e-mail, retention periods (no sign-in) |
+
+Sign-in: an unknown account and a wrong password give the same answer; 8 wrong passwords for one account pause
+it for 15 minutes (`429 ACCOUNT_LOCKED`). Old `OPT-…` numbers still sign in to their `FBI-…` account.
 
 Deactivated accounts cannot sign in. `user.mustChangePassword` is `true` after an admin creates or resets an
 account; the app forces the password-change screen until it is cleared.

@@ -146,7 +146,7 @@ cd backend
 cp .env.example .env          # set JWT_SECRET, office coordinates, shift start…
 npm install
 npx prisma migrate deploy     # create tables
-npm run db:seed               # demo users, stock and jobs
+npm run db:seed               # sample users, stock and jobs (development only; refuses NODE_ENV=production)
 npm run dev                   # http://localhost:4000/api/v1
 ```
 
@@ -158,7 +158,7 @@ cp .env.example .env          # EXPO_PUBLIC_API_URL=http://<your-computer-LAN-IP
 npx expo start                # scan the QR code with Expo Go
 ```
 
-### Demo accounts (password `Optimas@2026`)
+### Sample accounts for development (password `Optimas@2026`; never on a live server)
 
 | Staff no. | Role | Name |
 |---|---|---|

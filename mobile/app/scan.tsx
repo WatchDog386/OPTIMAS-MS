@@ -4,6 +4,7 @@ import { CameraView, useCameraPermissions, type BarcodeScanningResult, type Barc
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
+import { goBack } from '../src/utils/nav';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Text } from '../src/components';
 import { resolveScan } from '../src/store/bridge';
@@ -48,7 +49,7 @@ export default function Scan() {
   const finish = (list: string[]) => {
     done.current = true;
     resolveScan(list);
-    router.back();
+    goBack();
   };
 
   const add = (raw: string) => {

@@ -6,6 +6,7 @@ import * as Application from 'expo-application';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
+import { goBack } from '../src/utils/nav';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api, ApiError } from '../src/api/client';
 import type { CapturePurpose } from '../src/api/types';
@@ -98,7 +99,7 @@ export default function Capture() {
             deviceId: await deviceId(),
           },
         } satisfies CaptureResult);
-        router.back();
+        goBack();
         return;
       }
       const form = new FormData();
@@ -117,7 +118,7 @@ export default function Capture() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
       done.current = true;
       resolveCapture({ photoId: result.photoId, uri: photo.uri, flags: result.flags } satisfies CaptureResult);
-      router.back();
+      goBack();
     } catch (e) {
       setPreview(null);
       setError(e instanceof ApiError ? e.message : 'Could not capture photo. Try again.');

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
+import { goBack } from '../src/utils/nav';
 import { api, ApiError } from '../src/api/client';
 import type { TaskType } from '../src/api/types';
 import { Button, Glass, Input, Screen, ScreenHeader, Segmented, Text } from '../src/components';
@@ -31,7 +32,7 @@ export default function RequestNew() {
       const fix = sharing ? await currentFix() : null;
       await api('/customer/requests', { body: { type, description, phone: phone || undefined, ...(fix ? { lat: fix.lat, lng: fix.lng } : {}) } });
       toast.success('Request sent', 'Thank you. A supervisor will assign a technician and you will be notified.');
-      router.back();
+      goBack();
     } catch (e) {
       toast.error('Could not send', e instanceof ApiError ? e.message : 'Try again');
     } finally {

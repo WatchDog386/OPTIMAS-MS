@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { goBack } from '../../src/utils/nav';
 import { Ionicons } from '@expo/vector-icons';
 import { api, ApiError } from '../../src/api/client';
 import type { Item } from '../../src/api/types';
@@ -45,7 +46,7 @@ export default function Transfer() {
         issuing ? 'Stock issued' : 'Return recorded',
         issuing ? 'The technician must confirm receipt in their app before devices can be installed.' : 'Stock is back in the store ledger.',
       );
-      router.back();
+      goBack();
     } catch (e) {
       toast.error('Failed', e instanceof ApiError ? e.message : 'Try again');
     } finally {

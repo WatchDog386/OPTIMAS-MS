@@ -135,7 +135,7 @@ VM 100, or a nightly `rsync` of `deploy/backups/` to another machine. Also sched
 The nightly database dump and photo archive are kept in `deploy/backups` on the server. To also copy them somewhere else after every run:
 
 1. Make a free bucket at any S3-compatible provider (Backblaze B2, Wasabi, AWS S3, …) and an access key for it.
-2. `cp deploy/backup.env.example deploy/backup.env`, fill in the bucket and keys.
+2. `cp deploy/backup.env.example deploy/backup.env`, fill in the bucket and keys, and set `BACKUP_PASSPHRASE` (make one with `openssl rand -base64 32`). Backups are then encrypted on the server before upload, so the storage company only holds scrambled files. **Write the passphrase down somewhere safe**: without it the off-site copies can never be restored. To bring one back: `docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env exec backup sh /backup.sh fetch db_2026-10-25_0100.dump`.
 3. `bash deploy/deploy.sh` (needs Docker Compose 2.24 or newer).
 4. Next morning check the log: `docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env logs --tail=20 backup` should say "off-site copy done".
 5. Once a month, restore a backup on a spare machine (`deploy/restore.sh`) to prove it works.
@@ -174,3 +174,24 @@ Nothing to install: they come with `bash deploy/deploy.sh`.
 - **Map service.** Street maps come from OpenStreetMap, which is free and needs no key. For heavy use you may want your own tile provider later: set `EXPO_PUBLIC_MAP_TILE_URL` (and `EXPO_PUBLIC_MAP_TILE_ATTRIBUTION`) when building the web app.
 - **Road directions and arrival times** come from the free public OSRM server (`ROUTING_URL`). Typed addresses are looked up with OpenStreetMap Nominatim (`GEOCODING_URL`). Both are fair-use services. If either cannot be reached, the app still works and shows straight-line estimates, labelled as estimates. To turn them off, set `ROUTING_URL=` or `GEOCODING_URL=` (empty) in `deploy/.env`. If the business grows, run your own OSRM server and point `ROUTING_URL` at it.
 - **Chat** goes through the Optimas server. Messages arrive within a few seconds while a conversation is open, and as a push notification otherwise, if alerts are turned on.
+
+## Privacy, legal pages and contacts
+
+The app has a **Privacy Policy** (`/privacy`), **Terms of Service** (`/terms`) and a **Help** page (`/help`), all readable without signing in and linked from the sign-in page and every profile page.
+
+- **Fill in the company details** in `deploy/.env`, then `bash deploy/deploy.sh`. They appear on the help, privacy and terms pages and on customers' support buttons; an empty setting is simply hidden (no made-up numbers are ever shown):
+  ```
+  COMPANY_NAME=Optimas Networks
+  COMPANY_ADDRESS=<street, town>
+  SUPPORT_PHONE=+2547XXXXXXXX
+  SUPPORT_WHATSAPP=2547XXXXXXXX
+  SUPPORT_EMAIL=support@...
+  PRIVACY_EMAIL=privacy@...        # defaults to SUPPORT_EMAIL
+  ```
+- **Have a lawyer read the two pages** before you rely on them; they describe exactly what the app does, but only a lawyer can confirm they fit your contracts. The Kenya Data Protection Act also expects businesses that process staff and customer data to **register with the ODPC** (www.odpc.go.ke) as a data controller.
+- **People's data rights are built in:** Profile/Account → *Download my data*; customers can *Delete my account*; staff deletions go through an administrator.
+- **Old data is deleted automatically:** location trail after 3 days, notifications after 180 days, unused photos after a day (see `backend/src/lib/retention.ts`; the Privacy Policy reads the same numbers).
+
+## Staff and customer numbers (FBI-)
+
+New numbers are `FBI-ADM-001`, `FBI-SUP-001`, `FBI-STR-001`, `FBI-TEC-001` and customers `FBI-CUS-10000` upwards. The update renames existing `OPT-…` logins (and app-made `OPT-CUS-…` account numbers on jobs, requests and devices) automatically. Anyone who still types their old `OPT-…` number is signed in to the same account, so tell people their new number at your own pace.

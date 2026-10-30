@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { goBack } from '../../src/utils/nav';
 import { Ionicons } from '@expo/vector-icons';
 import { api, ApiError } from '../../src/api/client';
 import type { BulkHolding, SerialUnit, Task } from '../../src/api/types';
@@ -75,7 +76,7 @@ export default function CompleteTask() {
       });
       if (sent.queued) toast.info('Saved on this phone', 'No signal. Your completion report will be sent automatically when you are back online.');
       else celebrate('Job completed', 'Your report has been sent for verification.');
-      router.back();
+      goBack();
     } catch (e) {
       toast.error('Could not complete job', e instanceof ApiError ? e.message : 'Try again');
     } finally {

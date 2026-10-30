@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { goBack } from '../../../src/utils/nav';
 import { api, ApiError } from '../../../src/api/client';
 import type { Item } from '../../../src/api/types';
 import { Badge, Button, Glass, Input, Loading, Screen, ScreenHeader, Section, Segmented, StatGrid, StatTile, Text } from '../../../src/components';
@@ -66,7 +67,7 @@ export default function ItemDetail() {
       if (!(await confirmAction('Archive item', `${item.name} will be hidden from the catalogue. History is kept.`, 'Archive'))) return;
       await api(`/inventory/items/${item.id}`, { method: 'PATCH', body: { active: false } });
       toast.success('Item archived');
-      router.back();
+      goBack();
     });
 
   return (

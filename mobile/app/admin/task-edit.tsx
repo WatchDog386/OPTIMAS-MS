@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
+import { goBack } from '../../src/utils/nav';
 import { api, ApiError } from '../../src/api/client';
 import type { Task, TaskPriority } from '../../src/api/types';
 import { Button, Glass, Input, Loading, Screen, ScreenHeader, SectionHeader, Segmented, TechPicker, Text } from '../../src/components';
@@ -53,7 +54,7 @@ export default function TaskEdit() {
       const body = Object.fromEntries(Object.entries({ ...form, priority, assigneeId }).filter(([, v]) => v !== '' && v !== null));
       await api(`/tasks/${t.id}`, { method: 'PATCH', body });
       toast.success('Job updated', assigneeId !== t.assignee.id ? 'Both technicians have been notified.' : undefined);
-      router.back();
+      goBack();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not save');
     } finally {

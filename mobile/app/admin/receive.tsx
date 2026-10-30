@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { goBack } from '../../src/utils/nav';
 import { api, ApiError } from '../../src/api/client';
 import type { Item } from '../../src/api/types';
 import { Badge, Button, Input, Screen, ScreenHeader, SectionHeader, Text } from '../../src/components';
@@ -62,7 +63,7 @@ export default function Receive() {
           : { itemId: item.id, quantity: Number(quantity), note: note || undefined };
       const r = await api<{ received: number }>('/inventory/receive', { body });
       toast.success('Stock received', `${r.received} ${item.unit} of ${item.name} added to the store.`);
-      router.back();
+      goBack();
     } catch (e) {
       toast.error('Failed', e instanceof ApiError ? e.message : 'Try again');
     } finally {
