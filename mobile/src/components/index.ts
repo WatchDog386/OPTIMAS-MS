@@ -38,3 +38,4 @@ export * from './map';
 export * from './LocationSetting';
 export * from './PrivacyRows';
 export * from './BankCards';
+export * from './AssignPicker';

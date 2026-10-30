@@ -4,7 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api, ApiError } from '../../src/api/client';
 import type { ApprovalSummary, AttendanceReview, JobReview, ProofPhoto } from '../../src/api/approvals';
-import { ActionCardRow, AuthImage, Avatar, Badge, Button, EmptyState, Glass, Reveal, Screen, ScreenHeader, SectionLead, Text } from '../../src/components';
+import { AuthImage, Avatar, Badge, Button, EmptyState, Glass, PageHeader, Reveal, Screen, SectionLead, Text, TileGrid } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { celebrate, confirmDialog, promptDialog, toast } from '../../src/store/feedback';
 import { colors, fonts, radius, space } from '../../src/theme';
@@ -82,13 +82,13 @@ export default function Approvals() {
 
   return (
     <Screen refreshing={summary.refreshing} onRefresh={reload}>
-      <ScreenHeader title="Approvals" subtitle={s ? (s.total ? `${s.total} waiting${s.flagged ? ` · ${s.flagged} with warnings` : ''}` : 'Nothing waiting') : undefined} />
+      <PageHeader title="Approvals" subtitle={s ? (s.total ? `${s.total} waiting${s.flagged ? ` · ${s.flagged} with warnings` : ''}` : 'Nothing waiting') : undefined} />
 
-      <ActionCardRow
+      <TileGrid
         items={[
-          { key: 'checkins', title: 'Check-ins', status: s?.checkIns ? `${s.checkIns} waiting` : 'All reviewed', icon: 'log-in-outline', color: '#0D5C3E', action: 'Review', badge: s?.checkIns, selected: tab === 'checkins', onPress: () => setTab('checkins') },
-          { key: 'checkouts', title: 'Check-outs', status: s?.checkOuts ? `${s.checkOuts} waiting` : 'All reviewed', icon: 'log-out-outline', color: '#2E3A5C', action: 'Review', badge: s?.checkOuts, selected: tab === 'checkouts', onPress: () => setTab('checkouts') },
-          { key: 'jobs', title: 'Jobs', status: s?.jobs ? `${s.jobs} to verify` : 'All verified', icon: 'briefcase-outline', color: '#0D5C3E', action: 'Verify', badge: s?.jobs, selected: tab === 'jobs', onPress: () => setTab('jobs') },
+          { key: 'checkins', title: 'Check-ins', status: s?.checkIns ? `${s.checkIns} waiting` : 'All reviewed', icon: 'log-in-outline', badge: s?.checkIns, selected: tab === 'checkins', onPress: () => setTab('checkins') },
+          { key: 'checkouts', title: 'Check-outs', status: s?.checkOuts ? `${s.checkOuts} waiting` : 'All reviewed', icon: 'log-out-outline', badge: s?.checkOuts, selected: tab === 'checkouts', onPress: () => setTab('checkouts') },
+          { key: 'jobs', title: 'Jobs', status: s?.jobs ? `${s.jobs} to verify` : 'All verified', icon: 'briefcase-outline', badge: s?.jobs, selected: tab === 'jobs', onPress: () => setTab('jobs') },
         ]}
       />
       <SectionLead text={tab === 'jobs' ? 'Below are the jobs' : tab === 'checkins' ? 'Below are the check-ins' : 'Below are the check-outs'} accent={show === 'PENDING' ? 'waiting for you' : 'already reviewed'} />

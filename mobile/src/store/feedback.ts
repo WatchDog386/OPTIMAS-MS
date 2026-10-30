@@ -58,7 +58,8 @@ interface FeedbackState {
 }
 
 let seq = 0;
-const TOAST_MS: Record<ToastKind, number> = { success: 3200, info: 3600, warning: 4200, error: 5200 };
+// Errors stay longer: they usually say what to do next
+const TOAST_MS: Record<ToastKind, number> = { success: 3000, info: 4000, warning: 6000, error: 8000 };
 
 export const useFeedback = create<FeedbackState>((set, get) => ({
   toasts: [],

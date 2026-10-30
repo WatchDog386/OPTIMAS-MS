@@ -57,13 +57,20 @@ export interface Nearby {
   technicians: NearbyTech[];
 }
 
+export type ChatKind = 'DIRECT' | 'SUPPORT' | 'TEAM';
+/** WhatsApp ticks: one grey, two grey, two blue. */
+export type Tick = 'sent' | 'delivered' | 'read';
+
 export interface ConversationRow {
   id: string;
-  kind: 'DIRECT' | 'SUPPORT';
+  kind: ChatKind;
   title: string;
   subtitle: string;
-  role: Role | 'SUPPORT' | null;
-  lastMessage: { body: string; at: string; mine: boolean };
+  role: Role | 'SUPPORT' | 'TEAM' | null;
+  members: number;
+  /** When it last had a message (or was created, for a new team group). */
+  at: string;
+  lastMessage: { body: string; at: string; mine: boolean; sender: string; status: Tick | null } | null;
   unread: number;
 }
 
@@ -73,17 +80,19 @@ export interface ChatMessage {
   createdAt: string;
   mine: boolean;
   sender: { id: string; name: string; role: Role };
+  replyTo?: { id: string; body: string; sender: string } | null;
   /** Client-only: still being sent. */
   pending?: boolean;
 }
 
 export interface ConversationDetail {
+  receipts: { deliveredAt: string | null; readAt: string | null };
   conversation: {
     id: string;
-    kind: 'DIRECT' | 'SUPPORT';
+    kind: ChatKind;
     title: string;
     subtitle: string;
-    role: Role | 'SUPPORT' | null;
+    role: Role | 'SUPPORT' | 'TEAM' | null;
     phone: string | null;
     otherId: string | null;
     jobs: { id: string; code: string; title: string; status: string }[];

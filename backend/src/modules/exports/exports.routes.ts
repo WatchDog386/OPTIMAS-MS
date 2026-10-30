@@ -125,6 +125,7 @@ exportsRouter.get(
       orderBy: { createdAt: 'asc' },
       include: {
         assignee: { select: { name: true, staffNo: true } },
+        team: { select: { name: true, members: { select: { user: { select: { name: true } } } } } },
         verifiedBy: { select: { name: true } },
         materials: { include: { item: { select: { name: true, unit: true } }, unit: { select: { serialNumber: true } } } },
       },
@@ -137,6 +138,7 @@ exportsRouter.get(
       { header: 'Priority', key: 'priority', width: 10 },
       { header: 'Status', key: 'status', width: 12 },
       { header: 'Technician', key: 'tech', width: 20 },
+      { header: 'Team (members)', key: 'team', width: 30 },
       { header: 'Customer', key: 'customer', width: 24 },
       { header: 'Account', key: 'account', width: 15 },
       { header: 'Started', key: 'started', width: 10 },
@@ -166,6 +168,7 @@ exportsRouter.get(
         priority: t.priority,
         status: t.status,
         tech: t.assignee.name,
+        team: t.team ? `${t.team.name} (${t.team.members.map((m) => m.user.name).join(', ')})` : '',
         customer: t.customerName,
         account: t.customerAccount ?? '',
         started: t.startedAt ? time(t.startedAt) : '',

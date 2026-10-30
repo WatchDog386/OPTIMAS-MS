@@ -28,7 +28,11 @@ export function TaskCard({ task, showAssignee }: { task: Task; showAssignee?: bo
       <View style={styles.meta}>
         <Meta icon="person-outline" text={task.customerName} />
         <Meta icon="location-outline" text={task.address} />
-        {showAssignee ? <Meta icon="construct-outline" text={task.assignee.name} /> : null}
+        {task.team ? (
+          <Meta icon="people-outline" text={`${task.team.name} · led by ${task.assignee.name}`} />
+        ) : showAssignee ? (
+          <Meta icon="construct-outline" text={task.assignee.name} />
+        ) : null}
       </View>
       <View style={styles.bottom}>
         <Badge label={humanize(task.priority)} tone={priorityTone[task.priority]} dot={false} />

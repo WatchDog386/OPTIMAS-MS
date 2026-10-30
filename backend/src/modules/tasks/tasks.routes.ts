@@ -17,6 +17,7 @@ import { distanceMetres } from '../../lib/geo';
 import { estimateMinutes } from '../../lib/routing';
 import { positionsOf } from '../location/location.service';
 import { fillJobCoordinates, trackJob } from '../location/track';
+import { createTeam, newTeamSchema, teamInclude } from '../teams/teams.routes';
 
 export const tasksRouter = Router();
 const managers = requireRole(ROLES.MANAGERS);
@@ -30,7 +31,20 @@ const detailInclude = {
   startPhoto: photo,
   endPhoto: photo,
   materials: { include: { item: { select: { name: true, sku: true, unit: true, category: true } }, unit: { select: { serialNumber: true } } } },
+  team: { include: teamInclude },
 } satisfies Prisma.TaskInclude;
+
+/** Everyone working the job: the assignee plus, for a team job, every member. */
+const crewOf = (task: { assigneeId: string; team?: { members: { userId: string }[] } | null }) => [...new Set([task.assigneeId, ...(task.team?.members.map((m) => m.userId) ?? [])])];
+/** Team members other than the leader. */
+const helpersOf = (task: { assigneeId: string; team?: { members: { userId: string }[] } | null }) => crewOf(task).filter((id) => id !== task.assigneeId);
+/** Only the assignee (the team leader on a team job) may start or report the job. */
+function mustBeAssignee(task: { assigneeId: string; assignee: { name: string }; team?: { name: string; members: { userId: string }[] } | null }, userId: string) {
+  if (task.assigneeId === userId) return;
+  if (task.team?.members.some((m) => m.userId === userId)) throw forbidden(`${task.assignee.name} leads ${task.team.name} and files the report for this job`);
+  throw forbidden('This task is not assigned to you');
+}
+const onCrew = (task: Parameters<typeof crewOf>[0], userId: string) => crewOf(task).includes(userId);
 
 const newCode = () => {
   const d = new Date();
@@ -55,12 +69,15 @@ tasksRouter.get(
     const status = typeof req.query.status === 'string'
       ? (req.query.status.split(',').filter((s) => s in TaskStatus) as TaskStatus[])
       : undefined;
+    const forTech = typeof req.query.assigneeId === 'string' ? req.query.assigneeId : undefined;
+    // A technician sees their own jobs and their teams' jobs
+    const who = isManager ? forTech : user.id;
     const tasks = await prisma.task.findMany({
       where: {
-        assigneeId: isManager ? (typeof req.query.assigneeId === 'string' ? req.query.assigneeId : undefined) : user.id,
+        ...(who ? { OR: [{ assigneeId: who }, { team: { members: { some: { userId: who } } } }] } : {}),
         status: status?.length ? { in: status } : undefined,
       },
-      include: { assignee: person },
+      include: { assignee: person, team: { select: { id: true, name: true, leaderId: true, _count: { select: { members: true } } } } },
       orderBy: [{ status: 'asc' }, { dueAt: 'asc' }, { createdAt: 'desc' }],
       take: 200,
     });
@@ -73,7 +90,7 @@ tasksRouter.get(
   ah(async (req, res) => {
     const user = me(req);
     const task = await loadTask(req.params.id);
-    if (task.assigneeId !== user.id && !ROLES.STORE.includes(user.role)) throw forbidden();
+    if (!onCrew(task, user.id) && !ROLES.STORE.includes(user.role)) throw forbidden();
     res.json({ task });
   }),
 );
@@ -92,18 +109,58 @@ const taskSchema = z.object({
   lat: z.number().min(-90).max(90).optional(),
   lng: z.number().min(-180).max(180).optional(),
   dueAt: z.coerce.date().optional(),
-  assigneeId: z.string().min(1),
+  /** One technician… */
+  assigneeId: z.string().min(1).optional(),
+  /** …or a team: an existing one, or a new one made here. The leader becomes the assignee. */
+  teamId: z.string().min(1).nullable().optional(),
+  newTeam: newTeamSchema.optional(),
   /** Customer service request this job fulfils. */
   requestId: z.string().optional(),
 });
+
+/** Who the job goes to: { assigneeId, teamId } from an individual, an existing team or a new team. */
+async function resolveAssignment(tx: Prisma.TransactionClient, body: { assigneeId?: string; teamId?: string | null; newTeam?: z.infer<typeof newTeamSchema> }, actorId: string) {
+  if (body.newTeam) {
+    const team = await createTeam(tx, body.newTeam, actorId);
+    return { assigneeId: team.leaderId, teamId: team.id };
+  }
+  if (body.teamId) {
+    const team = await tx.team.findUnique({ where: { id: body.teamId }, include: { leader: true, members: { include: { user: true } } } });
+    if (!team) throw badRequest('Team not found');
+    if (!team.leader.active || team.leader.role !== 'TECHNICIAN') throw badRequest(`${team.leader.name} can no longer lead ${team.name}. Make a new team.`);
+    return { assigneeId: team.leaderId, teamId: team.id };
+  }
+  if (!body.assigneeId) throw badRequest('Choose a technician or a team');
+  const assignee = await tx.user.findUnique({ where: { id: body.assigneeId } });
+  if (!assignee?.active || assignee.role !== 'TECHNICIAN') throw badRequest('Tasks can only be assigned to active technicians');
+  return { assigneeId: assignee.id, teamId: null };
+}
+
+/** Tells the leader (or the one technician) and the rest of the team about a new job. */
+function announce(task: { id: string; title: string; priority: string; customerName: string; address: string; assigneeId: string; assignee: { name: string }; team: { name: string; members: { userId: string }[] } | null }, prefix = 'New') {
+  const urgent = task.priority === 'URGENT' ? 'URGENT ' : '';
+  void notify([task.assigneeId], {
+    type: 'TASK_ASSIGNED',
+    title: `${prefix} ${urgent}job: ${task.title}`,
+    body: `${task.team ? `You lead ${task.team.name} and file the report · ` : ''}${task.customerName} · ${task.address}`,
+    data: { taskId: task.id },
+  });
+  const helpers = helpersOf(task);
+  if (task.team && helpers.length) {
+    void notify(helpers, {
+      type: 'TASK_ASSIGNED',
+      title: `${task.team.name}: ${urgent}${task.title}`,
+      body: `${task.assignee.name} leads and files the report · ${task.customerName} · ${task.address}`,
+      data: { taskId: task.id },
+    });
+  }
+}
 
 tasksRouter.post(
   '/',
   managers,
   ah(async (req, res) => {
-    const body = parse(taskSchema, req.body);
-    const assignee = await prisma.user.findUnique({ where: { id: body.assigneeId } });
-    if (!assignee?.active || assignee.role !== 'TECHNICIAN') throw badRequest('Tasks can only be assigned to active technicians');
+    const { newTeam, teamId: _teamId, assigneeId: _assigneeId, ...body } = parse(taskSchema, req.body);
     if (body.requestId) {
       const request = await prisma.serviceRequest.findUnique({ where: { id: body.requestId }, include: { task: true } });
       if (!request) throw badRequest('Service request not found');
@@ -113,7 +170,8 @@ tasksRouter.post(
     }
     const create = () =>
       prisma.$transaction(async (tx) => {
-        const created = await tx.task.create({ data: { ...body, code: newCode(), createdById: me(req).id }, include: detailInclude });
+        const who = await resolveAssignment(tx, { newTeam, teamId: _teamId, assigneeId: _assigneeId }, me(req).id);
+        const created = await tx.task.create({ data: { ...body, ...who, code: newCode(), createdById: me(req).id }, include: detailInclude });
         if (body.requestId) await tx.serviceRequest.update({ where: { id: body.requestId }, data: { status: 'SCHEDULED' } });
         return created;
       });
@@ -121,15 +179,11 @@ tasksRouter.post(
     const task = await create().catch((e) => (codeClash(e) ? create() : Promise.reject(e)));
     if (task.lat == null) void fillJobCoordinates(task.id, task.address);
     void notifyCustomer(task, {
-      title: 'A technician has been assigned',
-      body: `${task.assignee.name} will handle "${task.title}"${task.dueAt ? ` · due ${task.dueAt.toLocaleString('en-KE', { timeZone: 'Africa/Nairobi', hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}` : ''}.`,
+      title: task.team ? 'A team has been assigned' : 'A technician has been assigned',
+      body: `${task.team ? `${task.team.name}, led by ${task.assignee.name},` : task.assignee.name} will handle "${task.title}"${task.dueAt ? ` · due ${task.dueAt.toLocaleString('en-KE', { timeZone: 'Africa/Nairobi', hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}` : ''}.`,
     });
-    void notify([task.assigneeId], {
-      type: 'TASK_ASSIGNED',
-      title: `New ${task.priority === 'URGENT' ? 'URGENT ' : ''}job: ${task.title}`,
-      body: `${task.customerName} · ${task.address}`,
-      data: { taskId: task.id },
-    });
+    if (task.team) await audit(me(req).id, 'TASK_TEAM_ASSIGNED', 'Task', task.id, `Assigned ${task.code} to ${task.team.name} (leader ${task.assignee.name})`);
+    announce(task);
     res.status(201).json({ task });
   }),
 );
@@ -139,26 +193,25 @@ tasksRouter.patch(
   managers,
   ah(async (req, res) => {
     // Linking to a customer request is only allowed at creation, where it is validated.
-    const body = parse(taskSchema.omit({ requestId: true }).partial(), req.body);
+    const { newTeam, teamId, assigneeId, ...body } = parse(taskSchema.omit({ requestId: true }).partial(), req.body);
     const task = await loadTask(req.params.id);
     if (task.status !== 'ASSIGNED') throw conflict('Only tasks that have not started can be edited or reassigned');
-    if (body.assigneeId && body.assigneeId !== task.assigneeId) {
-      const assignee = await prisma.user.findUnique({ where: { id: body.assigneeId } });
-      if (!assignee?.active || assignee.role !== 'TECHNICIAN') throw badRequest('Tasks can only be assigned to active technicians');
-    }
-    // A new address without a pin: forget the old pin and look the new address up
-    const moved = body.address && body.address !== task.address && body.lat == null;
-    const updated = await prisma.task.update({ where: { id: task.id }, data: moved ? { ...body, lat: null, lng: null } : body, include: detailInclude });
-    if (moved) void fillJobCoordinates(task.id, updated.address);
-    if (body.assigneeId && body.assigneeId !== task.assigneeId) {
-      await audit(me(req).id, 'TASK_REASSIGNED', 'Task', task.id, `Reassigned ${task.code} from ${task.assignee.name} to ${updated.assignee.name}`);
-      void notify([updated.assigneeId], {
-        type: 'TASK_ASSIGNED',
-        title: `New job: ${updated.title}`,
-        body: `${updated.customerName} · ${updated.address}`,
-        data: { taskId: updated.id },
-      });
-      void notify([task.assigneeId], { type: 'TASK_CANCELLED', title: `${task.code} reassigned`, body: 'This job was moved to another technician.', data: { taskId: task.id } });
+    // Reassigning: to a new team, another team, or one technician (which ends the team job)
+    const reassigning = !!newTeam || (teamId !== undefined && teamId !== task.teamId) || (!!assigneeId && assigneeId !== task.assigneeId && teamId === undefined);
+    const updated = await prisma.$transaction(async (tx) => {
+      const who = reassigning ? await resolveAssignment(tx, { newTeam, teamId, assigneeId: assigneeId ?? task.assigneeId }, me(req).id) : {};
+      // A new address without a pin: forget the old pin and look the new address up
+      const moved = body.address && body.address !== task.address && body.lat == null;
+      return tx.task.update({ where: { id: task.id }, data: { ...(moved ? { ...body, lat: null, lng: null } : body), ...who }, include: detailInclude });
+    });
+    if (body.address && body.address !== task.address && body.lat == null) void fillJobCoordinates(task.id, updated.address);
+    if (reassigning && (updated.assigneeId !== task.assigneeId || updated.teamId !== task.teamId)) {
+      const from = task.team ? `${task.team.name} (${task.assignee.name})` : task.assignee.name;
+      const to = updated.team ? `${updated.team.name} (${updated.assignee.name})` : updated.assignee.name;
+      await audit(me(req).id, 'TASK_REASSIGNED', 'Task', task.id, `Reassigned ${task.code} from ${from} to ${to}`);
+      announce(updated);
+      const dropped = crewOf(task).filter((id) => !crewOf(updated).includes(id));
+      if (dropped.length) void notify(dropped, { type: 'TASK_CANCELLED', title: `${task.code} reassigned`, body: 'This job was moved to another technician.', data: { taskId: task.id } });
     }
     res.json({ task: updated });
   }),
@@ -171,10 +224,11 @@ tasksRouter.get(
   '/:id/track',
   ah(async (req, res) => {
     const user = me(req);
-    const task = await prisma.task.findUnique({ where: { id: req.params.id } });
+    const task = await prisma.task.findUnique({ where: { id: req.params.id }, include: { team: { select: { members: { select: { userId: true } } } } } });
     if (!task) throw notFound('Task');
-    if (task.assigneeId !== user.id && !ROLES.STORE.includes(user.role)) throw forbidden();
-    res.json(await trackJob(task));
+    if (!onCrew(task, user.id) && !ROLES.STORE.includes(user.role)) throw forbidden();
+    const { team: _team, ...plain } = task;
+    res.json(await trackJob(plain));
   }),
 );
 
@@ -238,7 +292,8 @@ tasksRouter.post(
     const tech = await prisma.user.findUnique({ where: { id: body.technicianId } });
     if (!tech?.active || tech.role !== 'TECHNICIAN') throw badRequest('Jobs can only go to active technicians');
     // Guarded so two managers forwarding at once cannot both win
-    const { count } = await prisma.task.updateMany({ where: { id: task.id, status: 'ASSIGNED', assigneeId: task.assigneeId }, data: { assigneeId: tech.id } });
+    // Forwarding gives the job to one technician, so a team job stops being a team job
+    const { count } = await prisma.task.updateMany({ where: { id: task.id, status: 'ASSIGNED', assigneeId: task.assigneeId }, data: { assigneeId: tech.id, teamId: null } });
     if (!count) throw conflict('This job changed while you were looking. Refresh and try again.', 'STALE');
     const updated = await loadTask(task.id);
     await audit(me(req).id, 'TASK_FORWARDED', 'Task', task.id, `Forwarded ${task.code} from ${task.assignee.name} to ${tech.name}${body.note ? `: ${body.note}` : ''}`);
@@ -248,7 +303,7 @@ tasksRouter.post(
       body: `${task.customerName} · ${task.address}${body.note ? ` — ${body.note}` : ''}`,
       data: { taskId: task.id },
     });
-    void notify([task.assigneeId], { type: 'TASK_CANCELLED', title: `${task.code} moved to ${tech.name}`, body: 'A closer technician will handle this job.', data: { taskId: task.id } });
+    void notify(crewOf(task).filter((id) => id !== tech.id), { type: 'TASK_CANCELLED', title: `${task.code} moved to ${tech.name}`, body: 'A closer technician will handle this job.', data: { taskId: task.id } });
     void notifyCustomer(updated, { title: 'Your technician has changed', body: `${tech.name} is now handling "${task.title}".` });
     res.json({ task: updated });
   }),
@@ -265,7 +320,7 @@ tasksRouter.post(
       if (task.requestId) await tx.serviceRequest.update({ where: { id: task.requestId }, data: { status: 'OPEN' } });
       return tx.task.update({ where: { id: task.id }, data: { status: 'CANCELLED', requestId: null }, include: detailInclude });
     });
-    void notify([task.assigneeId], { type: 'TASK_CANCELLED', title: `${task.code} cancelled`, body: task.title, data: { taskId: task.id } });
+    void notify(crewOf(task), { type: 'TASK_CANCELLED', title: `${task.code} cancelled`, body: task.title, data: { taskId: task.id } });
     await audit(me(req).id, 'TASK_CANCELLED', 'Task', task.id, `Cancelled ${task.code} (${task.title})`);
     res.json({ task: updated });
   }),
@@ -290,7 +345,7 @@ tasksRouter.post(
       include: detailInclude,
     });
     await audit(me(req).id, `TASK_${body.decision}`, 'Task', task.id, `${body.decision === 'VERIFIED' ? 'Verified' : 'Rejected'} ${task.code}${body.note ? `: ${body.note}` : ''}`);
-    void notify([task.assigneeId], {
+    void notify(crewOf(task), {
       type: body.decision === 'VERIFIED' ? 'TASK_VERIFIED' : 'TASK_REJECTED',
       title: body.decision === 'VERIFIED' ? `${task.code} verified ✔` : `${task.code} returned for correction`,
       body: body.note ?? task.title,
@@ -308,7 +363,7 @@ tasksRouter.post(
     const userId = me(req).id;
     const { photoId } = parse(z.object({ photoId: z.string().min(1) }), req.body);
     const task = await loadTask(req.params.id);
-    if (task.assigneeId !== userId) throw forbidden('This task is not assigned to you');
+    mustBeAssignee(task, userId);
     if (task.status !== 'ASSIGNED') throw conflict(`Task is already ${task.status.toLowerCase().replace('_', ' ')}`);
 
     // A job started offline counts for the day it was really started, even if it is sent later
@@ -324,7 +379,8 @@ tasksRouter.post(
       await consumePhoto(tx, photoId, userId, 'TASK_START', task.id);
       await tx.task.update({ where: { id: task.id }, data: { status: 'IN_PROGRESS', startedAt, startPhotoId: photoId } });
     });
-    void notifyCustomer(task, { title: 'Your technician has started', body: `${task.assignee.name} is now working on "${task.title}".` });
+    void notifyCustomer(task, { title: 'Your technician has started', body: `${task.team ? `${task.team.name}, led by ${task.assignee.name}, is` : `${task.assignee.name} is`} now working on "${task.title}".` });
+    if (helpersOf(task).length) void notify(helpersOf(task), { type: 'JOB_UPDATE', title: `${task.code} started`, body: `${task.assignee.name} started the job for ${task.team!.name}.`, data: { taskId: task.id } });
     res.json({ task: await loadTask(task.id) });
   }),
 );
@@ -353,7 +409,7 @@ tasksRouter.post(
     const userId = me(req).id;
     const body = parse(completeSchema, req.body);
     const task = await loadTask(req.params.id);
-    if (task.assigneeId !== userId) throw forbidden('This task is not assigned to you');
+    mustBeAssignee(task, userId);
     if (task.status !== 'IN_PROGRESS' || !task.startedAt) throw conflict('Start the task before completing it');
     if (task.type === 'INSTALLATION' && body.serials.length === 0) {
       throw badRequest('Scan the serial number of the router/ONT installed for this customer', 'SERIAL_REQUIRED');
@@ -402,7 +458,7 @@ tasksRouter.post(
     void notifyCustomer(task, { title: 'Job completed', body: `"${task.title}" was completed by ${task.assignee.name}. Thank you for choosing Optimas.` });
     void notifyRoles(['SUPERVISOR', 'ADMIN'], {
       type: 'TASK_COMPLETED',
-      title: `${task.code} completed by ${task.assignee.name}`,
+      title: `${task.code} completed by ${task.team ? `${task.team.name} (${task.assignee.name})` : task.assignee.name}`,
       body: `${task.customerName} · ${minutesBetween(task.startedAt!, endedAt)} min — awaiting verification`,
       data: { taskId: task.id },
     });

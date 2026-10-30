@@ -62,7 +62,7 @@ passkeyRouter.get(
 passkeyRouter.post(
   '/register-options',
   ah(async (req, res) => {
-    const user = await prisma.user.findUniqueOrThrow({ where: { id: me(req).id }, include: { passkeys: { select: { id: true, transports: true } } } });
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: me(req).id } });
     const { rpID } = site(req);
     const options = await generateRegistrationOptions({
       rpName: 'Optimas MS',
@@ -71,9 +71,10 @@ passkeyRouter.post(
       userName: user.staffNo,
       userDisplayName: user.name,
       attestationType: 'none',
-      // The phone's own sensor, and it must check the person (fingerprint, face or screen lock)
-      authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'preferred' },
-      excludeCredentials: user.passkeys.map((p) => ({ id: p.id, transports: p.transports as AuthenticatorTransportFuture[] })),
+      // The phone's own sensor, and it must check the person (fingerprint, face or screen lock). A key kept on
+      // the phone only (not a synced passkey): works on Android phones without a Google account and can be
+      // registered again after the app's storage is cleared.
+      authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged' },
     });
     challenges.set(user.id, { value: options.challenge, at: Date.now(), kind: 'register' });
     res.json(options);

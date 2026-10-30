@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Platform, Share } from 'react-native';
+import { Platform, Share, Switch } from 'react-native';
 import { router } from 'expo-router';
+import type { Ionicons } from '@expo/vector-icons';
 import { api, ApiError, API_URL, authHeader } from '../api/client';
 import { useAuth } from '../store/auth';
 import { promptDialog, toast } from '../store/feedback';
 import { colors } from '../theme';
-import { BiometricSetting } from './BiometricSetting';
+import { useBiometricSetting } from './BiometricSetting';
 import { ListRow } from './ListRow';
 
 /** Saves the person's own data export (JSON) to their device. */
@@ -28,16 +29,29 @@ async function downloadMyData() {
   }
 }
 
+export interface PrivacyItem {
+  key: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  sub: string;
+  onPress: () => void;
+  danger?: boolean;
+  /** Fingerprint lock: whether it is on. */
+  on?: boolean;
+}
+
 /**
- * The person's data rights and the legal pages, for Profile / Account: download my data, privacy,
- * terms, help, and (customers) delete my account.
+ * The person's data rights and the legal pages, for Profile / Account: fingerprint lock, download my data,
+ * privacy, terms, help, and (customers) delete my account. Rows or tiles draw these the same way.
  */
-export function PrivacyRows() {
+export function usePrivacyItems(): PrivacyItem[] {
   const user = useAuth((s) => s.user);
+  const lock = useBiometricSetting();
   const [busy, setBusy] = useState<string | null>(null);
-  if (!user) return null;
+  if (!user) return [];
 
   const download = async () => {
+    if (busy) return;
     setBusy('download');
     try {
       await downloadMyData();
@@ -50,6 +64,7 @@ export function PrivacyRows() {
   };
 
   const remove = async () => {
+    if (busy) return;
     const password = await promptDialog({
       title: 'Delete your account?',
       message: 'Your account is closed and your name, phone, e-mail and location are removed. Visit and payment records are kept without your name. This cannot be undone. Enter your password to confirm.',
@@ -72,14 +87,39 @@ export function PrivacyRows() {
     }
   };
 
+  const items: PrivacyItem[] = [];
+  if (lock) items.push({ key: 'lock', icon: 'finger-print', title: 'Fingerprint lock', sub: lock.busy ? 'Working…' : lock.on ? 'On · tap to turn off' : 'Off · tap to turn on', on: lock.on, onPress: () => void lock.toggle(!lock.on) });
+  items.push(
+    { key: 'data', icon: 'download-outline', title: 'Download my data', sub: busy === 'download' ? 'Preparing…' : 'Everything the app holds', onPress: download },
+    { key: 'privacy', icon: 'shield-checkmark-outline', title: 'Privacy Policy', sub: 'How your data is used', onPress: () => router.push('/privacy') },
+    { key: 'terms', icon: 'document-text-outline', title: 'Terms of Service', sub: 'The rules of the app', onPress: () => router.push('/terms') },
+    { key: 'help', icon: 'help-buoy-outline', title: 'Help', sub: 'Guides and support', onPress: () => router.push(user.role === 'CUSTOMER' ? '/help' : '/help?who=technician') },
+  );
+  if (user.role === 'CUSTOMER') items.push({ key: 'delete', icon: 'trash-outline', title: 'Delete my account', sub: 'Close your account and remove your details', danger: true, onPress: remove });
+  return items;
+}
+
+/** The privacy items as list rows (technician Profile, customer Account). */
+export function PrivacyRows() {
+  const items = usePrivacyItems();
   return (
     <>
-      <BiometricSetting />
-      <ListRow icon="download-outline" iconTint={colors.text} title="Download my data" subtitle="A copy of everything the app holds about you" onPress={busy ? undefined : download} />
-      <ListRow icon="shield-checkmark-outline" iconTint={colors.text} title="Privacy Policy" onPress={() => router.push('/privacy')} />
-      <ListRow icon="document-text-outline" iconTint={colors.text} title="Terms of Service" onPress={() => router.push('/terms')} />
-      <ListRow icon="help-buoy-outline" iconTint={colors.text} title="Help" onPress={() => router.push(user.role === 'CUSTOMER' ? '/help' : '/help?who=technician')} />
-      {user.role === 'CUSTOMER' ? <ListRow icon="trash-outline" iconTint={colors.danger} title="Delete my account" subtitle="Close your account and remove your details" onPress={busy ? undefined : remove} /> : null}
+      {items.map((i) =>
+        i.key === 'lock' ? (
+          <ListRow
+            key={i.key}
+            icon={i.icon}
+            iconTint={colors.brand}
+            title={i.title}
+            subtitle={i.on ? 'On for this phone' : 'Unlock the app with your fingerprint'}
+            onPress={i.onPress}
+            chevron={false}
+            right={<Switch value={!!i.on} onValueChange={i.onPress} trackColor={{ true: colors.brand, false: colors.border }} thumbColor={colors.white} accessibilityLabel="Fingerprint lock" />}
+          />
+        ) : (
+          <ListRow key={i.key} icon={i.icon} iconTint={i.danger ? colors.danger : colors.text} title={i.title} subtitle={i.key === 'data' || i.danger ? i.sub : undefined} onPress={i.onPress} />
+        ),
+      )}
     </>
   );
 }

@@ -8,7 +8,7 @@ import { useAuth } from '../store/auth';
 import { useLock } from '../store/lock';
 import { promptDialog, toast } from '../store/feedback';
 import { colors, fonts, space } from '../theme';
-import { lockKeyOnThisDevice, unlockWithBiometric } from '../utils/biometric';
+import { biometricProblem, lockKeyOnThisDevice, prepareBiometric, unlockWithBiometric } from '../utils/biometric';
 import { NATIVE, prefersReducedMotion } from '../utils/motion';
 import { firstName } from '../utils/format';
 import { Text } from './Text';
@@ -66,6 +66,9 @@ function LockScreen({ name, onUnlocked }: { name: string; onUnlocked: () => void
     loop.start();
     return () => loop.stop();
   }, [pulse]);
+  useEffect(() => {
+    void prepareBiometric('unlock');
+  }, []);
 
   const fingerprint = async () => {
     if (busy) return;
@@ -73,9 +76,8 @@ function LockScreen({ name, onUnlocked }: { name: string; onUnlocked: () => void
     try {
       if (await unlockWithBiometric()) onUnlocked();
     } catch (e) {
-      // Closing the phone's prompt is not an error worth shouting about
-      const name = (e as { name?: string })?.name;
-      if (name !== 'NotAllowedError' && name !== 'AbortError') toast.error('Not unlocked', e instanceof ApiError ? e.message : 'Try again, or use your password.');
+      toast.error('Not unlocked', biometricProblem(e));
+      void prepareBiometric('unlock');
     } finally {
       setBusy(false);
     }

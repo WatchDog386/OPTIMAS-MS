@@ -25,19 +25,19 @@ export function FeatureCard({ title, subtitle, icon, tone = 'teal', onPress, bus
   return (
     <Pressable onPress={onPress} disabled={!onPress || busy} accessibilityRole="button" accessibilityLabel={`${title}. ${subtitle}`} style={({ pressed }) => [pressed && { transform: [{ scale: 0.985 }], opacity: 0.95 }]}>
       <LinearGradient colors={CARD_TONES[tone] as unknown as [string, string]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.feature}>
-        <View style={{ flex: 1, gap: 12, paddingRight: 8 }}>
-          <Text variant="h2" color="#FFFFFF" fixedColor style={styles.featureTitle}>
+        <View style={{ flex: 1, gap: 7, paddingRight: 8 }}>
+          <Text variant="title" color="#FFFFFF" fixedColor style={styles.featureTitle}>
             {title}
           </Text>
-          <Text variant="bodySm" color="rgba(255,255,255,0.88)" fixedColor style={{ lineHeight: 20 }}>
+          <Text variant="label" color="rgba(255,255,255,0.88)" fixedColor style={{ fontSize: 12.5, lineHeight: 17 }}>
             {subtitle}
           </Text>
           {footer}
         </View>
         <View style={styles.art} accessibilityElementsHidden importantForAccessibility="no">
-          <View style={[styles.ring, { width: 112, height: 112, borderRadius: 56 }]} />
-          <View style={[styles.ring, { width: 82, height: 82, borderRadius: 41, backgroundColor: 'rgba(255,255,255,0.16)' }]} />
-          <View style={styles.artCore}>{busy ? <ActivityIndicator color="#FFFFFF" /> : <Ionicons name={icon} size={34} color="#FFFFFF" />}</View>
+          <View style={[styles.ring, { width: 84, height: 84, borderRadius: 42 }]} />
+          <View style={[styles.ring, { width: 62, height: 62, borderRadius: 31, backgroundColor: 'rgba(255,255,255,0.16)' }]} />
+          <View style={styles.artCore}>{busy ? <ActivityIndicator color="#FFFFFF" /> : <Ionicons name={icon} size={24} color="#FFFFFF" />}</View>
         </View>
       </LinearGradient>
     </Pressable>
@@ -102,6 +102,60 @@ export function ActionCardRow({ items }: { items: ActionCardItem[] }) {
   );
 }
 
+export interface TileItem {
+  key: string;
+  title: string;
+  /** Short line under the title, e.g. "3 waiting". */
+  status?: string;
+  icon: Icon;
+  onPress: () => void;
+  selected?: boolean;
+  badge?: number;
+}
+
+/**
+ * Grid of plain tiles (the Safaricom "Quick Care" style): the icon sits straight in the tile's padding at
+ * the top left, the title at the bottom. `columns` per row (2 or 3).
+ */
+export function TileGrid({ items, columns = 3 }: { items: TileItem[]; columns?: 2 | 3 }) {
+  const width = columns === 3 ? '31.5%' : '48.5%';
+  return (
+    <View style={styles.tiles}>
+      {items.map((t) => (
+        <Pressable
+          key={t.key}
+          onPress={t.onPress}
+          accessibilityRole="button"
+          accessibilityState={{ selected: !!t.selected }}
+          accessibilityLabel={`${t.title}${t.status ? `. ${t.status}` : ''}`}
+          style={({ pressed }) => [styles.tile, { width }, t.selected && styles.tileOn, pressed && { transform: [{ scale: 0.97 }] }]}
+        >
+          <View style={styles.tileTop}>
+            <Ionicons name={t.icon} size={26} color={colors.brand} />
+            {t.badge ? (
+              <View style={styles.tileBadge}>
+                <Text variant="label" color={colors.white} fixedColor style={{ fontFamily: fonts.bold, fontSize: 11 }}>
+                  {t.badge > 99 ? '99+' : t.badge}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+          <View style={{ gap: 2 }}>
+            <Text variant="bodySm" numberOfLines={2} style={{ fontFamily: fonts.semibold }}>
+              {t.title}
+            </Text>
+            {t.status ? (
+              <Text variant="label" color={colors.textMuted} numberOfLines={1} style={{ fontSize: 11 }}>
+                {t.status}
+              </Text>
+            ) : null}
+          </View>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
 /** Centered heading between sections ("Below are your …" in the E-Loans style), with an accent word. */
 export function SectionLead({ text, accent }: { text: string; accent?: string }) {
   return (
@@ -121,11 +175,11 @@ export function SectionLead({ text, accent }: { text: string; accent?: string })
 }
 
 const styles = StyleSheet.create({
-  feature: { minHeight: 176, borderRadius: 22, paddingVertical: 26, paddingLeft: 24, paddingRight: 18, flexDirection: 'row', alignItems: 'center', overflow: 'hidden' },
-  featureTitle: { fontFamily: fonts.bold, fontSize: 21 },
-  art: { width: 118, height: 118, alignItems: 'center', justifyContent: 'center' },
+  feature: { minHeight: 128, borderRadius: 18, paddingVertical: 18, paddingLeft: 18, paddingRight: 12, flexDirection: 'row', alignItems: 'center', overflow: 'hidden' },
+  featureTitle: { fontFamily: fonts.bold, fontSize: 16.5 },
+  art: { width: 88, height: 88, alignItems: 'center', justifyContent: 'center' },
   ring: { position: 'absolute', borderWidth: 2, borderColor: 'rgba(255,255,255,0.35)' },
-  artCore: { width: 58, height: 58, borderRadius: 29, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' },
+  artCore: { width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' },
   row: { gap: 14, paddingHorizontal: 16, paddingVertical: 4 },
   action: { width: 228, borderRadius: 18, padding: 18, gap: 6, borderWidth: 3, borderColor: 'transparent' },
   selected: { borderColor: colors.highlight },
@@ -133,6 +187,11 @@ const styles = StyleSheet.create({
   badge: { minWidth: 26, height: 26, borderRadius: 13, paddingHorizontal: 6, backgroundColor: colors.highlight, alignItems: 'center', justifyContent: 'center' },
   link: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
   linkArrow: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  tiles: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
+  tile: { minHeight: 118, borderRadius: 14, padding: 14, justifyContent: 'space-between', backgroundColor: colors.glassStrong, borderWidth: 1.5, borderColor: colors.glassBorder },
+  tileOn: { borderColor: colors.brand, backgroundColor: colors.brandSoft },
+  tileTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  tileBadge: { minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 5, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center' },
   lead: { gap: 14, alignItems: 'center', paddingTop: 4 },
   leadLine: { width: '80%', height: 2, borderRadius: 1, backgroundColor: colors.border },
 });

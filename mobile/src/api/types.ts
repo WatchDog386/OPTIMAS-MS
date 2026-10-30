@@ -116,6 +116,19 @@ export interface Task {
   startPhoto?: PhotoRef | null;
   endPhoto?: PhotoRef | null;
   materials?: TaskMaterial[];
+  teamId?: string | null;
+  /** Team jobs: the detail view has every member; lists have the name, leader and size. */
+  team?: (JobTeam | { id: string; name: string; leaderId: string; _count: { members: number } }) | null;
+}
+
+/** A crew that takes jobs together; the leader (the job's assignee) files the report. */
+export interface JobTeam {
+  id: string;
+  name: string;
+  leaderId: string;
+  leader: Person;
+  members: { id: string; userId: string; user: Person }[];
+  openJobs?: number;
 }
 
 export interface SerialUnit {

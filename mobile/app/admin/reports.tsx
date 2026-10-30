@@ -5,7 +5,7 @@ import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { API_URL, authHeader } from '../../src/api/client';
 import { FeatureCard, PageHeader, Screen, Segmented, Text, type CardTone } from '../../src/components';
-import { colors } from '../../src/theme';
+import { colors, fonts } from '../../src/theme';
 import { toast } from '../../src/store/feedback';
 
 type Period = '7' | '30' | 'month' | 'last-month';
@@ -66,16 +66,17 @@ export default function Reports() {
   return (
     <Screen>
       <PageHeader title="Reports" right={null} />
-      <View style={{ gap: 6 }}>
-        <Text variant="h1" style={{ fontSize: 24 }}>
+      <View style={{ gap: 4 }}>
+        <Text variant="title" style={{ fontSize: 19, fontFamily: fonts.bold }}>
           Welcome to Reports
         </Text>
-        <Text variant="bodySm" color={colors.textMuted}>
+        <Text variant="label" color={colors.textMuted} style={{ fontSize: 12.5, lineHeight: 18 }}>
           Excel workbooks for payroll and audits, all in one place. Tap a report to download it.
         </Text>
       </View>
-      <View style={styles.divider} />
-      <Text variant="h2">Period</Text>
+      <Text variant="title" style={styles.section}>
+        Period
+      </Text>
       <Segmented<Period>
         options={[
           { value: '7', label: 'Last 7 days' },
@@ -89,7 +90,7 @@ export default function Reports() {
       <Text variant="label" color={colors.textDim}>
         {range(period).from} → {range(period).to}
       </Text>
-      <Text variant="h2" style={{ marginTop: 4 }}>
+      <Text variant="title" style={styles.section}>
         Workbooks
       </Text>
       {REPORTS.map((r) => (
@@ -102,7 +103,7 @@ export default function Reports() {
           busy={busy === r.key}
           onPress={() => download(r.key, r.dated)}
           footer={
-            <Text variant="label" color="rgba(255,255,255,0.75)" fixedColor>
+            <Text variant="label" color="rgba(255,255,255,0.75)" fixedColor style={{ fontSize: 11 }}>
               {r.dated ? 'Uses the period above · .xlsx' : 'Current snapshot · .xlsx'}
             </Text>
           }
@@ -113,5 +114,5 @@ export default function Reports() {
 }
 
 const styles = StyleSheet.create({
-  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderStrong },
+  section: { fontFamily: fonts.semibold, fontSize: 15 },
 });

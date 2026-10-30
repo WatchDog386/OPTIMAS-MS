@@ -72,6 +72,9 @@ model User {
   chatMemberships      ConversationMember[]
   messagesSent         Message[]
   supportConversation  Conversation?         @relation("SupportCustomer")
+  teamsLed             Team[]                @relation("TeamLeader")
+  teamsCreated         Team[]                @relation("TeamCreator")
+  teamMemberships      TeamMember[]
   passkeys             Passkey[]
 
   @@index([customerAccount])
@@ -249,7 +252,12 @@ model Task {
   units      SerialUnit[]
   movements  StockMovement[]
 
+  /// Team jobs: the whole team sees the job; the leader (the assignee) starts it and files the report.
+  teamId String?
+  team   Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
   @@index([assigneeId, status])
+  @@index([teamId])
 }
 
 model TaskMaterial {
@@ -532,6 +540,8 @@ enum ConversationKind {
   DIRECT
   /// A customer and the Optimas office: every supervisor and admin can read and reply.
   SUPPORT
+  /// A team's group chat: its technicians; supervisors and admins can read and reply.
+  TEAM
 }
 
 model Conversation {
@@ -541,10 +551,14 @@ model Conversation {
   pairKey       String?          @unique
   /// SUPPORT only: the customer the conversation belongs to.
   customerId    String?          @unique
+  /// TEAM only: the team (kept as a plain group if the team is removed) and the group's name.
+  teamId        String?          @unique
+  title         String?
   lastMessageAt DateTime         @default(now())
   createdAt     DateTime         @default(now())
 
   customer User?                @relation("SupportCustomer", fields: [customerId], references: [id], onDelete: Cascade)
+  team     Team?                @relation(fields: [teamId], references: [id], onDelete: SetNull)
   members  ConversationMember[]
   messages Message[]
 
@@ -552,11 +566,13 @@ model Conversation {
 }
 
 model ConversationMember {
-  id             String    @id @default(cuid())
-  conversationId String
-  userId         String
-  lastReadAt     DateTime?
-  joinedAt       DateTime  @default(now())
+  id              String    @id @default(cuid())
+  conversationId  String
+  userId          String
+  lastReadAt      DateTime?
+  /// When this person's app last fetched their chats (their messages so far reached the phone: grey ticks).
+  lastDeliveredAt DateTime?
+  joinedAt        DateTime  @default(now())
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -570,10 +586,14 @@ model Message {
   conversationId String
   senderId       String
   body           String
+  /// The message this one answers (shown quoted above it).
+  replyToId      String?
   createdAt      DateTime @default(now())
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender       User         @relation(fields: [senderId], references: [id])
+  replyTo      Message?     @relation("Reply", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies      Message[]    @relation("Reply")
 
   @@index([conversationId, createdAt])
 }
@@ -595,5 +615,33 @@ model Passkey {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+}
+
+/// A crew of technicians that can take a job together. The leader files the report for everyone.
+model Team {
+  id          String   @id @default(cuid())
+  /// Team name or number, e.g. "Team 3" or "Kilimani crew".
+  name        String   @unique
+  leaderId    String
+  createdById String
+  createdAt   DateTime @default(now())
+
+  leader    User          @relation("TeamLeader", fields: [leaderId], references: [id])
+  createdBy User          @relation("TeamCreator", fields: [createdById], references: [id])
+  members   TeamMember[]
+  tasks     Task[]
+  chat      Conversation?
+}
+
+model TeamMember {
+  id     String @id @default(cuid())
+  teamId String
+  userId String
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
   @@index([userId])
 }

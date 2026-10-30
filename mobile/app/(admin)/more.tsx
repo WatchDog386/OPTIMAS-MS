@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 import type { User } from '../../src/api/types';
-import { GlassBackground, PrivacyRows, Text } from '../../src/components';
+import { GlassBackground, Text, usePrivacyItems } from '../../src/components';
 import { TAB_BAR_CLEARANCE } from '../../src/components/Screen';
 import { useApi } from '../../src/hooks/useApi';
 import { useAuth } from '../../src/store/auth';
@@ -21,8 +21,11 @@ interface Tile {
   icon: IconName;
   title: string;
   sub: string;
-  href: string;
+  onPress: () => void;
   count?: number;
+  danger?: boolean;
+  /** A switch-like tile (fingerprint lock): shows a green "On" pill. */
+  on?: boolean;
 }
 
 /** What makes a profile complete: people can reach you, and you have your own password. */
@@ -41,11 +44,14 @@ export default function More() {
   const managers = role === 'ADMIN' || role === 'SUPERVISOR';
   const pct = completion(user);
 
+  const go = (href: string) => () => router.push(href as never);
+  const privacy = usePrivacyItems();
   const tiles: Tile[] = [
-    { key: 'alerts', icon: 'notifications-outline', title: 'Notifications', sub: 'Alerts and activity', href: '/notifications', count: unread.data?.unread },
-    { key: 'trace', icon: 'barcode-outline', title: 'Trace a device', sub: 'Custody by serial number', href: '/admin/unit' },
-    ...(role === 'ADMIN' ? [{ key: 'audit', icon: 'finger-print-outline' as IconName, title: 'Audit log', sub: 'Who changed what', href: '/admin/audit' }] : []),
-    { key: 'pw', icon: 'key-outline', title: 'Change password', sub: 'Keep your account safe', href: '/change-password' },
+    { key: 'alerts', icon: 'notifications-outline', title: 'Notifications', sub: 'Alerts and activity', onPress: go('/notifications'), count: unread.data?.unread },
+    { key: 'trace', icon: 'barcode-outline', title: 'Trace a device', sub: 'Custody by serial number', onPress: go('/admin/unit') },
+    ...(role === 'ADMIN' ? [{ key: 'audit', icon: 'list-outline' as IconName, title: 'Audit log', sub: 'Who changed what', onPress: go('/admin/audit') }] : []),
+    { key: 'pw', icon: 'key-outline', title: 'Change password', sub: 'Keep your account safe', onPress: go('/change-password') },
+    ...privacy,
   ];
 
   // Back to wherever the person came from; straight to the dashboard if the page was opened directly
@@ -87,7 +93,7 @@ export default function More() {
           {tiles.map((t) => (
             <Pressable
               key={t.key}
-              onPress={() => router.push(t.href as never)}
+              onPress={t.onPress}
               accessibilityRole="button"
               accessibilityLabel={t.title}
               style={({ pressed }) => [styles.tile, pressed && { transform: [{ scale: 0.97 }] }]}
@@ -99,8 +105,15 @@ export default function More() {
                   </Text>
                 </View>
               ) : null}
-              <BubbleIcon name={t.icon} />
-              <Text variant="title" style={styles.tileTitle} numberOfLines={1}>
+              {t.on !== undefined ? (
+                <View style={[styles.state, t.on && styles.stateOn]}>
+                  <Text variant="label" color={t.on ? colors.white : colors.textMuted} fixedColor={t.on} style={{ fontFamily: fonts.bold, fontSize: 11 }}>
+                    {t.on ? 'ON' : 'OFF'}
+                  </Text>
+                </View>
+              ) : null}
+              <BubbleIcon name={t.icon} danger={t.danger} />
+              <Text variant="title" color={t.danger ? colors.danger : undefined} style={styles.tileTitle} numberOfLines={1}>
                 {t.title}
               </Text>
               <Text variant="label" color={colors.textMuted} numberOfLines={1} style={{ fontSize: 11, textAlign: 'center' }}>
@@ -108,10 +121,6 @@ export default function More() {
               </Text>
             </Pressable>
           ))}
-        </View>
-
-        <View style={{ marginHorizontal: 20, marginBottom: 16, gap: 8 }}>
-          <PrivacyRows />
         </View>
 
         <Pressable onPress={signOut} style={({ pressed }) => [styles.signOut, pressed && { opacity: 0.7 }]} accessibilityRole="button">
@@ -167,13 +176,13 @@ function CompletionRing({ pct, onEdit }: { pct: number; onEdit: () => void }) {
 }
 
 /** Green outlined speech-bubble icon from the reference. */
-function BubbleIcon({ name }: { name: IconName }) {
+function BubbleIcon({ name, danger }: { name: IconName; danger?: boolean }) {
   return (
     <View style={{ alignItems: 'center', marginBottom: 10 }}>
-      <View style={styles.bubble}>
-        <Ionicons name={name} size={22} color={colors.text} />
+      <View style={[styles.bubble, danger && { backgroundColor: colors.dangerSoft }]}>
+        <Ionicons name={name} size={22} color={danger ? colors.danger : colors.text} />
       </View>
-      <View style={styles.tail} />
+      <View style={[styles.tail, danger && { borderTopColor: colors.dangerSoft }]} />
     </View>
   );
 }
@@ -219,6 +228,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  state: { position: 'absolute', top: 12, right: 12, paddingHorizontal: 8, height: 20, borderRadius: 10, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
+  stateOn: { backgroundColor: colors.brand },
   bubble: { width: 48, height: 48, borderRadius: 14, backgroundColor: colors.highlight, alignItems: 'center', justifyContent: 'center' },
   tail: {
     width: 0,

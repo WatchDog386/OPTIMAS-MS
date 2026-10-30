@@ -104,7 +104,7 @@ approvalsRouter.post(
     const actor = me(req);
     const now = new Date();
     let approved = 0;
-    const verifiedJobs: { id: string; code: string; title: string; assigneeId: string }[] = [];
+    const verifiedJobs: { id: string; code: string; title: string; assigneeId: string; team: { members: { userId: string }[] } | null }[] = [];
     for (const item of items) {
       if (item.kind === 'CHECK_IN') {
         const r = await prisma.attendance.updateMany({ where: { id: item.id, dressReview: 'PENDING' }, data: { dressReview: 'APPROVED', reviewedById: actor.id, reviewedAt: now } });
@@ -113,7 +113,7 @@ approvalsRouter.post(
         const r = await prisma.attendance.updateMany({ where: { id: item.id, checkOutReview: 'PENDING' }, data: { checkOutReview: 'APPROVED', checkOutReviewedById: actor.id, checkOutReviewedAt: now } });
         approved += r.count;
       } else {
-        const task = await prisma.task.findFirst({ where: { id: item.id, status: 'COMPLETED' }, select: { id: true, code: true, title: true, assigneeId: true } });
+        const task = await prisma.task.findFirst({ where: { id: item.id, status: 'COMPLETED' }, select: { id: true, code: true, title: true, assigneeId: true, team: { select: { members: { select: { userId: true } } } } } });
         if (!task) continue;
         await prisma.task.update({ where: { id: task.id }, data: { status: 'VERIFIED', verifiedById: actor.id, verifiedAt: now } });
         verifiedJobs.push(task);
@@ -121,7 +121,9 @@ approvalsRouter.post(
       }
     }
     for (const t of verifiedJobs) {
-      void notify([t.assigneeId], { type: 'TASK_VERIFIED', title: `${t.code} verified ✔`, body: t.title, data: { taskId: t.id } });
+      // The whole team hears the job was approved
+      const crew = [...new Set([t.assigneeId, ...(t.team?.members.map((m) => m.userId) ?? [])])];
+      void notify(crew, { type: 'TASK_VERIFIED', title: `${t.code} verified ✔`, body: t.title, data: { taskId: t.id } });
     }
     if (approved) await audit(actor.id, 'BULK_APPROVED', 'Approvals', null, `Approved ${approved} item(s) at once`, { items });
     res.json({ approved, skipped: items.length - approved });

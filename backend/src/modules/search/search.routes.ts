@@ -23,8 +23,11 @@ searchRouter.get(
     const [tasks, units, staff, customers, requests] = await Promise.all([
       prisma.task.findMany({
         where: {
-          ...(store ? {} : { assigneeId: user.id }),
-          OR: [{ code: like }, { title: like }, { customerName: like }, { customerAccount: like }, { customerPhone: { contains: q } }, { address: like }],
+          // A technician finds their own jobs and their teams' jobs
+          AND: [
+            store ? {} : { OR: [{ assigneeId: user.id }, { team: { members: { some: { userId: user.id } } } }] },
+            { OR: [{ code: like }, { title: like }, { customerName: like }, { customerAccount: like }, { customerPhone: { contains: q } }, { address: like }] },
+          ],
         },
         select: { id: true, code: true, title: true, status: true, customerName: true, assignee: { select: { name: true } } },
         orderBy: { createdAt: 'desc' },

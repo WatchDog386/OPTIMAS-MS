@@ -99,6 +99,23 @@ const TECHNICIAN: Topic[] = [
     ],
   },
   {
+    icon: 'people-outline',
+    title: 'Team jobs',
+    steps: [
+      'A job can go to a team. Everyone in the team sees it in their jobs and gets its alerts.',
+      'The team leader (marked with a star) starts the job and files the report for everyone. The others help on site.',
+      'Each team has its own group in Chats.',
+    ],
+  },
+  {
+    icon: 'chatbubbles-outline',
+    title: 'Chats',
+    steps: [
+      'One grey tick: sent. Two grey ticks: it reached their phone. Two blue ticks: they read it.',
+      'Long-press a message to reply to it.',
+    ],
+  },
+  {
     icon: 'person-add-outline',
     title: 'Onboarding a customer',
     steps: [

@@ -1,17 +1,17 @@
 import { useState } from 'react';
-import { Linking, StyleSheet, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api, ApiError } from '../../src/api/client';
 import type { PhotoRef, Task } from '../../src/api/types';
-import { AuthImage, Badge, Button, Card, Input, Loading, Screen, ScreenHeader, SectionHeader, SignatureView, StarRating, Text } from '../../src/components';
+import { AuthImage, Avatar, Badge, Button, Card, Input, Loading, Screen, ScreenHeader, SectionHeader, SignatureView, StarRating, Text } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { confirmAction } from '../../src/utils/confirm';
 import { isManager, useAuth } from '../../src/store/auth';
 import { requestCapture } from '../../src/store/bridge';
 import { submitWithPhoto } from '../../src/offline/queue';
 import { colors, radius, space } from '../../src/theme';
-import { dateTime, duration, flagLabel, humanize, kes, priorityTone, taskStatusTone, taskTypeIcon, time } from '../../src/utils/format';
+import { dateTime, duration, firstName, flagLabel, humanize, kes, priorityTone, taskStatusTone, taskTypeIcon, time } from '../../src/utils/format';
 import { celebrate, toast } from '../../src/store/feedback';
 import { openChatWith } from '../../src/utils/chat';
 
@@ -28,6 +28,9 @@ export default function TaskDetail() {
   if (!task) return <Loading />;
 
   const mine = task.assignee.id === user.id;
+  // Team jobs: the whole team works it; the leader (the assignee) starts it and files the report
+  const team = task.team && 'members' in task.team ? task.team : null;
+  const helper = !mine && !!team?.members.some((m) => m.userId === user.id);
   const run = async (fn: () => Promise<{ task: Task }>) => {
     setBusy(true);
     try {
@@ -91,6 +94,13 @@ export default function TaskDetail() {
       </View>
     ) : manager && task.status === 'IN_PROGRESS' ? (
       <Button label="Cancel job" variant="danger" icon="close-circle-outline" loading={busy} onPress={cancel} />
+    ) : helper && open ? (
+      <View style={styles.leadNote}>
+        <Ionicons name="star" size={18} color={colors.brand} />
+        <Text variant="bodySm" style={{ flex: 1 }}>
+          {firstName(task.assignee.name)} leads {team!.name} and files the report for everyone.
+        </Text>
+      </View>
     ) : undefined;
 
   return (
@@ -135,7 +145,7 @@ export default function TaskDetail() {
           {task.customerPhone ? (
             <Button label="Call" icon="call" variant="secondary" style={{ flex: 1 }} onPress={() => Linking.openURL(`tel:${task.customerPhone}`)} />
           ) : null}
-          {mine ? (
+          {mine || helper ? (
             <Button label="Directions" icon="navigate" variant="secondary" style={{ flex: 1 }} onPress={() => router.push(`/navigate/${task.id}`)} />
           ) : open ? (
             <Button label="Track" icon="navigate" variant="secondary" style={{ flex: 1 }} onPress={() => router.push(`/track/${task.id}`)} />
@@ -149,7 +159,36 @@ export default function TaskDetail() {
         ) : null}
       </Card>
 
-      {manager ? (
+      {team ? (
+        <>
+          <SectionHeader title={`Team · ${team.name}`} />
+          <Card style={{ gap: space.md }}>
+            {team.members.map((m) => {
+              const leads = m.userId === task.assignee.id;
+              return (
+                <View key={m.id} style={styles.row}>
+                  <Avatar name={m.user.name} size={36} tint={leads ? colors.brand : colors.textMuted} />
+                  <View style={{ flex: 1 }}>
+                    <Text variant="title">{m.user.name}</Text>
+                    <Text variant="label" color={colors.textMuted}>
+                      {leads ? 'Team leader · files the report' : 'Team member'}
+                      {m.userId === user.id ? ' · you' : ''}
+                    </Text>
+                  </View>
+                  {leads ? <Ionicons name="star" size={18} color={colors.brand} /> : null}
+                  {m.userId !== user.id && (manager || mine || helper) ? (
+                    <Pressable onPress={() => openChatWith({ userId: m.userId })} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Message ${m.user.name}`}>
+                      <Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.text} />
+                    </Pressable>
+                  ) : null}
+                </View>
+              );
+            })}
+          </Card>
+        </>
+      ) : null}
+
+      {manager && !team ? (
         <Card style={styles.row}>
           <Ionicons name="person-circle-outline" size={22} color={colors.primary} />
           <View style={{ flex: 1 }}>
@@ -295,6 +334,7 @@ function ProofPhoto({ label, photo }: { label: string; photo?: PhotoRef | null }
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm, justifyContent: 'space-between' },
+  leadNote: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: radius.md, backgroundColor: colors.brandSoft },
   typeIcon: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.heroInset, alignItems: 'center', justifyContent: 'center' },
   metrics: { flexDirection: 'row', backgroundColor: colors.heroInset, borderRadius: radius.md, padding: space.md },
   matRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },

@@ -12,6 +12,7 @@ import { usersRouter } from './modules/users/users.routes';
 import { captureRouter } from './modules/capture/capture.routes';
 import { attendanceRouter } from './modules/attendance/attendance.routes';
 import { tasksRouter } from './modules/tasks/tasks.routes';
+import { teamsRouter } from './modules/teams/teams.routes';
 import { inventoryRouter } from './modules/inventory/inventory.routes';
 import { reportsRouter } from './modules/reports/reports.routes';
 import { insightsRouter } from './modules/insights/insights.routes';
@@ -79,6 +80,7 @@ export function createApp() {
   api.use('/capture', requireAuth, staff, captureRouter);
   api.use('/attendance', requireAuth, staff, attendanceRouter);
   api.use('/tasks', requireAuth, staff, tasksRouter);
+  api.use('/teams', requireAuth, staff, teamsRouter);
   api.use('/inventory', requireAuth, staff, inventoryRouter);
   api.use('/reports', requireAuth, staff, reportsRouter);
   api.use('/insights', requireAuth, requireRole(ROLES.MANAGERS), insightsRouter);

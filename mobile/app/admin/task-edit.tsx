@@ -3,7 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { goBack } from '../../src/utils/nav';
 import { api, ApiError } from '../../src/api/client';
 import type { Task, TaskPriority } from '../../src/api/types';
-import { Button, Glass, Input, Loading, Screen, ScreenHeader, SectionHeader, Segmented, TechPicker, Text } from '../../src/components';
+import { AssignPicker, Button, Glass, Input, Loading, NO_ASSIGNMENT, Screen, ScreenHeader, SectionHeader, Segmented, Text, assignmentBody, assignmentProblem, type Assignment } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { colors } from '../../src/theme';
 import { toast } from '../../src/store/feedback';
@@ -15,11 +15,11 @@ const PRIORITIES: { value: TaskPriority; label: string }[] = [
   { value: 'URGENT', label: 'Urgent' },
 ];
 
-/** Edit or reassign a job that has not started yet. Both technicians are notified of a reassignment. */
+/** Edit or reassign a job that has not started yet (to one technician or a team). Everyone affected is notified. */
 export default function TaskEdit() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data } = useApi<{ task: Task }>(`/tasks/${id}`);
-  const [assigneeId, setAssignee] = useState<string | null>(null);
+  const [assign, setAssign] = useState<Assignment>(NO_ASSIGNMENT);
   const [priority, setPriority] = useState<TaskPriority>('NORMAL');
   const [form, setForm] = useState({ title: '', description: '', customerName: '', customerPhone: '', customerAccount: '', address: '' });
   const [busy, setBusy] = useState(false);
@@ -28,7 +28,7 @@ export default function TaskEdit() {
   useEffect(() => {
     if (!data) return;
     const t = data.task;
-    setAssignee(t.assignee.id);
+    setAssign(t.teamId ? { mode: 'team', teamId: t.teamId, newTeam: null } : { mode: 'individual', assigneeId: t.assignee.id });
     setPriority(t.priority);
     setForm({ title: t.title, description: t.description ?? '', customerName: t.customerName, customerPhone: t.customerPhone ?? '', customerAccount: t.customerAccount ?? '', address: t.address });
   }, [data]);
@@ -47,13 +47,18 @@ export default function TaskEdit() {
   }
   const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
 
+  const moved =
+    assign.mode === 'individual' ? assign.assigneeId !== t.assignee.id || !!t.teamId : !!assign.newTeam || assign.teamId !== (t.teamId ?? null);
+
   const save = async () => {
+    const missing = assignmentProblem(assign);
+    if (missing) return setError(missing);
     setBusy(true);
     setError(null);
     try {
-      const body = Object.fromEntries(Object.entries({ ...form, priority, assigneeId }).filter(([, v]) => v !== '' && v !== null));
+      const body = { ...Object.fromEntries(Object.entries({ ...form, priority }).filter(([, v]) => v !== '')), ...(moved ? assignmentBody(assign) : {}) };
       await api(`/tasks/${t.id}`, { method: 'PATCH', body });
-      toast.success('Job updated', assigneeId !== t.assignee.id ? 'Both technicians have been notified.' : undefined);
+      toast.success('Job updated', moved ? 'Everyone affected has been notified.' : undefined);
       goBack();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not save');
@@ -65,8 +70,8 @@ export default function TaskEdit() {
   return (
     <Screen footer={<Button label="Save job" icon="checkmark" size="lg" loading={busy} onPress={save} />}>
       <ScreenHeader title={`Edit ${t.code}`} subtitle="Change details or reassign" />
-      <SectionHeader title="Technician" />
-      <TechPicker value={assigneeId} onChange={setAssignee} />
+      <SectionHeader title="Assign to" />
+      <AssignPicker value={assign} onChange={setAssign} />
       <Text variant="label" color={colors.textMuted}>
         Priority
       </Text>

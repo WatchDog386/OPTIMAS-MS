@@ -175,3 +175,20 @@ Customers receive `JOB_UPDATE` notifications when a technician is assigned, star
 | GET | `/insights/map` | Staff (live phone position, else last GPS photo today; heading, state), open jobs and open customer requests with coordinates |
 | GET | `/insights/charts?days=7..30` | Per-day jobs, cash, attendance, stock movement, and job mix |
 | GET | `/insights/ratings` | Average, 1–5 spread, per-technician averages, latest comments |
+
+## Teams
+
+| Method | Path | Who | Notes |
+|---|---|---|---|
+| GET | `/teams` | managers, store | Teams with leader, members and open job count |
+| POST | `/teams` | supervisors, admins | `{ name, memberIds[≥2], leaderId }` — also creates the team's group chat |
+| DELETE | `/teams/:id` | supervisors, admins | Refused while the team has open jobs (`TEAM_BUSY`) |
+
+`POST /tasks` and `PATCH /tasks/:id` take one of `assigneeId`, `teamId` (or `null` to end a team job) or `newTeam: { name, memberIds, leaderId }`. On a team job the leader is the assignee; only they can start or complete it (`403` for other members).
+
+## Chat receipts and replies
+
+- `GET /chat/conversations` rows carry `kind` (`DIRECT`, `SUPPORT`, `TEAM`), `members`, and `lastMessage.status` (`sent` / `delivered` / `read`) for your own last message. Fetching the list (or `/chat/unread`) marks messages as delivered to you.
+- `GET /chat/conversations/:id` returns `receipts: { deliveredAt, readAt }` (how far the other side has got with your messages) and `replyTo` on each message.
+- `POST /chat/conversations/:id/messages` takes an optional `replyToId` (a message in the same chat).
+

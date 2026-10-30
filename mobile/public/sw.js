@@ -1,6 +1,6 @@
 /* Optimas MS service worker: makes the web console installable and caches the app shell.
    API calls (/api/*) always go to the network — data is never served stale. */
-const SHELL = 'optimas-shell-v7';
+const SHELL = 'optimas-shell-v8';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(SHELL).then((c) => c.addAll(['/', '/manifest.json', '/icons/icon-192.png'])).then(() => self.skipWaiting()));

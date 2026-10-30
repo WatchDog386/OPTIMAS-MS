@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { api, ApiError } from '../../src/api/client';
 import type { Task, TaskPriority, TaskType } from '../../src/api/types';
-import { Button, Input, Screen, ScreenHeader, SectionHeader, Segmented, TechPicker, Text } from '../../src/components';
+import { AssignPicker, Button, Input, NO_ASSIGNMENT, Screen, ScreenHeader, SectionHeader, Segmented, Text, assignmentBody, assignmentProblem, type Assignment } from '../../src/components';
 import { colors, space } from '../../src/theme';
 import { toast } from '../../src/store/feedback';
 
@@ -40,7 +40,7 @@ const dueDate = (v: string) => {
 export default function NewTask() {
   // Optional pre-fill when turning a customer request into a job.
   const p = useLocalSearchParams<{ requestId?: string; type?: TaskType; title?: string; description?: string; customerName?: string; customerPhone?: string; customerAccount?: string; address?: string }>();
-  const [assigneeId, setAssignee] = useState<string | null>(null);
+  const [assign, setAssign] = useState<Assignment>(NO_ASSIGNMENT);
   const [type, setType] = useState<TaskType>(p.type ?? 'INSTALLATION');
   const [priority, setPriority] = useState<TaskPriority>('NORMAL');
   const [due, setDue] = useState('eod');
@@ -56,7 +56,8 @@ export default function NewTask() {
   const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   const submit = async () => {
-    if (!assigneeId) return toast.warning('Choose a technician');
+    const missing = assignmentProblem(assign);
+    if (missing) return toast.warning(missing);
     setBusy(true);
     try {
       const { task } = await api<{ task: Task }>('/tasks', {
@@ -64,12 +65,12 @@ export default function NewTask() {
           ...Object.fromEntries(Object.entries(form).filter(([, v]) => v.trim() !== '')),
           type,
           priority,
-          assigneeId,
+          ...assignmentBody(assign),
           requestId: p.requestId || undefined,
           dueAt: dueDate(due),
         },
       });
-      toast.success('Job created', 'The technician has been notified.');
+      toast.success('Job created', assign.mode === 'team' ? 'Everyone in the team has been notified.' : 'The technician has been notified.');
       router.replace(`/task/${task.id}`);
     } catch (e) {
       toast.error('Could not create job', e instanceof ApiError ? e.message : 'Try again');
@@ -82,7 +83,7 @@ export default function NewTask() {
     <Screen footer={<Button label="Create & assign job" icon="send" size="lg" loading={busy} onPress={submit} />}>
       <ScreenHeader title="New job" subtitle={p.requestId ? 'From a customer request · the customer is notified too' : 'The technician is notified in their app'} />
       <SectionHeader title="Assign to" />
-      <TechPicker value={assigneeId} onChange={setAssignee} />
+      <AssignPicker value={assign} onChange={setAssign} />
       <SectionHeader title="Job" />
       <Segmented options={TYPES} value={type} onChange={setType} />
       <Input label="Title" value={form.title} onChangeText={set('title')} placeholder="e.g. New fibre installation — 20 Mbps" />

@@ -1,33 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, BackHandler, Easing, PanResponder, Platform, Pressable, StyleSheet, TextInput, View, type ViewStyle } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Animated, BackHandler, Platform, Pressable, StyleSheet, TextInput, View, type ViewStyle } from 'react-native';
 import { useFeedback, type Toast, type ToastKind } from '../store/feedback';
 import { colors, fonts } from '../theme';
-import { EASE_IN, EASE_OUT, NATIVE, haptic, prefersReducedMotion, spring } from '../utils/motion';
+import { EASE_IN, NATIVE, haptic, prefersReducedMotion, spring } from '../utils/motion';
 import { CelebrationHost } from './Celebration';
 import { Text } from './Text';
 
-const KIND: Record<ToastKind, { icon: keyof typeof Ionicons.glyphMap; bg: string; fg: string }> = {
-  success: { icon: 'checkmark', bg: colors.success, fg: colors.white },
-  error: { icon: 'close', bg: colors.danger, fg: colors.white },
-  warning: { icon: 'alert', bg: '#F59E0B', fg: colors.white },
-  info: { icon: 'information', bg: colors.highlight, fg: colors.onHighlight },
-};
-const TOAST_MS: Record<ToastKind, number> = { success: 3200, info: 3600, warning: 4200, error: 5200 };
+/** The emoji each kind of message shows, like the dialogs. */
+const KIND_EMOJI: Record<ToastKind, string> = { success: '✅', error: '😕', warning: '⚠️', info: '💡' };
 
-/** Renders toasts (top), the dialog (centre) and the celebration. Mount once at the root. */
+/** Renders messages and the dialog (both the same dark pop-up card) and the celebration. Mount once at the root. */
 export function FeedbackHost() {
   const toasts = useFeedback((s) => s.toasts);
   const dialog = useFeedback((s) => s.dialog);
-  const insets = useSafeAreaInsets();
+  // One message at a time: the newest
+  const toast = dialog ? undefined : toasts[0];
   return (
     <>
-      <View pointerEvents="box-none" style={[styles.toasts, { top: insets.top + 10 }]}>
-        {toasts.map((t) => (
-          <ToastCard key={t.id} toast={t} />
-        ))}
-      </View>
+      {toast ? <ToastCard key={toast.id} toast={toast} /> : null}
       {dialog ? <DialogView /> : null}
       <CelebrationHost />
     </>
@@ -35,78 +25,60 @@ export function FeedbackHost() {
 }
 
 /**
- * A toast drops in with a small spring, its icon pops, a hairline counts down the time left, and it leaves
- * upward. Drag it up to send it away early; tap to dismiss.
+ * A message is the same dark card as the dialogs: title, a big emoji, the text and an OK button. It
+ * springs in, closes by itself after a few seconds, and closes at once on OK or a tap outside.
  */
 function ToastCard({ toast }: { toast: Toast }) {
   const reduced = prefersReducedMotion();
-  const enter = useRef(new Animated.Value(reduced ? 1 : 0)).current;
+  const v = useRef(new Animated.Value(reduced ? 1 : 0)).current;
   const icon = useRef(new Animated.Value(reduced ? 1 : 0)).current;
-  const drag = useRef(new Animated.Value(0)).current;
-  const countdown = useRef(new Animated.Value(1)).current;
   const dismiss = useFeedback((s) => s.dismiss);
   const remove = useFeedback((s) => s.remove);
-  const k = KIND[toast.kind];
-  // Success is a solid green card with white text (like M-Pesa's confirmation); the rest stay white
-  const ok = toast.kind === 'success';
 
   useEffect(() => {
     if (toast.kind === 'success') haptic.success();
     else if (toast.kind === 'error') haptic.error();
     else if (toast.kind === 'warning') haptic.warning();
     if (reduced) return;
-    Animated.spring(enter, { toValue: 1, ...spring.pop, useNativeDriver: NATIVE }).start();
-    Animated.spring(icon, { toValue: 1, ...spring.pop, delay: 120, useNativeDriver: NATIVE } as Animated.SpringAnimationConfig).start();
-    // The countdown line is the only thing animated on the JS thread (width cannot use the native driver)
-    Animated.timing(countdown, { toValue: 0, duration: TOAST_MS[toast.kind], easing: Easing.linear, useNativeDriver: false }).start();
+    Animated.spring(v, { toValue: 1, ...spring.pop, useNativeDriver: NATIVE }).start();
+    Animated.spring(icon, { toValue: 1, ...spring.pop, delay: 110, useNativeDriver: NATIVE } as Animated.SpringAnimationConfig).start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (!toast.leaving) return;
     if (reduced) return void remove(toast.id);
-    Animated.timing(enter, { toValue: 0, duration: 240, easing: EASE_IN, useNativeDriver: NATIVE }).start(() => remove(toast.id));
-  }, [toast.leaving, enter, remove, toast.id, reduced]);
+    Animated.timing(v, { toValue: 0, duration: 170, easing: EASE_IN, useNativeDriver: NATIVE }).start(() => remove(toast.id));
+  }, [toast.leaving, v, remove, toast.id, reduced]);
 
-  const pan = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 6 && Math.abs(g.dy) > Math.abs(g.dx),
-      onPanResponderMove: (_, g) => drag.setValue(Math.min(0, g.dy)),
-      onPanResponderRelease: (_, g) => {
-        if (g.dy < -28 || g.vy < -0.6) dismiss(toast.id);
-        else Animated.spring(drag, { toValue: 0, ...spring.settle, useNativeDriver: NATIVE }).start();
-      },
-    }),
-  ).current;
-
+  const close = () => dismiss(toast.id);
+  const blur = Platform.OS === 'web' ? ({ backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' } as unknown as ViewStyle) : null;
   return (
-    <Animated.View
-      {...pan.panHandlers}
-      style={{
-        width: '100%',
-        alignItems: 'center',
-        opacity: enter.interpolate({ inputRange: [0, 0.6, 1], outputRange: [0, 1, 1] }),
-        transform: [{ translateY: Animated.add(enter.interpolate({ inputRange: [0, 1], outputRange: [-46, 0] }), drag) }, { scale: enter.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }],
-      }}
-    >
-      <Pressable onPress={() => dismiss(toast.id)} accessibilityRole="alert" style={[styles.toast, ok && styles.toastOk]}>
-        <Animated.View style={[styles.toastIcon, { backgroundColor: ok ? '#FFFFFF' : k.bg, transform: [{ scale: icon.interpolate({ inputRange: [0, 1], outputRange: [0.2, 1] }) }] }]}>
-          <Ionicons name={k.icon} size={18} color={ok ? colors.success : k.fg} />
-        </Animated.View>
-        <View style={{ flex: 1 }}>
-          <Text variant="title" color={ok ? '#FFFFFF' : undefined} fixedColor={ok} style={{ fontFamily: fonts.semibold, fontSize: 14.5 }} numberOfLines={2}>
-            {toast.title}
+    <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, styles.toastLayer, blur, { opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0, 1], extrapolate: 'clamp' }) }]}>
+      <Pressable style={StyleSheet.absoluteFill} onPress={close} accessibilityLabel="Close" />
+      <Animated.View
+        accessibilityRole="alert"
+        style={[styles.card, { transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [28, 0] }) }, { scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.88, 1] }) }] }]}
+      >
+        <Text variant="h2" color="#FFFFFF" fixedColor style={styles.title}>
+          {toast.title}
+        </Text>
+        <Animated.Text style={[styles.emoji, { transform: [{ scale: icon.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }) }] }]} accessibilityElementsHidden importantForAccessibility="no">
+          {KIND_EMOJI[toast.kind]}
+        </Animated.Text>
+        {toast.message ? (
+          <Text variant="body" color="rgba(255,255,255,0.78)" fixedColor style={styles.message}>
+            {toast.message}
           </Text>
-          {toast.message ? (
-            <Text variant="label" color={ok ? 'rgba(255,255,255,0.9)' : colors.textMuted} fixedColor={ok} numberOfLines={3} style={{ marginTop: 1 }}>
-              {toast.message}
+        ) : null}
+        <View style={styles.actions}>
+          <Pressable onPress={close} accessibilityRole="button" style={({ pressed }) => [styles.btn, { backgroundColor: toast.kind === 'error' ? colors.danger : DIALOG_GREEN }, pressed && styles.pressed]}>
+            <Text variant="title" color="#FFFFFF" fixedColor style={styles.btnText}>
+              OK
             </Text>
-          ) : null}
+          </Pressable>
         </View>
-        <View pointerEvents="none" style={[styles.countTrack, ok && { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-          <Animated.View style={[styles.countFill, { backgroundColor: ok ? '#FFFFFF' : k.bg, width: countdown.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }]} />
-        </View>
-      </Pressable>
+      </Animated.View>
     </Animated.View>
   );
 }
@@ -213,30 +185,7 @@ const DIALOG_BG = '#1E1F21';
 const DIALOG_GREEN = '#7CB82F';
 
 const styles = StyleSheet.create({
-  toasts: { position: 'absolute', left: 14, right: 14, zIndex: 70, gap: 8 },
-  toast: {
-    width: '100%',
-    maxWidth: 460,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: 'rgba(28,29,31,0.06)',
-    shadowColor: '#1C1D1F',
-    shadowOpacity: 0.16,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 10,
-    overflow: 'hidden',
-  },
-  toastOk: { backgroundColor: colors.success, borderColor: 'rgba(0,0,0,0.04)', shadowColor: colors.success, shadowOpacity: 0.35 },
-  toastIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  countTrack: { position: 'absolute', left: 14, right: 14, bottom: 0, height: 3, borderRadius: 2, overflow: 'hidden', backgroundColor: 'rgba(28,29,31,0.05)' },
-  countFill: { height: 3, borderRadius: 2, opacity: 0.55 },
+  toastLayer: { zIndex: 75 },
   backdrop: { zIndex: 80, backgroundColor: 'rgba(17,18,19,0.45)', alignItems: 'center', justifyContent: 'center', padding: 24 },
   card: {
     width: '100%',

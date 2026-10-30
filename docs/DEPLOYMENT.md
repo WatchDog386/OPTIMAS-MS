@@ -203,5 +203,14 @@ Anyone can turn on **Fingerprint lock** in Profile / Account (shown only on phon
 - It needs the real `https://` address (it does not work over plain `http://`).
 - The phone's sensor signs a one-time challenge and the server checks it, so nothing about the fingerprint is ever stored on the server.
 - It is turned on per phone. Signing in on a new phone needs it turned on again there.
+- If it will not turn on, the pop-up now says why. Usually the phone has no screen lock or fingerprint set up (Settings → Security), or the app was opened in a browser that cannot use the sensor (use Chrome on Android, Safari on iPhone).
 - If the app is served under a second address (another domain pointing at the same server), list it in `backend/.env` as `WEBAUTHN_ORIGINS=https://other.example.com`. The normal address needs nothing.
+
+## Team jobs and group chats
+
+- **New job → Assign to → Team**: pick a saved team or make a new one (name or number, at least two technicians, and the leader).
+- Everyone in the team sees the job and its alerts. The leader starts it and files the report for everyone; the others cannot submit it.
+- Every team gets a group chat. Supervisors and admins can read and reply in all team groups.
+- Editing a job can move it to another team or back to one technician. Forwarding to the nearest technician makes it a one-person job.
+- The Jobs report has a **Team (members)** column.
 
