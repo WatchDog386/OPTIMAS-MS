@@ -2,7 +2,7 @@
   "name": "optimas-ms-api",
   "version": "1.0.0",
   "private": true,
-  "description": "Optimas MS — field workforce, attendance, task and inventory API",
+  "description": "Optimas MS \u2014 field workforce, attendance, task and inventory API",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -48,5 +48,8 @@
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^3.2.7"
+  },
+  "overrides": {
+    "uuid": "^11.1.1"
   }
 }

@@ -12,7 +12,14 @@
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "strict-origin-when-cross-origin"
+		# Only our own scripts run; nobody can frame the app (clickjacking); map tiles and photos are images
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		X-Frame-Options "DENY"
+		# The app needs the camera (proof photos, scanning) and location; nothing else
+		Permissions-Policy "camera=(self), geolocation=(self), microphone=(), payment=(), usb=(), interest-cohort=()"
+		Cross-Origin-Opener-Policy "same-origin"
 		-Server
+		-X-Powered-By
 	}
 
 	# API (photos are uploaded here, so allow large bodies)

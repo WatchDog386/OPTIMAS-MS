@@ -35,7 +35,8 @@ const detailInclude = {
 const newCode = () => {
   const d = new Date();
   const ymd = `${String(d.getFullYear()).slice(2)}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
-  return `JOB-${ymd}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
+  // 6 characters: 16 million codes a day, so two jobs practically never collide (and a clash is retried)
+  return `JOB-${ymd}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 };
 
 async function loadTask(id: string) {
@@ -110,11 +111,14 @@ tasksRouter.post(
       // The customer's phone said where they are: use it unless the manager pinned the job themselves
       if (body.lat == null && request.lat != null && request.lng != null) Object.assign(body, { lat: request.lat, lng: request.lng });
     }
-    const task = await prisma.$transaction(async (tx) => {
-      const created = await tx.task.create({ data: { ...body, code: newCode(), createdById: me(req).id }, include: detailInclude });
-      if (body.requestId) await tx.serviceRequest.update({ where: { id: body.requestId }, data: { status: 'SCHEDULED' } });
-      return created;
-    });
+    const create = () =>
+      prisma.$transaction(async (tx) => {
+        const created = await tx.task.create({ data: { ...body, code: newCode(), createdById: me(req).id }, include: detailInclude });
+        if (body.requestId) await tx.serviceRequest.update({ where: { id: body.requestId }, data: { status: 'SCHEDULED' } });
+        return created;
+      });
+    const codeClash = (e: unknown) => e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002' && String(e.meta?.target ?? '').includes('code');
+    const task = await create().catch((e) => (codeClash(e) ? create() : Promise.reject(e)));
     if (task.lat == null) void fillJobCoordinates(task.id, task.address);
     void notifyCustomer(task, {
       title: 'A technician has been assigned',

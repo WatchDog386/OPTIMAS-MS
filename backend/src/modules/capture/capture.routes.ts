@@ -58,13 +58,22 @@ captureRouter.post(
 );
 
 /** Stream a stored photo. Owners can see their own; supervisors and storekeepers can see all. */
+/**
+ * Who may open a photo: the person who took it and supervisors/admins. The store sees job photos (they
+ * show installed devices) but not staff check-in/out selfies, which it has no need for.
+ */
+function canSee(role: string, userId: string, photo: { userId: string; purpose: string }) {
+  if (photo.userId === userId || ROLES.MANAGERS.includes(role as never)) return true;
+  return role === 'STOREKEEPER' && photo.purpose.startsWith('TASK_');
+}
+
 captureRouter.get(
   '/photos/:id',
   ah(async (req, res) => {
     const photo = await prisma.photo.findUnique({ where: { id: req.params.id } });
     if (!photo) throw notFound('Photo');
     const user = me(req);
-    if (photo.userId !== user.id && !ROLES.STORE.includes(user.role)) throw forbidden();
+    if (!canSee(user.role, user.id, photo)) throw forbidden();
     res.setHeader('Cache-Control', 'private, max-age=86400');
     res.sendFile(storage.absolutePath(photo.storageKey));
   }),
@@ -86,7 +95,7 @@ captureRouter.get(
     });
     if (!photo) throw notFound('Photo');
     const user = me(req);
-    if (photo.userId !== user.id && !ROLES.STORE.includes(user.role)) throw forbidden();
+    if (!canSee(user.role, user.id, photo)) throw forbidden();
     const task = photo.taskStart ?? photo.taskEnd;
     res.json({
       photo: {

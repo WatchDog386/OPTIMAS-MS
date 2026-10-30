@@ -8,6 +8,10 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
+  // Sample accounts share a known password: never on a live server
+  if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DEMO_SEED !== '1') {
+    throw new Error('Refusing to load sample data on a production server (NODE_ENV=production).');
+  }
   const passwordHash = await bcrypt.hash('Optimas@2026', 10);
   const people: { staffNo: string; name: string; email: string; role: Role; region: string; phone: string }[] = [
     { staffNo: 'OPT-ADM-001', name: 'Grace Wanjiru', email: 'admin@optimas.co.ke', role: 'ADMIN', region: 'HQ', phone: '+254700000001' },

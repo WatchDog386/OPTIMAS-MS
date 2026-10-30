@@ -61,7 +61,7 @@ describe('web push', () => {
     sup = (await login('OPT-SUP-001', PASSWORD)).token;
   });
 
-  const sub = (n: string) => ({ endpoint: `https://push.example.test/${n}`, keys: { p256dh: 'p256dh-key', auth: 'auth-key' } });
+  const sub = (n: string) => ({ endpoint: `https://fcm.googleapis.com/fcm/send/test-${n}`, keys: { p256dh: 'p256dh-key', auth: 'auth-key' } });
 
   it('hands out the public key and stores a subscription per browser', async () => {
     const key = await api().get('/api/v1/notifications/web-push-key').set(auth(sup));

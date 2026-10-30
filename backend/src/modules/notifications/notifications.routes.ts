@@ -75,8 +75,19 @@ notificationsRouter.get('/web-push-key', (_req, res) => {
   res.json({ publicKey: webPushPublicKey });
 });
 
+/** Browser push services (Chrome/Android, Firefox, Edge/Windows, Safari/iPhone). Nothing else is sent to. */
+const PUSH_HOSTS = [/^fcm\.googleapis\.com$/, /^updates\.push\.services\.mozilla\.com$/, /(^|\.)notify\.windows\.com$/, /(^|\.)push\.apple\.com$/];
+const isPushService = (url: string) => {
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' && PUSH_HOSTS.some((h) => h.test(u.hostname));
+  } catch {
+    return false;
+  }
+};
+
 const webPushSchema = z.object({
-  endpoint: z.string().url().max(2000),
+  endpoint: z.string().url().max(2000).refine(isPushService, 'Not a browser push service address'),
   keys: z.object({ p256dh: z.string().min(1).max(200), auth: z.string().min(1).max(100) }),
 });
 

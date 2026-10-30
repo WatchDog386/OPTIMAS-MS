@@ -15,6 +15,10 @@ export const storage = {
     await fs.writeFile(full, data);
     return key;
   },
+  /** Deletes a stored file (no error if it is already gone). */
+  async remove(key: string): Promise<void> {
+    await fs.rm(this.absolutePath(key), { force: true });
+  },
   absolutePath(key: string): string {
     const full = path.resolve(root, key);
     if (!full.startsWith(root + path.sep)) throw new Error('Invalid storage key');
