@@ -64,9 +64,44 @@ export function useInstallPrompt() {
     canInstall: !!deferred,
     /** iPhone Safari: install only via Share → Add to Home Screen. */
     needsIosSteps: ios && !deferred,
-    available: isWeb && !runningAsApp() && (!!deferred || ios),
+    /** Shown whenever the app is not installed yet; browsers without one-tap install get steps. */
+    available: isWeb && !runningAsApp(),
     install,
   };
+}
+
+/** Which browser the page is open in, for install steps. */
+export type BrowserKind = 'in-app' | 'ios-safari' | 'ios-other' | 'samsung' | 'firefox' | 'chrome' | 'desktop';
+export function browserKind(): BrowserKind {
+  if (!isWeb) return 'chrome';
+  const ua = navigator.userAgent;
+  // WhatsApp, Facebook, Instagram, Telegram… open links in their own small browser, which cannot install
+  if (/FBAN|FBAV|FB_IAB|Instagram|WhatsApp|Telegram|Line\/|MicroMessenger|; wv\)/i.test(ua)) return 'in-app';
+  if (/iPhone|iPad|iPod/i.test(ua)) return /CriOS|FxiOS|EdgiOS/i.test(ua) ? 'ios-other' : 'ios-safari';
+  if (/SamsungBrowser/i.test(ua)) return 'samsung';
+  if (/Firefox/i.test(ua)) return 'firefox';
+  if (/Android/i.test(ua)) return 'chrome';
+  return 'desktop';
+}
+
+/** Step-by-step install instructions for browsers that do not offer a one-tap install. */
+export function installSteps(kind: BrowserKind = browserKind()): string[] {
+  switch (kind) {
+    case 'in-app':
+      return ['This page is open inside another app (WhatsApp, Facebook…), which cannot install apps.', 'Tap ⋮ (or ⋯) at the top and choose "Open in Chrome" (iPhone: "Open in Safari").', 'Then tap Install app again.'];
+    case 'ios-safari':
+      return ['Tap the Share button at the bottom of Safari.', 'Scroll down and choose "Add to Home Screen".', 'Tap "Add". Optimas MS appears on your home screen.'];
+    case 'ios-other':
+      return ['Tap the Share button (in the address bar or menu).', 'Choose "Add to Home Screen" (if it is not there, open this page in Safari).', 'Tap "Add".'];
+    case 'samsung':
+      return ['Tap the menu ☰ at the bottom right.', 'Choose "Add page to", then "Home screen".', 'Tap "Add".'];
+    case 'firefox':
+      return ['Tap the menu ⋮.', 'Choose "Install" (or "Add to Home screen").', 'Tap "Add".'];
+    case 'chrome':
+      return ['Tap the menu ⋮ at the top right of Chrome.', 'Choose "Install app" (or "Add to Home screen").', 'Tap "Install".'];
+    default:
+      return ['Click the install icon at the right of the address bar (a screen with a down arrow).', 'Or open the browser menu and choose "Install Optimas MS".'];
+  }
 }
 
 /** Phone status bar / browser toolbar colour: the same light grey as the top of every screen. */

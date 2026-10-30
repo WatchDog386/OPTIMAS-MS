@@ -4,7 +4,8 @@ import { router } from 'expo-router';
 import type { Ionicons } from '@expo/vector-icons';
 import { api, ApiError, API_URL, authHeader } from '../api/client';
 import { useAuth } from '../store/auth';
-import { promptDialog, toast } from '../store/feedback';
+import { alertDialog, promptDialog, toast } from '../store/feedback';
+import { installSteps, useInstallPrompt } from '../utils/install';
 import { colors } from '../theme';
 import { useBiometricSetting } from './BiometricSetting';
 import { ListRow } from './ListRow';
@@ -47,6 +48,7 @@ export interface PrivacyItem {
 export function usePrivacyItems(): PrivacyItem[] {
   const user = useAuth((s) => s.user);
   const lock = useBiometricSetting();
+  const installable = useInstallPrompt();
   const [busy, setBusy] = useState<string | null>(null);
   if (!user) return [];
 
@@ -88,6 +90,18 @@ export function usePrivacyItems(): PrivacyItem[] {
   };
 
   const items: PrivacyItem[] = [];
+  if (installable.available) {
+    items.push({
+      key: 'install',
+      icon: 'download-outline',
+      title: 'Install app',
+      sub: 'Add Optimas MS to your home screen',
+      onPress: async () => {
+        if (installable.canInstall) return void (await installable.install());
+        await alertDialog({ title: 'Install the app', emoji: '📲', message: installSteps().map((step, i) => `${i + 1}. ${step}`).join('\n'), confirmLabel: 'Got it' });
+      },
+    });
+  }
   if (lock) items.push({ key: 'lock', icon: 'finger-print', title: 'Fingerprint lock', sub: lock.busy ? 'Working…' : lock.on ? 'On · tap to turn off' : 'Off · tap to turn on', on: lock.on, onPress: () => void lock.toggle(!lock.on) });
   items.push(
     { key: 'data', icon: 'download-outline', title: 'Download my data', sub: busy === 'download' ? 'Preparing…' : 'Everything the app holds', onPress: download },
@@ -117,7 +131,7 @@ export function PrivacyRows() {
             right={<Switch value={!!i.on} onValueChange={i.onPress} trackColor={{ true: colors.brand, false: colors.border }} thumbColor={colors.white} accessibilityLabel="Fingerprint lock" />}
           />
         ) : (
-          <ListRow key={i.key} icon={i.icon} iconTint={i.danger ? colors.danger : colors.text} title={i.title} subtitle={i.key === 'data' || i.danger ? i.sub : undefined} onPress={i.onPress} />
+          <ListRow key={i.key} icon={i.icon} iconTint={i.danger ? colors.danger : colors.text} title={i.title} subtitle={i.key === 'data' || i.key === 'install' || i.danger ? i.sub : undefined} onPress={i.onPress} />
         ),
       )}
     </>
