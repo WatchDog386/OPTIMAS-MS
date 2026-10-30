@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { api, ApiError } from '../api/client';
 import { apiCache, clearApiCache } from '../api/cache';
+import { usePageLoad } from '../store/pageLoad';
 
 const cache = apiCache;
 export { clearApiCache };
@@ -34,10 +35,16 @@ export function useApi<T>(path: string | null, options: Options = {}) {
     setLoading(!next);
   }, [path]);
 
+  // The page loader shows while an open screen fetches its very first data (not on refreshes or polls)
+  const loaderId = useId();
+  const everLoaded = useRef(!!hit);
   const load = useCallback(
     async (mode: 'focus' | 'refresh' | 'poll' = 'focus') => {
       if (!path || (mode === 'poll' && inFlight.current)) return;
       inFlight.current = true;
+      // Only before this screen has shown anything at all (a filter change inside an open page does not count)
+      const first = mode === 'focus' && !everLoaded.current;
+      if (first) usePageLoad.getState().start(loaderId);
       if (mode === 'refresh') setRefreshing(true);
       else if (mode === 'focus' && !hasData.current) setLoading(true);
       try {
@@ -55,12 +62,14 @@ export function useApi<T>(path: string | null, options: Options = {}) {
         if (offline && hasData.current) return;
         if (mode !== 'poll' || !hasData.current) setError(e instanceof ApiError ? e.message : 'Something went wrong');
       } finally {
+        everLoaded.current = true;
+        if (first) usePageLoad.getState().done(loaderId);
         inFlight.current = false;
         setLoading(false);
         setRefreshing(false);
       }
     },
-    [path],
+    [path, loaderId],
   );
 
   useFocusEffect(
@@ -71,6 +80,8 @@ export function useApi<T>(path: string | null, options: Options = {}) {
       return () => clearInterval(t);
     }, [load, options.poll]),
   );
+
+  useEffect(() => () => usePageLoad.getState().done(loaderId), [loaderId]);
 
   const setData = useCallback(
     (v: T | null | ((prev: T | null) => T | null)) => {

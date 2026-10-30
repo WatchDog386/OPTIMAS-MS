@@ -14,6 +14,7 @@ import { colors, radius, space } from '../../src/theme';
 import { dateTime, duration, firstName, flagLabel, humanize, kes, priorityTone, taskStatusTone, taskTypeIcon, time } from '../../src/utils/format';
 import { celebrate, toast } from '../../src/store/feedback';
 import { openChatWith } from '../../src/utils/chat';
+import { collectDevice } from '../../src/utils/devices';
 
 export default function TaskDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -156,6 +157,9 @@ export default function TaskDetail() {
             <Button label="Message" icon="chatbubble-ellipses-outline" variant="secondary" style={{ flex: 1 }} onPress={() => openChatWith({ taskId: task.id, with: 'customer' })} />
             <Button label="Onboard customer" icon="person-add-outline" variant="secondary" style={{ flex: 1.3 }} onPress={() => router.push(`/onboard?taskId=${task.id}`)} />
           </View>
+        ) : null}
+        {(mine || helper) && task.customerAccount ? (
+          <Button label="Collect a device from this customer" icon="arrow-undo-outline" variant="secondary" onPress={() => void collectDevice()} />
         ) : null}
       </Card>
 

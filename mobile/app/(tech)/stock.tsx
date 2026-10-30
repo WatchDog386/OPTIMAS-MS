@@ -5,7 +5,9 @@ import { api, ApiError } from '../../src/api/client';
 import type { BulkHolding, SerialUnit, StockCountResult } from '../../src/api/types';
 import { Badge, Button, Card, EmptyState, ListRow, PageHeader, Screen, SectionHeader, Text } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
+import { router } from 'expo-router';
 import { requestScan } from '../../src/store/bridge';
+import { collectDevice } from '../../src/utils/devices';
 import { colors, space } from '../../src/theme';
 import { dateTime } from '../../src/utils/format';
 import { toast } from '../../src/store/feedback';
@@ -21,6 +23,22 @@ interface MyStock {
 export default function MyStock() {
   const { data, refresh, refreshing, reload } = useApi<MyStock>('/inventory/my');
   const [busy, setBusy] = useState<'accept' | 'count' | null>(null);
+
+  // Scanning each device proves it is in your hands (and is the one issued to you)
+  const acceptByScan = async () => {
+    const serials = await requestScan({ multiple: true, title: 'Scan each device you received' });
+    if (!serials?.length) return;
+    setBusy('accept');
+    try {
+      const r = await api<{ accepted: number }>('/inventory/accept', { body: { serials } });
+      toast.success('Receipt confirmed', `${r.accepted} device(s) checked and now in your custody.`);
+      await reload();
+    } catch (e) {
+      toast.error('Not confirmed', e instanceof ApiError ? e.message : 'Try again');
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const acceptAll = async () => {
     setBusy('accept');
@@ -55,6 +73,10 @@ export default function MyStock() {
   return (
     <Screen refreshing={refreshing} onRefresh={refresh}>
       <PageHeader title="My stock" />
+      <View style={styles.tools}>
+        <Button label="Check a device" icon="shield-checkmark-outline" variant="secondary" style={{ flex: 1 }} onPress={() => router.push('/verify')} />
+        <Button label="Collect from customer" icon="arrow-undo-outline" variant="secondary" style={{ flex: 1 }} onPress={() => void collectDevice().then((ok) => (ok ? reload() : undefined))} />
+      </View>
 
       <Card variant="hero" style={styles.hero}>
         <View style={{ flex: 1, gap: 4 }}>
@@ -80,7 +102,8 @@ export default function MyStock() {
           {data.pending.map((u) => (
             <ListRow key={u.id} icon="cube-outline" iconTint={colors.warning} title={u.item.name} subtitle={`S/N ${u.serialNumber}`} right={<Badge label="Issued" tone="warning" />} />
           ))}
-          <Button label={`Confirm receipt (${data.pending.length})`} icon="checkmark-circle" loading={busy === 'accept'} onPress={acceptAll} />
+          <Button label={`Scan to confirm (${data.pending.length})`} icon="qr-code-outline" loading={busy === 'accept'} onPress={acceptByScan} />
+          <Button label="No label? Confirm all without scanning" variant="secondary" disabled={busy === 'accept'} onPress={acceptAll} />
         </>
       ) : null}
 
@@ -141,6 +164,7 @@ export default function MyStock() {
 }
 
 const styles = StyleSheet.create({
+  tools: { flexDirection: 'row', gap: 10 },
   hero: { flexDirection: 'row', alignItems: 'center', padding: space.xl },
   heroIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.heroInset, alignItems: 'center', justifyContent: 'center' },
 });

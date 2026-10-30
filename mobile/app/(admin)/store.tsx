@@ -12,6 +12,7 @@ const ACTIONS = [
   { icon: 'arrow-up-circle-outline', label: 'Issue', status: 'Give devices to a technician', action: 'Issue', href: '/admin/transfer?direction=issue', color: '#0D5C3E' },
   { icon: 'arrow-down-circle-outline', label: 'Return', status: 'Take devices back to store', action: 'Return', href: '/admin/transfer?direction=return', color: '#2E3A5C' },
   { icon: 'add-circle-outline', label: 'Receive', status: 'Add new stock', action: 'Receive', href: '/admin/receive', color: '#0D5C3E' },
+  { icon: 'shield-checkmark-outline', label: 'Check device', status: 'Is this the one we issued?', action: 'Scan', href: '/verify', color: '#0D5C3E' },
   { icon: 'search-outline', label: 'Find unit', status: 'Trace a serial number', action: 'Search', href: '/admin/unit', color: '#2E3A5C' },
   { icon: 'list-outline', label: 'Ledger', status: 'Every stock movement', action: 'Open', href: '/admin/movements', color: '#0D5C3E' },
 ] as const;

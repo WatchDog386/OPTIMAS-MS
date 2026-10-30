@@ -31,6 +31,7 @@ import { prefetchWork } from '../src/offline/prefetch';
 import { FeedbackHost } from '../src/components/FeedbackHost';
 import { LocationHost } from '../src/components/LocationHost';
 import { LockHost } from '../src/components/LockHost';
+import { PageLoader } from '../src/components/PageLoader';
 import { RouteLoader } from '../src/components/RouteLoader';
 import { unlockAudioOnFirstTouch } from '../src/utils/chime';
 import { colors } from '../src/theme';
@@ -125,6 +126,7 @@ function AppStack() {
       <SyncStatus />
       <PhotoViewerHost />
       <LocationHost />
+      <PageLoader />
       <LockHost />
       <FeedbackHost />
     </>

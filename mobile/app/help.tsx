@@ -99,6 +99,15 @@ const TECHNICIAN: Topic[] = [
     ],
   },
   {
+    icon: 'qr-code-outline',
+    title: 'Devices and labels',
+    steps: [
+      'Every router and ONT has an Optimas label with a QR code. When devices are issued to you, open My stock and tap "Scan to confirm": only the devices issued to you are accepted.',
+      'My stock → Check a device tells you if a device is genuine and whether it is the one issued to you. Never install a device that shows "Not yours" or "Fake label".',
+      'Taking a router back from a customer (relocation, disconnection, swap)? Open the job and tap "Collect a device from this customer", then hand it to the store.',
+    ],
+  },
+  {
     icon: 'people-outline',
     title: 'Team jobs',
     steps: [

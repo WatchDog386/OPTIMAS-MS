@@ -39,3 +39,4 @@ export * from './LocationSetting';
 export * from './PrivacyRows';
 export * from './BankCards';
 export * from './AssignPicker';
+export * from './QrCode';

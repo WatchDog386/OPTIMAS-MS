@@ -30,6 +30,7 @@ services:
       PORT: 4000
       DATABASE_URL: postgresql://${POSTGRES_USER:-optimas}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-optimas_ms}?schema=public
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in deploy/.env}
+      ASSET_TAG_SECRET: ${ASSET_TAG_SECRET:-}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-12h}
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
       TRUST_PROXY: 1
@@ -54,7 +55,7 @@ services:
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@example.com}
       API_RATE_LIMIT: ${API_RATE_LIMIT:-600}
-      LOGIN_RATE_LIMIT: ${LOGIN_RATE_LIMIT:-10}
+      LOGIN_RATE_LIMIT: ${LOGIN_RATE_LIMIT:-30}
       SUPPORT_PHONE: ${SUPPORT_PHONE:-}
       SUPPORT_WHATSAPP: ${SUPPORT_WHATSAPP:-}
       SUPPORT_EMAIL: ${SUPPORT_EMAIL:-}

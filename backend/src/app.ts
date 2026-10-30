@@ -2,7 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
+import { verifyToken } from './lib/jwt';
 import { env } from './config/env';
 import { prisma } from './lib/prisma';
 import { ROLES, requireAuth, requireRole } from './middleware/auth';
@@ -49,11 +50,24 @@ export function createApp() {
   });
 
   const api = express.Router();
-  // A ceiling on how fast one address can hammer the API (the login route has its own, stricter limit below)
+  // A ceiling on how fast one person (signed in) or one address (not signed in) can hammer the API. Signed-in
+  // people count on their own, so a whole office behind one Wi-Fi address does not share one allowance.
+  // The login route has its own, stricter limit below.
   api.use(
     rateLimit({
       windowMs: 60_000,
       limit: env.API_RATE_LIMIT,
+      keyGenerator: (req) => {
+        const header = req.headers.authorization;
+        if (header?.startsWith('Bearer ')) {
+          try {
+            return `user:${verifyToken(header.slice(7)).sub}`;
+          } catch {
+            /* not a valid token: counted by address */
+          }
+        }
+        return `ip:${ipKeyGenerator(req.ip ?? '')}`;
+      },
       standardHeaders: 'draft-7',
       legacyHeaders: false,
       message: { error: { message: 'Too many requests. Slow down and try again in a minute.', code: 'RATE_LIMITED' } },

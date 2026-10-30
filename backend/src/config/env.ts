@@ -37,7 +37,8 @@ const schema = z.object({
   VAPID_PRIVATE_KEY: z.string().optional(),
   VAPID_SUBJECT: z.string().default('mailto:admin@example.com'),
   TRUST_PROXY: z.coerce.number().default(0),
-  LOGIN_RATE_LIMIT: z.coerce.number().default(10),
+  // Per address (an office Wi-Fi shares one); each account also locks itself after 8 wrong passwords
+  LOGIN_RATE_LIMIT: z.coerce.number().default(30),
   /** Requests one address may make per minute across the whole API (the app polls, so keep this generous). */
   API_RATE_LIMIT: z.coerce.number().default(600),
   /** OSRM server for in-app driving routes and arrival times. Empty switches road routing off (straight-line estimates are used). */
@@ -46,6 +47,8 @@ const schema = z.object({
   GEOCODING_URL: z.string().default('https://nominatim.openstreetmap.org'),
   /** Extra page addresses allowed to use fingerprint lock when the web app is not on the API's own address (comma-separated). */
   WEBAUTHN_ORIGINS: z.string().default(''),
+  /** Signs the QR labels stuck on devices (deploy.sh makes it once). Empty: derived from JWT_SECRET. */
+  ASSET_TAG_SECRET: z.string().default(''),
   /** Shown to customers and on the help, privacy and terms pages. Leave empty to hide a contact. */
   SUPPORT_PHONE: z.string().default(''),
   SUPPORT_WHATSAPP: z.string().default(''),

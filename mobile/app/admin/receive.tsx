@@ -67,8 +67,14 @@ export default function Receive() {
           ? { itemId: item.id, serials: serials.map((serialNumber) => ({ serialNumber })), note: note || undefined }
           : { itemId: item.id, quantity: Number(quantity), note: note || undefined };
       const r = await api<{ received: number }>('/inventory/receive', { body });
-      toast.success('Stock received', `${r.received} ${item.unit} of ${item.name} added to the store.`);
-      goBack();
+      if (item.tracking === 'SERIALIZED') {
+        // Next: print a signed label for each device just received
+        toast.success('Stock received', `${r.received} device(s) added. Print their labels and stick one on each.`);
+        router.replace(`/admin/labels?serials=${encodeURIComponent(serials.join(','))}`);
+      } else {
+        toast.success('Stock received', `${r.received} ${item.unit} of ${item.name} added to the store.`);
+        goBack();
+      }
     } catch (e) {
       toast.error('Failed', e instanceof ApiError ? e.message : 'Try again');
     } finally {

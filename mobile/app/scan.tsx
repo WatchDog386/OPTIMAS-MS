@@ -29,6 +29,9 @@ function useLocalDecoder() {
 }
 useLocalDecoder();
 
+/** An Optimas label reads as "OPTIMAS:<serial>:<signature>": show the serial (the server checks the rest). */
+const shown = (code: string) => (code.startsWith('OPTIMAS:') ? `🏷 ${code.slice(8, code.lastIndexOf(':'))}` : code);
+
 /** Barcode / QR scanner for products and for router & ONT serial numbers. Supports single or continuous (multi) scanning. */
 export default function Scan() {
   useStatusBarColor('#000000'); // camera pages are black edge to edge
@@ -148,7 +151,7 @@ export default function Scan() {
               <View style={styles.chips}>
                 {serials.slice(0, 12).map((s) => (
                   <Pressable key={s} style={styles.chip} onPress={() => setSerials((l) => l.filter((x) => x !== s))}>
-                    <Text variant="label">{s}</Text>
+                    <Text variant="label">{shown(s)}</Text>
                     <Ionicons name="close-circle" size={14} color={colors.textMuted} />
                   </Pressable>
                 ))}

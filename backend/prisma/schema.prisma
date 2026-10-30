@@ -365,6 +365,7 @@ enum MovementType {
   REPORT_LOST
   REPORT_FAULTY
   ADJUST
+  RECOVER // device taken back from a customer
 }
 
 // Immutable ledger: rows are only ever inserted.

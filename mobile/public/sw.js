@@ -1,9 +1,27 @@
 /* Optimas MS service worker: makes the web console installable and caches the app shell.
    API calls (/api/*) always go to the network — data is never served stale. */
+// Stamped with a hash of the file list at build time, so each release installs fresh
 const SHELL = 'optimas-shell-v9';
 
+// Every page's code, the fonts and images, listed at build time (scripts/precache.mjs). Downloading them
+// all at install means no page waits on the network the first time it is opened.
+async function precache() {
+  const cache = await caches.open(SHELL);
+  await cache.addAll(['/', '/manifest.json', '/icons/icon-192.png']);
+  let files = [];
+  try {
+    files = (await (await fetch('/precache.json', { cache: 'no-store' })).json()).files || [];
+  } catch {
+    return; // a dev build has no list: pages are cached as they are opened
+  }
+  // A few at a time, so a slow connection is not swamped; a file that fails is fetched when needed
+  for (let i = 0; i < files.length; i += 6) {
+    await Promise.all(files.slice(i, i + 6).map((f) => cache.match(f).then((hit) => hit || cache.add(f)).catch(() => undefined)));
+  }
+}
+
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(SHELL).then((c) => c.addAll(['/', '/manifest.json', '/icons/icon-192.png'])).then(() => self.skipWaiting()));
+  event.waitUntil(precache().then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {
@@ -17,7 +35,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
   // The release marker must always come from the server
-  if (url.pathname === '/version.json') return;
+  if (url.pathname === '/version.json' || url.pathname === '/precache.json') return;
   // Pages: network first, fall back to the cached shell when offline.
   if (req.mode === 'navigate') {
     event.respondWith(fetch(req).catch(() => caches.match('/')));

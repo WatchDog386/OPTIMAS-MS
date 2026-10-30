@@ -53,7 +53,9 @@ interface GlassProps {
 export function Glass({ children, style, strong, radius = 28, padded = true, onPress }: GlassProps) {
   const body = (
     <View style={[styles.glass, { borderRadius: radius }, padded && styles.padded, style]}>
-      {Platform.OS !== 'android' ? <BlurView intensity={30} tint="light" style={[StyleSheet.absoluteFill, { borderRadius: radius }]} /> : null}
+      {/* A live blur per card is costly on phones' browsers (it redraws while scrolling); the cards are
+          nearly opaque, so the web app and Android go without it */}
+      {Platform.OS === 'ios' ? <BlurView intensity={30} tint="light" style={[StyleSheet.absoluteFill, { borderRadius: radius }]} /> : null}
       <View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderRadius: radius, backgroundColor: strong ? colors.glassStrong : colors.glass }]} />
       {children}
     </View>
