@@ -9,6 +9,7 @@ import { Button, GlassBackground, InstallButton, Input, Reveal, SignInLoader, Te
 import { afterLogin, useAuth } from '../../src/store/auth';
 import { colors, fonts, radius, space } from '../../src/theme';
 import { biometricAvailable, loginWithBiometric } from '../../src/utils/biometric';
+import { InstallPill } from '../../src/components/InstallPrompt';
 import { toast } from '../../src/store/feedback';
 
 const MAX_W = 480;
@@ -200,6 +201,8 @@ export default function Login() {
                 ) : null}
 
                 <Button label="Sign in" size="lg" trailingIcon="arrow-forward-circle-outline" loading={loading} onPress={submit} style={styles.signIn} />
+
+                <InstallPill />
               </Reveal>
 
               <Text variant="label" color={colors.textDim} align="center" style={styles.legal}>
