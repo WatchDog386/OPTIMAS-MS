@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ComponentRef } from 'react';
-import { Animated, Easing, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
+import { Animated, Easing, Image, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,7 +9,6 @@ import { Button, GlassBackground, InstallButton, Input, Reveal, SignInLoader, Te
 import { afterLogin, useAuth } from '../../src/store/auth';
 import { colors, fonts, radius, space } from '../../src/theme';
 import { biometricAvailable, loginWithBiometric } from '../../src/utils/biometric';
-import { InstallPill } from '../../src/components/InstallPrompt';
 import { toast } from '../../src/store/feedback';
 
 const MAX_W = 480;
@@ -57,6 +56,14 @@ export default function Login() {
     } finally {
       setBioBusy(false);
     }
+  };
+
+  const downloadAndroid = async () => {
+    // Replace this URL with the actual hosted APK download link.
+    const url = 'https://your-domain.com/download/Optimas-MS.apk';
+    const ok = await Linking.canOpenURL(url);
+    if (ok) await Linking.openURL(url);
+    else setError('Download link not configured. Ask your administrator for the APK.');
   };
 
   // The picture eases in once, as soon as its space is known
@@ -202,7 +209,12 @@ export default function Login() {
 
                 <Button label="Sign in" size="lg" trailingIcon="arrow-forward-circle-outline" loading={loading} onPress={submit} style={styles.signIn} />
 
-                <InstallPill />
+                <Pressable onPress={downloadAndroid} style={styles.download} accessibilityLabel="Download the Optimas MS app for Android">
+                  <Ionicons name="download-outline" size={20} color={colors.white} />
+                  <Text variant="label" style={{ color: colors.white, fontWeight: '600' }}>
+                    Download for Android
+                  </Text>
+                </Pressable>
               </Reveal>
 
               <Text variant="label" color={colors.textDim} align="center" style={styles.legal}>
@@ -260,6 +272,7 @@ const styles = StyleSheet.create({
   bioButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 52, borderRadius: CORNER, paddingHorizontal: space.md, shadowColor: '#1C1D1F', shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
   bioButtonOff: { opacity: 0.55 },
   bioText: { fontFamily: fonts.semibold, fontSize: 15 },
+  download: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 52, borderRadius: CORNER, backgroundColor: colors.primary, paddingHorizontal: space.md, shadowColor: '#1C1D1F', shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
   error: { flexDirection: 'row', gap: space.sm, alignItems: 'center', backgroundColor: colors.dangerSoft, padding: space.md, borderRadius: radius.md },
   legal: { marginTop: 4, paddingHorizontal: 12, lineHeight: 18 },
   legalLink: { textDecorationLine: 'underline', color: colors.textMuted },
