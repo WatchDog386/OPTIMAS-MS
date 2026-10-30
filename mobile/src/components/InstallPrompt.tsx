@@ -24,10 +24,11 @@ const snooze = () => {
 };
 
 /** Round "install" button for top bars — only shown in a browser where installing is possible. */
-export function InstallButton({ round }: { round?: boolean }) {
+export function InstallButton({ round, stepsOnly }: { round?: boolean; stepsOnly?: boolean }) {
   const { available, canInstall, install } = useInstallPrompt();
   const [open, setOpen] = useState(false);
-  if (!available) return null;
+  // `stepsOnly`: the page has its own one-tap Install button, so this one only shows where steps are needed
+  if (!available || (stepsOnly && canInstall)) return null;
   // One tap installs where the browser allows it; otherwise the steps for this browser
   const tap = async () => {
     if (canInstall) await install();
@@ -40,10 +41,10 @@ export function InstallButton({ round }: { round?: boolean }) {
           <Ionicons name="download-outline" size={20} color={colors.onHighlight} />
         </GlassCircle>
       ) : (
-        <Pressable onPress={tap} style={({ pressed }) => [styles.installChip, pressed && { opacity: 0.85 }]} accessibilityRole="button" accessibilityLabel="Install app">
+        <Pressable onPress={tap} style={({ pressed }) => [styles.installChip, pressed && { opacity: 0.85 }]} accessibilityRole="button" accessibilityLabel="Install">
           <Ionicons name="download-outline" size={17} color={colors.onHighlight} />
           <Text variant="bodySm" color={colors.onHighlight} fixedColor style={{ fontFamily: fonts.bold }}>
-            Install app
+            Install
           </Text>
         </Pressable>
       )}

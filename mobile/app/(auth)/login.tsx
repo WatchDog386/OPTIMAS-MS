@@ -108,7 +108,7 @@ export default function Login() {
                 Optimas Networks
               </Text>
               <View style={styles.topRight}>
-                <InstallButton />
+                <InstallButton stepsOnly />
                 {/* Capsule like a mini-app's: ··· opens help, ⊗ clears the form */}
                 <View style={styles.capsule}>
                   <Pressable onPress={help} hitSlop={6} style={styles.capsuleHalf} accessibilityRole="button" accessibilityLabel="Help for customers and technicians">

@@ -14,7 +14,7 @@ import { Button, Text } from '../src/components';
 import { resolveCapture, type CaptureResult } from '../src/store/bridge';
 import { colors, radius, space } from '../src/theme';
 import { useStatusBarColor } from '../src/utils/statusBar';
-import { appendFile } from '../src/utils/upload';
+import { appendFile, grabCameraFrame } from '../src/utils/upload';
 
 /**
  * Camera-only proof capture. There is deliberately NO gallery picker in this app:
@@ -81,7 +81,9 @@ export default function Capture() {
       }
       // 2. Take the photo live.
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
-      const photo = await camera.current.takePictureAsync({ quality: 0.6, exif: false, shutterSound: false, imageType: 'jpg' });
+      // Web: the frame straight from the live picture as a JPEG file; phones: the camera's own photo
+      const frame = await grabCameraFrame();
+      const photo = frame ? { uri: frame.uri } : await camera.current.takePictureAsync({ quality: 0.6, exif: false, shutterSound: false, imageType: 'jpg' });
       setPreview(photo.uri);
       // 3. Upload with location + device metadata.
       const loc = location.current ?? (await Location.getLastKnownPositionAsync().catch(() => null));
@@ -89,7 +91,8 @@ export default function Capture() {
         done.current = true;
         resolveCapture({
           photoId: '',
-          uri: photo.uri,
+          // Kept on the phone until there is signal again, so it must be a lasting copy
+          uri: frame ? frame.dataUri() : photo.uri,
           flags: ['OFFLINE_CAPTURE'],
           pending: {
             capturedAt: new Date().toISOString(),
@@ -103,7 +106,8 @@ export default function Capture() {
         return;
       }
       const form = new FormData();
-      await appendFile(form, 'photo', photo.uri, 'capture.jpg', 'image/jpeg');
+      if (frame) form.append('photo', frame.blob, 'capture.jpg');
+      else await appendFile(form, 'photo', photo.uri, 'capture.jpg', 'image/jpeg');
       form.append('challengeId', challenge.challengeId);
       form.append('nonce', challenge.nonce);
       form.append('deviceTime', new Date().toISOString());
@@ -121,7 +125,9 @@ export default function Capture() {
       goBack();
     } catch (e) {
       setPreview(null);
-      setError(e instanceof ApiError ? e.message : 'Could not capture photo. Try again.');
+      // Say what went wrong, so it can be put right
+      const why = e instanceof Error && e.message ? ` (${e.message.slice(0, 120)})` : '';
+      setError(e instanceof ApiError ? e.message : `Could not take the photo${why}. Try again.`);
     } finally {
       setBusy(false);
     }

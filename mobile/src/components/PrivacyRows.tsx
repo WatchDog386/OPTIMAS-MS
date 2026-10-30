@@ -94,7 +94,7 @@ export function usePrivacyItems(): PrivacyItem[] {
     items.push({
       key: 'install',
       icon: 'download-outline',
-      title: 'Install app',
+      title: 'Install',
       sub: 'Add Optimas MS to your home screen',
       onPress: async () => {
         if (installable.canInstall) return void (await installable.install());

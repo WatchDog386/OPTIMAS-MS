@@ -17,6 +17,16 @@ const emit = () => listeners.forEach((l) => l());
 const isWeb = Platform.OS === 'web' && typeof window !== 'undefined';
 
 if (isWeb) {
+  // Caught by /pwa-early.js before this code loaded
+  const early = () => {
+    const e = (window as unknown as { __optimasInstall?: InstallEvent | null }).__optimasInstall;
+    if (e && e !== deferred) {
+      deferred = e;
+      emit();
+    }
+  };
+  early();
+  window.addEventListener('optimas-installable', early);
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferred = e as InstallEvent;
@@ -52,9 +62,12 @@ export function useInstallPrompt() {
   }, []);
   const install = async () => {
     if (!deferred) return false;
-    await deferred.prompt();
-    const { outcome } = await deferred.userChoice;
+    const e = deferred;
+    await e.prompt();
+    const { outcome } = await e.userChoice;
+    // The browser's offer can be used once
     deferred = null;
+    (window as unknown as { __optimasInstall?: InstallEvent | null }).__optimasInstall = null;
     emit();
     return outcome === 'accepted';
   };
@@ -64,8 +77,12 @@ export function useInstallPrompt() {
     canInstall: !!deferred,
     /** iPhone Safari: install only via Share → Add to Home Screen. */
     needsIosSteps: ios && !deferred,
-    /** Shown whenever the app is not installed yet; browsers without one-tap install get steps. */
-    available: isWeb && !runningAsApp(),
+    /**
+     * Shown when tapping it can install: one tap where the browser allows (Chrome, Samsung Internet,
+     * Edge), or the only way there is (iPhone: Share → Add to Home Screen; WhatsApp/Facebook's own
+     * browser: open in Chrome first).
+     */
+    available: isWeb && !runningAsApp() && (!!deferred || ['ios-safari', 'ios-other', 'in-app'].includes(browserKind())),
     install,
   };
 }

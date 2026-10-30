@@ -33,3 +33,20 @@ export async function uriToBlob(uri: string): Promise<Blob> {
   }
   return (await fetch(uri)).blob();
 }
+
+/**
+ * Web: the photo straight from the live camera picture on screen, as a JPEG file (no data: address to
+ * decode). `uri` is for showing it; `dataUri()` gives a copy that can be saved for later when offline.
+ */
+export async function grabCameraFrame(quality = 0.7): Promise<{ blob: Blob; uri: string; dataUri: () => string } | null> {
+  if (Platform.OS !== 'web' || typeof document === 'undefined') return null;
+  const video = Array.from(document.querySelectorAll('video')).find((v) => v.videoWidth > 0 && v.readyState >= 2);
+  if (!video) return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d')!.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
+  if (!blob) return null;
+  return { blob, uri: URL.createObjectURL(blob), dataUri: () => canvas.toDataURL('image/jpeg', quality) };
+}
