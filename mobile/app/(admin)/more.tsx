@@ -12,7 +12,6 @@ import { colors, fonts } from '../../src/theme';
 import { confirmAction } from '../../src/utils/confirm';
 import { humanize } from '../../src/utils/format';
 import { unregisterPush } from '../../src/utils/push';
-import { DemoNotice } from '../../src/components/DemoNotice';
 
 /* "Profile": completion ring and the few account tools — in the app's glass theme. */
 
@@ -73,7 +72,6 @@ export default function More() {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: TAB_BAR_CLEARANCE + insets.bottom }} showsVerticalScrollIndicator={false}>
-        <DemoNotice style={{ marginHorizontal: 20, marginBottom: 12 }} />
         <View style={styles.profile}>
           <CompletionRing pct={pct} onEdit={edit} />
           <Text variant="title" style={styles.name}>

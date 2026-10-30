@@ -4,7 +4,6 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../../src/api/client';
-import { DEMO_TOKEN } from '../../src/api/demoToken';
 import type { LatLng, Route } from '../../src/api/field';
 import type { Task } from '../../src/api/types';
 import { Button, HeaderButton, Loading, MapCanvas, Text, type MapPin } from '../../src/components';
@@ -80,7 +79,6 @@ function turnIcon(text: string): keyof typeof Ionicons.glyphMap {
 export default function Navigate() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
-  const demo = useAuth((s) => s.token === DEMO_TOKEN);
   const { data } = useApi<{ task: Task }>(`/tasks/${id}`);
   const task = data?.task;
   const site: LatLng | null = task?.lat != null && task?.lng != null ? [task.lat, task.lng] : null;
@@ -96,9 +94,9 @@ export default function Navigate() {
   const lastRouteAt = useRef(0);
   const routeFrom = useRef<LatLng | null>(null);
 
-  // Follow the phone (in the demo, drive along the route instead)
+  // Follow the phone
   useEffect(() => {
-    if (demo || !site) return;
+    if (!site) return;
     let stop = () => {};
     // Start from the last position the app already knows, then follow the phone
     const known = useLocation.getState().fix;
@@ -114,30 +112,8 @@ export default function Navigate() {
       stop();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [demo, site?.[0], site?.[1]]);
+  }, [site?.[0], site?.[1]]);
 
-  const demoStart = useRef<LatLng | null>(null);
-  useEffect(() => {
-    if (!demo || !site) return;
-    demoStart.current = [site[0] + 0.014, site[1] + 0.018];
-    setFix({ lat: demoStart.current[0], lng: demoStart.current[1], accuracy: 8, heading: null, speed: 0, at: Date.now() });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [demo, site?.[0], site?.[1]]);
-  const demoPath = useRef<LatLng[] | null>(null);
-  useEffect(() => {
-    if (!demo || !route || demoPath.current) return;
-    demoPath.current = route.geometry;
-    let i = 0;
-    const timer = setInterval(() => {
-      const g = demoPath.current!;
-      i = Math.min(i + 1, g.length - 1);
-      const here = g[i];
-      const next = g[Math.min(i + 1, g.length - 1)];
-      setFix({ lat: here[0], lng: here[1], accuracy: 6, heading: bearing(here, next), speed: 9, at: Date.now() });
-      if (i >= g.length - 1) clearInterval(timer);
-    }, 1400);
-    return () => clearInterval(timer);
-  }, [demo, route]);
 
   // Ask for a route at the start, when off it, and now and then while moving
   useEffect(() => {

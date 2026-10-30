@@ -59,13 +59,6 @@ export default function Login() {
     }
   };
 
-  // Sample data for looking around without an account; the API client answers it locally and saves nothing
-  const startDemo = async () => {
-    const [{ demoAdmin }, { DEMO_TOKEN }] = await Promise.all([import('../../src/demo/data'), import('../../src/api/demoToken')]);
-    await useAuth.getState().setSession(DEMO_TOKEN, demoAdmin);
-    setSignedIn(demoAdmin);
-  };
-
   const openSite = () => {
     setMenu(false);
     void Linking.openURL('https://optimaswifi.co.ke');
@@ -165,12 +158,6 @@ export default function Login() {
 
                 <Button label="Sign in" size="lg" trailingIcon="arrow-forward-circle-outline" loading={loading} onPress={submit} style={styles.signIn} />
               </Reveal>
-
-              <Pressable onPress={startDemo} hitSlop={8} style={styles.help} accessibilityRole="button" accessibilityLabel="Explore with demo data">
-                <Text variant="bodySm" style={{ fontFamily: fonts.semibold, textDecorationLine: 'underline' }} color={colors.navy}>
-                  Explore with demo data
-                </Text>
-              </Pressable>
 
               <Pressable onPress={help} hitSlop={8} style={styles.help} accessibilityRole="button">
                 <Text variant="bodySm" color={colors.textMuted}>

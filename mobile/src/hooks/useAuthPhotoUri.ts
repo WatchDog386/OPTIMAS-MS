@@ -8,7 +8,6 @@ import { authHeader, photoUrl } from '../api/client';
  * On phones the image request can carry the bearer token in its headers. Browsers ignore the Image
  * `headers` option entirely, so on web the photo is fetched first (with the token) and handed over
  * as a local blob: address — otherwise the web console shows an empty frame for every photo.
- * Demo photos are local data: addresses and need no request at all.
  */
 export type AuthPhotoSource = { uri: string; headers?: Record<string, string> };
 
@@ -21,10 +20,6 @@ export function useAuthPhotoUri(photoId: string | null | undefined): AuthPhotoSo
       return;
     }
     const raw = photoUrl(photoId);
-    if (raw.startsWith('data:')) {
-      setSrc({ uri: raw });
-      return;
-    }
     if (Platform.OS !== 'web') {
       setSrc({ uri: raw, headers: authHeader() });
       return;

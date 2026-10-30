@@ -1,7 +1,6 @@
 import { api } from '../api/client';
 import { apiCache, attachPersistence } from '../api/cache';
 import type { Task } from '../api/types';
-import { DEMO_TOKEN } from '../api/demoToken';
 import { useAuth } from '../store/auth';
 import { loadKv, saveKv } from './store';
 
@@ -24,7 +23,7 @@ const LISTS = ['/attendance/today', '/tasks?status=IN_PROGRESS,ASSIGNED', '/task
 /** Fetches the working data and every open job's details into the cache. Silent when there is no signal. */
 export async function prefetchWork() {
   const { token, user } = useAuth.getState();
-  if (!token || token === DEMO_TOKEN || user?.role !== 'TECHNICIAN') return;
+  if (!token || user?.role !== 'TECHNICIAN') return;
   try {
     const results = await Promise.all(
       LISTS.map(async (p) => {

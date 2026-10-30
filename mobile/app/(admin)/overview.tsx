@@ -25,7 +25,6 @@ import {
 import { useApi } from '../../src/hooks/useApi';
 import { useAuth } from '../../src/store/auth';
 import type { ApprovalSummary } from '../../src/api/approvals';
-import { DemoNotice } from '../../src/components/DemoNotice';
 import { requestScan } from '../../src/store/bridge';
 import { colors, fonts } from '../../src/theme';
 import { duration, firstName } from '../../src/utils/format';
@@ -287,7 +286,6 @@ export default function Overview() {
         </View>
       </NotchCard>
 
-      <DemoNotice />
 
       <QuickActions items={actions} action={managers ? { label: manage ? 'Done' : 'Manage', active: manage, onPress: () => setManage((m) => !m) } : undefined} />
 

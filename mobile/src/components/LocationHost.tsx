@@ -3,7 +3,6 @@ import { Animated, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname } from 'expo-router';
 import { api } from '../api/client';
-import { DEMO_TOKEN } from '../api/demoToken';
 import type { User } from '../api/types';
 import { useAuth } from '../store/auth';
 import { useLocation } from '../store/location';
@@ -72,10 +71,9 @@ export async function disableLocationSharing() {
  */
 export function LocationHost() {
   const user = useAuth((s) => s.user);
-  const demo = useAuth((s) => s.token === DEMO_TOKEN);
   const dismissed = useLocation((s) => s.promptDismissed);
   const path = usePathname();
-  const asks = !!user && !demo && (user.role === 'TECHNICIAN' || user.role === 'CUSTOMER');
+  const asks = !!user && (user.role === 'TECHNICIAN' || user.role === 'CUSTOMER');
 
   // The saved profile may predate the location question: fetch the current answer once per sign-in
   const checked = useRef<string | null>(null);
@@ -92,7 +90,7 @@ export function LocationHost() {
   }, [asks, user]);
 
   // Technicians who said yes: follow the phone and report it
-  const tracking = !!user && !demo && user.role === 'TECHNICIAN' && user.locationConsent === true;
+  const tracking = !!user && user.role === 'TECHNICIAN' && user.locationConsent === true;
   useEffect(() => {
     if (!tracking) return;
     let lastSent: Fix | null = null;

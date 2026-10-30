@@ -3,7 +3,6 @@ import { AppState, Platform } from 'react-native';
 import * as Application from 'expo-application';
 import { api, ApiError } from '../api/client';
 import type { CapturePurpose } from '../api/types';
-import { DEMO_TOKEN } from '../api/demoToken';
 import type { CaptureResult } from '../store/bridge';
 import { useAuth } from '../store/auth';
 import { toast } from '../store/feedback';
@@ -64,7 +63,6 @@ async function persist() {
   await saveQueue(items);
 }
 
-export const isDemoSession = () => useAuth.getState().token === DEMO_TOKEN;
 
 async function deviceId() {
   try {
@@ -137,7 +135,7 @@ async function sendOne(item: QueuedAction): Promise<Outcome> {
 
 /** Sends everything that is waiting, oldest first, stopping at the first thing that needs a signal. */
 export async function syncNow() {
-  if (running || isDemoSession() || !useAuth.getState().token) return;
+  if (running || !useAuth.getState().token) return;
   running = true;
   try {
     await ready();
