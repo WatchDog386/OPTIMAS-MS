@@ -23,7 +23,7 @@ account; the app forces the password-change screen until it is cleared.
 | POST | `/users` | S A | `{ staffNo, name, email?, phone?, role, region?, password?, customerAccount?, address? }` — no password → a one-time temporary password is returned as `temporaryPassword`. Customers sign in with `customerAccount`. Supervisors cannot create admins |
 | PATCH | `/users/:id` | S A | profile fields, `role`, `active`. Refuses: changing your own role or deactivating yourself, removing the last active admin, deactivating someone still holding devices (`HOLDS_DEVICES`), converting staff ↔ customer |
 | POST | `/users/:id/reset-password` | S A | → `{ temporaryPassword }`; the user must set a new one at next sign-in |
-| POST | `/users/onboard-customer` | T S A | `{ name, phone, address, email?, customerAccount?, lat?, lng?, taskId? }` — creates the customer's app login on site (account number generated as `OPT-CUS-#####` if not given; a technician only on their own job). → `{ user, loginId, temporaryPassword }`; links the job to the account |
+| POST | `/users/onboard-customer` | T S A | `{ name, phone, address, email?, customerAccount?, lat?, lng?, taskId? }` — creates the customer's app login on site (account number generated as `FBI-CUS-#####` if not given; a technician only on their own job). → `{ user, loginId, temporaryPassword }`; links the job to the account |
 
 ## Search & audit
 | Method | Path | Who | Body / notes |

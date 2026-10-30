@@ -1,7 +1,7 @@
 /**
  * Creates (or resets the password of) an administrator account.
  *
- *   node dist/scripts/create-admin.js --staff OPT-ADM-001 --name "Jane Doe" --email admin@optimas.co.ke --password '<strong password>'
+ *   node dist/scripts/create-admin.js --staff FBI-ADM-001 --name "Jane Doe" --email admin@optimas.co.ke --password '<strong password>'
  *
  * In Docker: docker compose exec api node dist/scripts/create-admin.js --staff ... (see docs/DEPLOYMENT.md)
  */

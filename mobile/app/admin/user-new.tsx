@@ -7,28 +7,28 @@ import { useApi } from '../../src/hooks/useApi';
 import { useAuth } from '../../src/store/auth';
 import { colors } from '../../src/theme';
 
-/** Staff-number prefixes per role (OPT-TEC-001, OPT-ADM-002 …). */
+/** Staff-number prefixes per role (FBI-TEC-001, FBI-ADM-002 …). */
 const STAFF_PREFIX: Partial<Record<Role, string>> = { ADMIN: 'ADM', SUPERVISOR: 'SUP', STOREKEEPER: 'STR', TECHNICIAN: 'TEC' };
 
-/** The next number of the form OPT-XXX-### that is not taken yet. */
+/** The next number of the form FBI-XXX-### that is not taken yet. */
 function suggestStaffNo(list: { staffNo: string }[], code: string): string {
   let max = 0;
-  const re = new RegExp(`^OPT-${code}-(\\d+)$`);
+  const re = new RegExp(`^FBI-${code}-(\\d+)$`);
   for (const u of list) {
     const m = re.exec(u.staffNo);
     if (m) max = Math.max(max, Number(m[1]));
   }
-  return `OPT-${code}-${String(max + 1).padStart(3, '0')}`;
+  return `FBI-${code}-${String(max + 1).padStart(3, '0')}`;
 }
 
 /** The next five-digit account number after the highest one on record. */
 function suggestAccountNo(list: { staffNo: string }[]): string {
   let max = 9999;
   for (const u of list) {
-    const m = /^OPT-CUS-(\d+)$/.exec(u.staffNo);
+    const m = /^FBI-CUS-(\d+)$/.exec(u.staffNo);
     if (m) max = Math.max(max, Number(m[1]));
   }
-  return `OPT-CUS-${String(max + 1).padStart(5, '0')}`;
+  return `FBI-CUS-${String(max + 1).padStart(5, '0')}`;
 }
 
 /** Create a staff member or a customer login. The server issues a one-time password. */
@@ -104,9 +104,9 @@ export default function UserNew() {
       <Segmented options={roles} value={role} onChange={setRole} />
       <Glass strong style={{ gap: 14 }}>
         {customer ? (
-          <Input label="Account number" icon="card-outline" autoCapitalize="characters" placeholder="OPT-CUS-12345" value={form.customerAccount} onChangeText={set('customerAccount')} error={errors.customerAccount} />
+          <Input label="Account number" icon="card-outline" autoCapitalize="characters" placeholder="FBI-CUS-12345" value={form.customerAccount} onChangeText={set('customerAccount')} error={errors.customerAccount} />
         ) : (
-          <Input label="Staff number" icon="id-card-outline" autoCapitalize="characters" placeholder="OPT-TEC-004" value={form.staffNo} onChangeText={set('staffNo')} error={errors.staffNo} />
+          <Input label="Staff number" icon="id-card-outline" autoCapitalize="characters" placeholder="FBI-TEC-004" value={form.staffNo} onChangeText={set('staffNo')} error={errors.staffNo} />
         )}
         <Input label={customer ? 'Customer / premises name' : 'Full name'} icon="person-outline" value={form.name} onChangeText={set('name')} error={errors.name} />
         <Input label="Phone" icon="call-outline" keyboardType="phone-pad" placeholder="+2547…" value={form.phone} onChangeText={set('phone')} error={errors.phone} />

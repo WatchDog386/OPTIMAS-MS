@@ -73,7 +73,7 @@ export default function Login() {
 
   const help = () => {
     setMenu(false);
-    const msg = 'Staff: sign in with your staff number (e.g. OPT-TEC-001).\nCustomers: use your Optimas account number.\n\nForgot your password? Ask your supervisor or call Optimas support.';
+    const msg = 'Staff: sign in with your staff number (e.g. FBI-TEC-001).\nCustomers: use your Optimas account number.\n\nForgot your password? Ask your supervisor or call Optimas support.';
     void alertDialog({ title: 'Signing in', message: msg, icon: 'help-buoy-outline', confirmLabel: 'Got it' });
   };
 
@@ -120,7 +120,7 @@ export default function Login() {
                 <Input
                   label="Staff or account number"
                   icon="id-card-outline"
-                  placeholder="e.g. OPT-TEC-001"
+                  placeholder="e.g. FBI-TEC-001"
                   autoCapitalize="characters"
                   autoCorrect={false}
                   autoComplete="username"

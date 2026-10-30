@@ -4,7 +4,7 @@ import { api, auth, login, newTechnician, PASSWORD } from './helpers';
 describe('access follows the account, not just the token', () => {
   let admin: string;
   beforeAll(async () => {
-    admin = (await login('OPT-ADM-001')).token;
+    admin = (await login('FBI-ADM-001')).token;
   });
 
   it('locks out a deactivated person on their very next request', async () => {
@@ -44,10 +44,10 @@ describe('platform safeguards', () => {
 describe('manager insights', () => {
   let admin: string, sup: string, tech: string, customer: string;
   beforeAll(async () => {
-    admin = (await login('OPT-ADM-001')).token;
-    sup = (await login('OPT-SUP-001', PASSWORD)).token;
-    tech = (await login('OPT-TEC-001')).token;
-    customer = (await login('OPT-CUS-10421')).token;
+    admin = (await login('FBI-ADM-001')).token;
+    sup = (await login('FBI-SUP-001', PASSWORD)).token;
+    tech = (await login('FBI-TEC-001')).token;
+    customer = (await login('FBI-CUS-10421')).token;
   });
 
   const paths = ['/insights/leaderboard?range=week', '/insights/leaderboard?range=month', '/insights/map', '/insights/charts?days=14', '/insights/ratings'];

@@ -14,25 +14,25 @@ async function main() {
   }
   const passwordHash = await bcrypt.hash('Optimas@2026', 10);
   const people: { staffNo: string; name: string; email: string; role: Role; region: string; phone: string }[] = [
-    { staffNo: 'OPT-ADM-001', name: 'Grace Wanjiru', email: 'admin@optimas.co.ke', role: 'ADMIN', region: 'HQ', phone: '+254700000001' },
-    { staffNo: 'OPT-SUP-001', name: 'Daniel Otieno', email: 'supervisor@optimas.co.ke', role: 'SUPERVISOR', region: 'Nairobi', phone: '+254700000002' },
-    { staffNo: 'OPT-STR-001', name: 'Mercy Achieng', email: 'store@optimas.co.ke', role: 'STOREKEEPER', region: 'Nairobi', phone: '+254700000003' },
-    { staffNo: 'OPT-TEC-001', name: 'Brian Kiprono', email: 'brian@optimas.co.ke', role: 'TECHNICIAN', region: 'Westlands', phone: '+254700000011' },
-    { staffNo: 'OPT-TEC-002', name: 'Kevin Mwangi', email: 'kevin@optimas.co.ke', role: 'TECHNICIAN', region: 'Kilimani', phone: '+254700000012' },
-    { staffNo: 'OPT-TEC-003', name: 'Faith Njeri', email: 'faith@optimas.co.ke', role: 'TECHNICIAN', region: 'Kasarani', phone: '+254700000013' },
+    { staffNo: 'FBI-ADM-001', name: 'Grace Wanjiru', email: 'admin@optimas.co.ke', role: 'ADMIN', region: 'HQ', phone: '+254700000001' },
+    { staffNo: 'FBI-SUP-001', name: 'Daniel Otieno', email: 'supervisor@optimas.co.ke', role: 'SUPERVISOR', region: 'Nairobi', phone: '+254700000002' },
+    { staffNo: 'FBI-STR-001', name: 'Mercy Achieng', email: 'store@optimas.co.ke', role: 'STOREKEEPER', region: 'Nairobi', phone: '+254700000003' },
+    { staffNo: 'FBI-TEC-001', name: 'Brian Kiprono', email: 'brian@optimas.co.ke', role: 'TECHNICIAN', region: 'Westlands', phone: '+254700000011' },
+    { staffNo: 'FBI-TEC-002', name: 'Kevin Mwangi', email: 'kevin@optimas.co.ke', role: 'TECHNICIAN', region: 'Kilimani', phone: '+254700000012' },
+    { staffNo: 'FBI-TEC-003', name: 'Faith Njeri', email: 'faith@optimas.co.ke', role: 'TECHNICIAN', region: 'Kasarani', phone: '+254700000013' },
   ];
   const users: Record<string, string> = {};
-  // A demo customer login (Amani Apartments, account OPT-CUS-10421)
+  // A demo customer login (Amani Apartments, account FBI-CUS-10421)
   await prisma.user.upsert({
-    where: { staffNo: 'OPT-CUS-10421' },
+    where: { staffNo: 'FBI-CUS-10421' },
     update: {},
     create: {
-      staffNo: 'OPT-CUS-10421',
+      staffNo: 'FBI-CUS-10421',
       name: 'Amani Apartments B4',
       email: 'amani.b4@example.com',
       phone: '+254711222333',
       role: 'CUSTOMER',
-      customerAccount: 'OPT-CUS-10421',
+      customerAccount: 'FBI-CUS-10421',
       address: 'Ring Rd Kilimani, Nairobi',
       passwordHash,
     },
@@ -41,7 +41,7 @@ async function main() {
     const u = await prisma.user.upsert({ where: { staffNo: p.staffNo }, update: {}, create: { ...p, passwordHash } });
     users[p.staffNo] = u.id;
   }
-  const store = users['OPT-STR-001'];
+  const store = users['FBI-STR-001'];
 
   const catalogue = [
     { sku: 'RTR-HW-AX3', name: 'Huawei AX3 Wi-Fi 6 Router', category: 'ROUTER', tracking: 'SERIALIZED', unit: 'pcs', unitPrice: 6500, reorderLevel: 10 },
@@ -77,7 +77,7 @@ async function main() {
     }
 
     // Issue a starter kit to each technician: 2 routers pending acceptance + cable and connectors.
-    const techs = ['OPT-TEC-001', 'OPT-TEC-002', 'OPT-TEC-003'].map((s) => users[s]);
+    const techs = ['FBI-TEC-001', 'FBI-TEC-002', 'FBI-TEC-003'].map((s) => users[s]);
     const routers = await prisma.serialUnit.findMany({ where: { itemId: items['RTR-HW-AX3'] }, take: techs.length * 2 });
     for (const [i, techId] of techs.entries()) {
       for (const unit of routers.slice(i * 2, i * 2 + 2)) {
@@ -95,12 +95,12 @@ async function main() {
   }
 
   if ((await prisma.task.count()) === 0) {
-    const sup = users['OPT-SUP-001'];
+    const sup = users['FBI-SUP-001'];
     const jobs = [
-      { title: 'New fibre installation — 20 Mbps', type: 'INSTALLATION', priority: 'HIGH', customerName: 'Amani Apartments, Unit B4', customerPhone: '+254711222333', customerAccount: 'OPT-CUS-10421', address: 'Ring Rd Kilimani, Nairobi', lat: -1.2905, lng: 36.7834, assigneeId: users['OPT-TEC-001'] },
-      { title: 'No internet — LOS red light', type: 'REPAIR', priority: 'URGENT', customerName: 'Mama Njeri Supermarket', customerPhone: '+254722444555', customerAccount: 'OPT-CUS-08817', address: 'Kasarani Mwiki Rd', lat: -1.2208, lng: 36.8986, assigneeId: users['OPT-TEC-003'] },
-      { title: 'Router relocation to 2nd floor', type: 'RELOCATION', priority: 'NORMAL', customerName: 'Peter Kamau', customerPhone: '+254733666777', customerAccount: 'OPT-CUS-09902', address: 'Westlands, Rhapta Rd', lat: -1.2669, lng: 36.8045, assigneeId: users['OPT-TEC-001'] },
-      { title: 'Site survey for business link', type: 'SURVEY', priority: 'LOW', customerName: 'Savannah Logistics Ltd', customerPhone: '+254744888999', address: 'Mombasa Rd, ICD', assigneeId: users['OPT-TEC-002'] },
+      { title: 'New fibre installation — 20 Mbps', type: 'INSTALLATION', priority: 'HIGH', customerName: 'Amani Apartments, Unit B4', customerPhone: '+254711222333', customerAccount: 'FBI-CUS-10421', address: 'Ring Rd Kilimani, Nairobi', lat: -1.2905, lng: 36.7834, assigneeId: users['FBI-TEC-001'] },
+      { title: 'No internet — LOS red light', type: 'REPAIR', priority: 'URGENT', customerName: 'Mama Njeri Supermarket', customerPhone: '+254722444555', customerAccount: 'FBI-CUS-08817', address: 'Kasarani Mwiki Rd', lat: -1.2208, lng: 36.8986, assigneeId: users['FBI-TEC-003'] },
+      { title: 'Router relocation to 2nd floor', type: 'RELOCATION', priority: 'NORMAL', customerName: 'Peter Kamau', customerPhone: '+254733666777', customerAccount: 'FBI-CUS-09902', address: 'Westlands, Rhapta Rd', lat: -1.2669, lng: 36.8045, assigneeId: users['FBI-TEC-001'] },
+      { title: 'Site survey for business link', type: 'SURVEY', priority: 'LOW', customerName: 'Savannah Logistics Ltd', customerPhone: '+254744888999', address: 'Mombasa Rd, ICD', assigneeId: users['FBI-TEC-002'] },
     ] as const;
     for (const [i, j] of jobs.entries()) {
       await prisma.task.create({
@@ -109,7 +109,7 @@ async function main() {
     }
   }
 
-  console.log('✅ Seed complete. Log in with a staff number (e.g. OPT-TEC-001 / OPT-SUP-001) or the customer account OPT-CUS-10421; password Optimas@2026');
+  console.log('✅ Seed complete. Log in with a staff number (e.g. FBI-TEC-001 / FBI-SUP-001) or the customer account FBI-CUS-10421; password Optimas@2026');
 }
 
 main()

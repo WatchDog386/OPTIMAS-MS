@@ -10,9 +10,9 @@ describe('a technician’s day: check-in → job → completion → verification
   let cableId: string;
 
   beforeAll(async () => {
-    admin = (await login('OPT-ADM-001')).token;
-    store = (await login('OPT-STR-001')).token;
-    sup = (await login('OPT-SUP-001')).token;
+    admin = (await login('FBI-ADM-001')).token;
+    store = (await login('FBI-STR-001')).token;
+    sup = (await login('FBI-SUP-001')).token;
     tech = await newTechnician(admin);
     ({ serials } = await receiveSerials(store, 'RTR-HW-AX3', 2));
     cableId = (await itemBySku(store, 'CBL-DROP-1C')).id;
@@ -71,7 +71,7 @@ describe('a technician’s day: check-in → job → completion → verification
     // the installed unit is bound to the customer account
     const trail = await api().get(`/api/v1/inventory/units/${serials[0]}/history`).set(auth(store));
     expect(trail.body.unit.status).toBe('INSTALLED');
-    expect(trail.body.unit.customerAccount).toBe('OPT-CUS-TEST');
+    expect(trail.body.unit.customerAccount).toBe('FBI-CUS-TEST');
     expect(trail.body.unit.movements.map((m: { type: string }) => m.type)).toEqual(['RECEIVE', 'ISSUE', 'ACCEPT', 'INSTALL']);
 
     // verification: rejection needs a reason

@@ -6,12 +6,12 @@ import { prisma } from '../src/lib/prisma';
 describe('sign-in hardening', () => {
   it('answers the same for an unknown account and a wrong password, and locks an account after repeated failures', async () => {
     const unknown = await api().post('/api/v1/auth/login').send({ identifier: 'NOBODY-123', password: 'x' });
-    const wrong = await api().post('/api/v1/auth/login').send({ identifier: 'OPT-STR-001', password: 'wrong' });
+    const wrong = await api().post('/api/v1/auth/login').send({ identifier: 'FBI-STR-001', password: 'wrong' });
     expect(unknown.status).toBe(401);
     expect(wrong.status).toBe(401);
     expect(unknown.body.error.message).toBe(wrong.body.error.message);
 
-    const admin = (await login('OPT-ADM-001')).token;
+    const admin = (await login('FBI-ADM-001')).token;
     const tech = await newTechnician(admin);
     const me = await api().get('/api/v1/auth/me').set(auth(tech.token));
     const id = me.body.user.staffNo;
@@ -22,7 +22,7 @@ describe('sign-in hardening', () => {
   });
 
   it('only accepts real browser push services as push addresses', async () => {
-    const tech = await newTechnician((await login('OPT-ADM-001')).token);
+    const tech = await newTechnician((await login('FBI-ADM-001')).token);
     const keys = { p256dh: 'BOr', auth: 'x' };
     for (const endpoint of ['http://169.254.169.254/latest/meta-data', 'https://internal.example.com/push', 'http://fcm.googleapis.com/fcm/send/abc']) {
       expect((await api().post('/api/v1/notifications/web-push').set(auth(tech.token)).send({ endpoint, keys })).status).toBe(400);
@@ -33,11 +33,11 @@ describe('sign-in hardening', () => {
 
 describe('who sees staff photos', () => {
   it('lets supervisors see check-in selfies but not the store', async () => {
-    const admin = (await login('OPT-ADM-001')).token;
+    const admin = (await login('FBI-ADM-001')).token;
     const tech = await newTechnician(admin);
     const rec = await checkIn(tech.token);
-    const store = (await login('OPT-STR-001')).token;
-    const sup = (await login('OPT-SUP-001')).token;
+    const store = (await login('FBI-STR-001')).token;
+    const sup = (await login('FBI-SUP-001')).token;
     expect((await api().get(`/api/v1/capture/photos/${rec.checkInPhotoId}`).set(auth(store))).status).toBe(403);
     expect((await api().get(`/api/v1/capture/photos/${rec.checkInPhotoId}/info`).set(auth(store))).status).toBe(403);
     expect((await api().get(`/api/v1/capture/photos/${rec.checkInPhotoId}`).set(auth(sup))).status).toBe(200);
@@ -48,7 +48,7 @@ describe('who sees staff photos', () => {
 describe('personal data rights', () => {
   let admin: string;
   beforeAll(async () => {
-    admin = (await login('OPT-ADM-001')).token;
+    admin = (await login('FBI-ADM-001')).token;
   });
 
   it('gives anyone a copy of their own data', async () => {
@@ -86,5 +86,19 @@ describe('personal data rights', () => {
     expect(r.trail).toBeGreaterThanOrEqual(1);
     expect(r.notifications).toBeGreaterThanOrEqual(1);
     expect(await prisma.photo.findUnique({ where: { id: unused } })).toBeNull();
+  });
+});
+
+describe('FBI numbering', () => {
+  it('numbers new customers FBI-CUS-##### in sequence and still signs people in with their old OPT- number', async () => {
+    const admin = (await login('FBI-ADM-001')).token;
+    const tech = await newTechnician(admin);
+    const a = await api().post('/api/v1/users/onboard-customer').set(auth(tech.token)).send({ name: 'Seq One', phone: '+254712000401', address: 'Ngong Rd' });
+    const b = await api().post('/api/v1/users/onboard-customer').set(auth(tech.token)).send({ name: 'Seq Two', phone: '+254712000402', address: 'Ngong Rd' });
+    expect(a.body.loginId).toMatch(/^FBI-CUS-\d{5}$/);
+    expect(Number(b.body.loginId.slice(8))).toBe(Number(a.body.loginId.slice(8)) + 1);
+    const old = await api().post('/api/v1/auth/login').send({ identifier: 'opt-sup-001', password: 'Optimas@2026' });
+    expect(old.status).toBe(200);
+    expect(old.body.user.staffNo).toBe('FBI-SUP-001');
   });
 });

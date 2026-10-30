@@ -4,9 +4,9 @@ import { api, auth, createTask, eventually, login, newTechnician } from './helpe
 describe('customer portal and service requests', () => {
   let admin: string, sup: string, customer: string;
   beforeAll(async () => {
-    admin = (await login('OPT-ADM-001')).token;
-    sup = (await login('OPT-SUP-001')).token;
-    customer = (await login('OPT-CUS-10421')).token;
+    admin = (await login('FBI-ADM-001')).token;
+    sup = (await login('FBI-SUP-001')).token;
+    customer = (await login('FBI-CUS-10421')).token;
   });
 
   it('turns a customer request into a job exactly once and notifies the customer', async () => {
@@ -16,7 +16,7 @@ describe('customer portal and service requests', () => {
     const inbox = await api().get('/api/v1/requests?status=OPEN').set(auth(sup));
     expect(inbox.body.requests.some((r: { id: string }) => r.id === req.body.request.id)).toBe(true);
 
-    const job = await createTask(sup, tech.user.id, { type: 'REPAIR', customerAccount: 'OPT-CUS-10421', requestId: req.body.request.id });
+    const job = await createTask(sup, tech.user.id, { type: 'REPAIR', customerAccount: 'FBI-CUS-10421', requestId: req.body.request.id });
     const dup = await api()
       .post('/api/v1/tasks')
       .set(auth(sup))
@@ -37,7 +37,7 @@ describe('customer portal and service requests', () => {
 
   it('only shows a customer their own account', async () => {
     const tech = await newTechnician(admin);
-    const theirs = await createTask(sup, tech.user.id, { customerAccount: 'OPT-CUS-OTHER' });
+    const theirs = await createTask(sup, tech.user.id, { customerAccount: 'FBI-CUS-OTHER' });
     expect((await api().get(`/api/v1/customer/jobs/${theirs.id}`).set(auth(customer))).status).toBe(404);
     const overview = await api().get('/api/v1/customer/overview').set(auth(customer));
     expect(overview.status).toBe(200);

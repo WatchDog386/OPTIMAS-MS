@@ -4,8 +4,8 @@ import { api, auth, createTask, login, newTechnician } from './helpers';
 describe('search and admin reports', () => {
   let admin: string, sup: string;
   beforeAll(async () => {
-    admin = (await login('OPT-ADM-001')).token;
-    sup = (await login('OPT-SUP-001')).token;
+    admin = (await login('FBI-ADM-001')).token;
+    sup = (await login('FBI-SUP-001')).token;
   });
 
   it('scopes technician search to their own work', async () => {

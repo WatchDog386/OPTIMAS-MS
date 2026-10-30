@@ -162,13 +162,13 @@ npx expo start                # scan the QR code with Expo Go
 
 | Staff no. | Role | Name |
 |---|---|---|
-| `OPT-ADM-001` | Admin | Grace Wanjiru |
-| `OPT-SUP-001` | Supervisor | Daniel Otieno |
-| `OPT-STR-001` | Storekeeper | Mercy Achieng |
-| `OPT-TEC-001` | Technician | Brian Kiprono |
-| `OPT-TEC-002` | Technician | Kevin Mwangi |
-| `OPT-TEC-003` | Technician | Faith Njeri |
-| `OPT-CUS-10421` | Customer | Amani Apartments B4 |
+| `FBI-ADM-001` | Admin | Grace Wanjiru |
+| `FBI-SUP-001` | Supervisor | Daniel Otieno |
+| `FBI-STR-001` | Storekeeper | Mercy Achieng |
+| `FBI-TEC-001` | Technician | Brian Kiprono |
+| `FBI-TEC-002` | Technician | Kevin Mwangi |
+| `FBI-TEC-003` | Technician | Faith Njeri |
+| `FBI-CUS-10421` | Customer | Amani Apartments B4 |
 
 ## Configuration (backend `.env`)
 

@@ -79,7 +79,7 @@ export async function createTask(token: string, assigneeId: string, extra: Recor
   const res = await api()
     .post('/api/v1/tasks')
     .set(auth(token))
-    .send({ title: 'Test installation', type: 'INSTALLATION', customerName: 'Test Customer', customerAccount: 'OPT-CUS-TEST', address: 'Test street', assigneeId, ...extra });
+    .send({ title: 'Test installation', type: 'INSTALLATION', customerName: 'Test Customer', customerAccount: 'FBI-CUS-TEST', address: 'Test street', assigneeId, ...extra });
   if (res.status !== 201) throw new Error(`create task failed ${res.status} ${JSON.stringify(res.body)}`);
   return res.body.task as { id: string; code: string };
 }

@@ -4,7 +4,7 @@ import { api, auth, capture, CHECKLIST, jpeg, login, newTechnician, photoId } fr
 describe('camera-only photo integrity', () => {
   let tech: string;
   beforeAll(async () => {
-    tech = (await newTechnician((await login('OPT-ADM-001')).token)).token;
+    tech = (await newTechnician((await login('FBI-ADM-001')).token)).token;
   });
 
   it('accepts a live capture and flags missing / far-away locations', async () => {
@@ -41,7 +41,7 @@ describe('camera-only photo integrity', () => {
   });
 
   it('refuses another user’s challenge', async () => {
-    const other = (await login('OPT-TEC-002')).token;
+    const other = (await login('FBI-TEC-002')).token;
     const ch = await api().post('/api/v1/capture/challenge').set(auth(other)).send({ purpose: 'CHECK_IN' });
     const res = await api().post('/api/v1/capture/upload').set(auth(tech)).field('challengeId', ch.body.challengeId).field('nonce', ch.body.nonce).attach('photo', jpeg(), 'p.jpg');
     expect(res.status).toBe(404);

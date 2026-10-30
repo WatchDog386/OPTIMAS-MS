@@ -4,7 +4,7 @@ import { api, auth, login } from './helpers';
 describe('authentication', () => {
   let admin: string;
   beforeAll(async () => {
-    admin = (await login('OPT-ADM-001')).token;
+    admin = (await login('FBI-ADM-001')).token;
   });
 
   it('logs in by staff number or email, case-insensitively', async () => {
@@ -13,7 +13,7 @@ describe('authentication', () => {
   });
 
   it('rejects a wrong password with a generic message', async () => {
-    const res = await api().post('/api/v1/auth/login').send({ identifier: 'OPT-TEC-001', password: 'nope' });
+    const res = await api().post('/api/v1/auth/login').send({ identifier: 'FBI-TEC-001', password: 'nope' });
     expect(res.status).toBe(401);
     expect(res.body.error.message).toMatch(/invalid/i);
   });

@@ -4,11 +4,11 @@ import { api, auth, login, newTechnician, receiveSerials } from './helpers';
 describe('role-based access', () => {
   let admin: string, sup: string, store: string, tech: string, customer: string;
   beforeAll(async () => {
-    admin = (await login('OPT-ADM-001')).token;
-    sup = (await login('OPT-SUP-001')).token;
-    store = (await login('OPT-STR-001')).token;
-    tech = (await login('OPT-TEC-001')).token;
-    customer = (await login('OPT-CUS-10421')).token;
+    admin = (await login('FBI-ADM-001')).token;
+    sup = (await login('FBI-SUP-001')).token;
+    store = (await login('FBI-STR-001')).token;
+    tech = (await login('FBI-TEC-001')).token;
+    customer = (await login('FBI-CUS-10421')).token;
   });
 
   it('keeps customers out of every staff endpoint', async () => {
@@ -39,16 +39,16 @@ describe('role-based access', () => {
     expect(asSup.status).toBe(403);
     const tech1 = await api().post('/api/v1/users').set(auth(sup)).send({ staffNo: 'ACC-TEC-1', name: 'New Tech', role: 'TECHNICIAN' });
     expect(tech1.status).toBe(201);
-    const cust = await api().post('/api/v1/users').set(auth(sup)).send({ name: 'New Customer', role: 'CUSTOMER', customerAccount: 'opt-cus-55555' });
+    const cust = await api().post('/api/v1/users').set(auth(sup)).send({ name: 'New Customer', role: 'CUSTOMER', customerAccount: 'fbi-cus-55555' });
     expect(cust.status).toBe(201);
-    expect(cust.body.user.staffNo).toBe('OPT-CUS-55555'); // customers sign in with their account number
+    expect(cust.body.user.staffNo).toBe('FBI-CUS-55555'); // customers sign in with their account number
     const noAcct = await api().post('/api/v1/users').set(auth(sup)).send({ staffNo: 'ACC-C-2', name: 'Bad Customer', role: 'CUSTOMER' });
     expect(noAcct.status).toBe(400);
     expect((await api().post('/api/v1/users').set(auth(store)).send({ staffNo: 'ACC-TEC-2', name: 'Nope', role: 'TECHNICIAN' })).status).toBe(403);
   });
 
   it('protects against lock-outs and orphaned devices', async () => {
-    const me = await login('OPT-ADM-001');
+    const me = await login('FBI-ADM-001');
     expect((await api().patch(`/api/v1/users/${me.user.id}`).set(auth(admin)).send({ active: false })).status).toBe(400);
     expect((await api().patch(`/api/v1/users/${me.user.id}`).set(auth(admin)).send({ role: 'SUPERVISOR' })).status).toBe(400);
 
@@ -75,13 +75,13 @@ describe('role-based access', () => {
 
 describe('customer account edits', () => {
   it('moves the login id with the account number and refuses duplicates', async () => {
-    const sup = (await login('OPT-SUP-001')).token;
-    const a = await api().post('/api/v1/users').set(auth(sup)).send({ name: 'Edit Me', role: 'CUSTOMER', customerAccount: 'OPT-CUS-70001', password: 'Cust-pass-1' });
-    await api().post('/api/v1/users').set(auth(sup)).send({ name: 'Taken', role: 'CUSTOMER', customerAccount: 'OPT-CUS-70002', password: 'Cust-pass-1' });
-    const moved = await api().patch(`/api/v1/users/${a.body.user.id}`).set(auth(sup)).send({ customerAccount: 'opt-cus-70003' });
-    expect(moved.body.user.staffNo).toBe('OPT-CUS-70003');
-    expect((await login('OPT-CUS-70003', 'Cust-pass-1')).user.role).toBe('CUSTOMER');
-    const dup = await api().patch(`/api/v1/users/${a.body.user.id}`).set(auth(sup)).send({ customerAccount: 'OPT-CUS-70002' });
+    const sup = (await login('FBI-SUP-001')).token;
+    const a = await api().post('/api/v1/users').set(auth(sup)).send({ name: 'Edit Me', role: 'CUSTOMER', customerAccount: 'FBI-CUS-70001', password: 'Cust-pass-1' });
+    await api().post('/api/v1/users').set(auth(sup)).send({ name: 'Taken', role: 'CUSTOMER', customerAccount: 'FBI-CUS-70002', password: 'Cust-pass-1' });
+    const moved = await api().patch(`/api/v1/users/${a.body.user.id}`).set(auth(sup)).send({ customerAccount: 'fbi-cus-70003' });
+    expect(moved.body.user.staffNo).toBe('FBI-CUS-70003');
+    expect((await login('FBI-CUS-70003', 'Cust-pass-1')).user.role).toBe('CUSTOMER');
+    const dup = await api().patch(`/api/v1/users/${a.body.user.id}`).set(auth(sup)).send({ customerAccount: 'FBI-CUS-70002' });
     expect(dup.status).toBe(409);
     const blank = await api().patch(`/api/v1/users/${a.body.user.id}`).set(auth(sup)).send({ customerAccount: '' });
     expect(blank.status).toBe(400);

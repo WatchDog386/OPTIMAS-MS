@@ -84,7 +84,7 @@ Create the first administrator (no demo data is loaded in production):
 
 ```bash
 sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env exec api \
-  node dist/scripts/create-admin.js --staff OPT-ADM-001 --name "Full Name" --email it@optimas.co.ke --password 'a-long-unique-password'
+  node dist/scripts/create-admin.js --staff FBI-ADM-001 --name "Full Name" --email it@optimas.co.ke --password 'a-long-unique-password'
 ```
 
 Check it: open `https://ms.optimas.co.ke` (manager web console) and `https://ms.optimas.co.ke/health`.

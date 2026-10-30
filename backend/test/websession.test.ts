@@ -19,7 +19,7 @@ import { api, auth, createTask, login, newTechnician, PASSWORD } from './helpers
 describe('signing out other devices', () => {
   let admin: string;
   beforeAll(async () => {
-    admin = (await login('OPT-ADM-001')).token;
+    admin = (await login('FBI-ADM-001')).token;
   });
 
   it('a password change ends every other session and hands this device a fresh token', async () => {
@@ -57,8 +57,8 @@ describe('web push', () => {
   let admin: string;
   let sup: string;
   beforeAll(async () => {
-    admin = (await login('OPT-ADM-001')).token;
-    sup = (await login('OPT-SUP-001', PASSWORD)).token;
+    admin = (await login('FBI-ADM-001')).token;
+    sup = (await login('FBI-SUP-001', PASSWORD)).token;
   });
 
   const sub = (n: string) => ({ endpoint: `https://fcm.googleapis.com/fcm/send/test-${n}`, keys: { p256dh: 'p256dh-key', auth: 'auth-key' } });

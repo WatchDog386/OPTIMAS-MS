@@ -45,9 +45,11 @@ authRouter.post(
     const { identifier, password } = parse(loginSchema, req.body);
     const key = identifier.toLowerCase();
     if (lockedOut(key)) throw new HttpError(429, 'Too many wrong passwords for this account. Try again in 15 minutes or ask your administrator to reset it.', 'ACCOUNT_LOCKED');
-    const user = await prisma.user.findFirst({
-      where: { OR: [{ staffNo: identifier.toUpperCase() }, { email: identifier.toLowerCase() }] },
-    });
+    const id = identifier.toUpperCase();
+    const user =
+      (await prisma.user.findFirst({ where: { OR: [{ staffNo: id }, { email: identifier.toLowerCase() }] } })) ??
+      // Numbers changed from OPT-… to FBI-…: an old number still finds its account
+      (id.startsWith('OPT-') ? await prisma.user.findUnique({ where: { staffNo: `FBI-${id.slice(4)}` } }) : null);
     const ok = await bcrypt.compare(password, user?.passwordHash ?? DUMMY_HASH);
     if (!user || !ok) {
       recordFail(key);

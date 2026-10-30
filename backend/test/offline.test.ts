@@ -26,8 +26,8 @@ describe('work done offline is recorded when it happened, not when it was sent',
   let tech: { token: string; user: { id: string } };
 
   beforeAll(async () => {
-    sup = (await login('OPT-SUP-001')).token;
-    const admin = (await login('OPT-ADM-001')).token;
+    sup = (await login('FBI-SUP-001')).token;
+    const admin = (await login('FBI-ADM-001')).token;
     tech = await newTechnician(admin);
   });
 

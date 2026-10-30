@@ -12,8 +12,8 @@ async function share(token: string, lat: number, lng: number) {
 describe('live location, tracking and dispatch', () => {
   let admin: string, sup: string;
   beforeAll(async () => {
-    admin = (await login('OPT-ADM-001')).token;
-    sup = (await login('OPT-SUP-001')).token;
+    admin = (await login('FBI-ADM-001')).token;
+    sup = (await login('FBI-SUP-001')).token;
   });
 
   it('only records location after the person said yes, and forgets it when they say no', async () => {
@@ -97,7 +97,7 @@ describe('live location, tracking and dispatch', () => {
 
     // same person again, or to a non-technician
     expect((await api().post(`/api/v1/tasks/${job.id}/forward`).set(auth(sup)).send({ technicianId: near.user.id })).status).toBe(400);
-    const supUser = (await login('OPT-SUP-001')).user;
+    const supUser = (await login('FBI-SUP-001')).user;
     expect((await api().post(`/api/v1/tasks/${job.id}/forward`).set(auth(sup)).send({ technicianId: supUser.id })).status).toBe(400);
   });
 
@@ -113,7 +113,7 @@ describe('live location, tracking and dispatch', () => {
   });
 
   it('shows open customer requests and live technicians on the manager map', async () => {
-    const customer = (await login('OPT-CUS-10421')).token;
+    const customer = (await login('FBI-CUS-10421')).token;
     const req = await api().post('/api/v1/customer/requests').set(auth(customer)).send({ type: 'REPAIR', description: 'Map test request', lat: -1.3, lng: 36.79 });
     expect(req.status).toBe(201);
     const map = await api().get('/api/v1/insights/map').set(auth(sup));
@@ -121,7 +121,7 @@ describe('live location, tracking and dispatch', () => {
     expect(row).toMatchObject({ lat: -1.3, lng: 36.79, customerName: expect.any(String) });
     // the job made from it starts at the customer's pin
     const tech = await newTechnician(admin);
-    const job = await createTask(sup, tech.user.id, { type: 'REPAIR', customerAccount: 'OPT-CUS-10421', requestId: req.body.request.id });
+    const job = await createTask(sup, tech.user.id, { type: 'REPAIR', customerAccount: 'FBI-CUS-10421', requestId: req.body.request.id });
     const detail = await api().get(`/api/v1/tasks/${job.id}`).set(auth(sup));
     expect(detail.body.task).toMatchObject({ lat: -1.3, lng: 36.79 });
     // and the customer can follow the technician to it
@@ -137,8 +137,8 @@ describe('live location, tracking and dispatch', () => {
 describe('customer onboarding by technicians', () => {
   let admin: string, sup: string;
   beforeAll(async () => {
-    admin = (await login('OPT-ADM-001')).token;
-    sup = (await login('OPT-SUP-001')).token;
+    admin = (await login('FBI-ADM-001')).token;
+    sup = (await login('FBI-SUP-001')).token;
   });
 
   it('creates a login for the customer on the job, links the job, and the customer can sign in', async () => {
@@ -149,7 +149,7 @@ describe('customer onboarding by technicians', () => {
       .set(auth(tech.token))
       .send({ name: 'Wanjiru Kamau', phone: '+254712000111', address: 'Lavington, Nairobi', lat: -1.28, lng: 36.77, taskId: job.id });
     expect(res.status).toBe(201);
-    expect(res.body.loginId).toMatch(/^OPT-CUS-\d{5}$/);
+    expect(res.body.loginId).toMatch(/^FBI-CUS-\d{5}$/);
     expect(res.body.user.role).toBe('CUSTOMER');
     const session = await login(res.body.loginId, res.body.temporaryPassword);
     expect(session.user.mustChangePassword).toBe(true);
@@ -170,14 +170,14 @@ describe('customer onboarding by technicians', () => {
     const theirs = await createTask(sup, other.user.id);
     const blocked = await api().post('/api/v1/users/onboard-customer').set(auth(tech.token)).send({ name: 'Someone', phone: '+254712000113', address: 'Kileleshwa', taskId: theirs.id });
     expect(blocked.status).toBe(403);
-    const acct = `OPT-CUS-T${Date.now().toString().slice(-6)}`;
+    const acct = `FBI-CUS-T${Date.now().toString().slice(-6)}`;
     const ok = await api().post('/api/v1/users/onboard-customer').set(auth(tech.token)).send({ name: 'Given Number', phone: '+254712000114', address: 'Kileleshwa', customerAccount: acct.toLowerCase() });
     expect(ok.status).toBe(201);
     expect(ok.body.loginId).toBe(acct);
     const bad = await api().post('/api/v1/users/onboard-customer').set(auth(tech.token)).send({ name: 'X', phone: 'abc', address: 'Kileleshwa' });
     expect(bad.status).toBe(400);
     // storekeepers and customers cannot onboard
-    const store = (await login('OPT-STR-001')).token;
+    const store = (await login('FBI-STR-001')).token;
     expect((await api().post('/api/v1/users/onboard-customer').set(auth(store)).send({ name: 'Y', phone: '+254712000115', address: 'Kileleshwa' })).status).toBe(403);
   });
 });
@@ -185,8 +185,8 @@ describe('customer onboarding by technicians', () => {
 describe('chat', () => {
   let admin: string, sup: string;
   beforeAll(async () => {
-    admin = (await login('OPT-ADM-001')).token;
-    sup = (await login('OPT-SUP-001')).token;
+    admin = (await login('FBI-ADM-001')).token;
+    sup = (await login('FBI-SUP-001')).token;
   });
 
   async function onboarded(techToken: string, taskId?: string) {
@@ -226,7 +226,7 @@ describe('chat', () => {
     // the job itself leads to the same conversation, from either side
     expect((await api().post('/api/v1/chat/conversations').set(auth(tech.token)).send({ taskId: job.id, with: 'customer' })).body.conversation.id).toBe(id);
     expect((await api().post('/api/v1/chat/conversations').set(auth(customer.token)).send({ taskId: job.id, with: 'technician' })).body.conversation.id).toBe(id);
-    const noApp = await createTask(sup, tech.user.id, { customerAccount: 'OPT-CUS-NOAPP' });
+    const noApp = await createTask(sup, tech.user.id, { customerAccount: 'FBI-CUS-NOAPP' });
     expect((await api().post('/api/v1/chat/conversations').set(auth(tech.token)).send({ taskId: noApp.id, with: 'customer' })).status).toBe(404);
 
     // a technician with no job for this customer can neither start a chat nor read this one
@@ -268,7 +268,7 @@ describe('chat', () => {
 
   it('lets office and technicians message each other, but not customers with each other', async () => {
     const tech = await newTechnician(admin);
-    const supUser = (await login('OPT-SUP-001')).user;
+    const supUser = (await login('FBI-SUP-001')).user;
     const dm = await api().post('/api/v1/chat/conversations').set(auth(tech.token)).send({ userId: supUser.id });
     expect(dm.status).toBe(201);
     expect((await api().post(`/api/v1/chat/conversations/${dm.body.conversation.id}/messages`).set(auth(sup)).send({ body: 'Go to Kilimani first' })).status).toBe(201);

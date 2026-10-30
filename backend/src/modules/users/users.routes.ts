@@ -232,7 +232,13 @@ const onboardSchema = z.object({
   taskId: z.string().optional(),
 });
 
-const newAccountNumber = () => `OPT-CUS-${String(Math.floor(10000 + Math.random() * 90000))}`;
+/** The next customer account number after the highest on record (FBI-CUS-10000, FBI-CUS-10001 …). */
+async function newAccountNumber(offset = 0): Promise<string> {
+  const rows = await prisma.$queryRaw<{ n: number | null }[]>`
+    SELECT MAX(CAST(SUBSTRING("staffNo" FROM 9) AS INTEGER)) AS n FROM "User" WHERE "staffNo" ~ '^FBI-CUS-[0-9]+$'`;
+  const next = Math.max(9999, Number(rows[0]?.n ?? 0)) + 1 + offset;
+  return `FBI-CUS-${String(next).padStart(5, '0')}`;
+}
 
 /**
  * Onboarding: a technician (or the office) creates the app login for the customer they are installing for.
@@ -258,9 +264,9 @@ usersRouter.post(
     const temp = temporaryPassword();
     const passwordHash = await bcrypt.hash(temp, 10);
     let user: User | null = null;
-    // A generated account number can (rarely) collide: try a few
+    // Two onboardings at the same moment can pick the same next number: try the following one
     for (let attempt = 0; !user && attempt < 5; attempt += 1) {
-      const loginId = account ?? newAccountNumber();
+      const loginId = account ?? (await newAccountNumber(attempt));
       try {
         user = await prisma.user.create({
           data: {

@@ -11,8 +11,8 @@ describe('the supervisor review desk', () => {
   let taskId: string;
 
   beforeAll(async () => {
-    admin = (await login('OPT-ADM-001')).token;
-    sup = (await login('OPT-SUP-001')).token;
+    admin = (await login('FBI-ADM-001')).token;
+    sup = (await login('FBI-SUP-001')).token;
     tech = await newTechnician(admin);
     other = await newTechnician(admin);
     attendanceId = (await checkIn(tech.token)).id;
