@@ -87,7 +87,7 @@ export function createApp() {
   api.use('/approvals', requireAuth, requireRole(ROLES.MANAGERS), approvalsRouter);
   api.use('/notifications', requireAuth, notificationsRouter);
   api.use('/exports', requireAuth, staff, exportsRouter);
-  api.use('/requests', requireAuth, requireRole(ROLES.MANAGERS), requestsRouter);
+  api.use('/requests', requireAuth, requireRole(ROLES.CARE), requestsRouter);
   api.use('/search', requireAuth, staff, searchRouter);
   api.use('/audit', requireAuth, requireRole(ROLES.ADMIN), auditRouter);
   api.use('/customer', requireAuth, requireRole(ROLES.CUSTOMER), customerRouter);

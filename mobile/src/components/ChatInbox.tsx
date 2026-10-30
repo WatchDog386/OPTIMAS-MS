@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ConversationRow, Tick } from '../api/field';
 import { useApi } from '../hooks/useApi';
-import { useAuth } from '../store/auth';
+import { homeFor, useAuth } from '../store/auth';
 import { colors, fonts, space } from '../theme';
 import { openChatWith } from '../utils/chat';
 import { Avatar } from './Avatar';
@@ -68,7 +68,7 @@ export function ChatInbox({ tab }: { tab?: boolean }) {
   return (
     <View style={{ flex: 1 }}>
       <Screen refreshing={refreshing} onRefresh={refresh}>
-        <PageHeader title="Chats" onBack={tab ? () => router.replace('/home') : undefined} />
+        <PageHeader title="Chats" onBack={tab ? () => router.replace(homeFor(role) as never) : undefined} />
 
         <View style={styles.search}>
           <Ionicons name="search" size={20} color={colors.textMuted} />

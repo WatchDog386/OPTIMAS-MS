@@ -54,8 +54,10 @@ export const useAuth = create<AuthState>((set) => ({
 export const isManager = (role?: Role) => role === 'ADMIN' || role === 'SUPERVISOR' || role === 'STOREKEEPER';
 export const isCustomer = (role?: Role) => role === 'CUSTOMER';
 
+export const isCare = (role?: Role) => role === 'CUSTOMER_CARE';
+
 /** Landing route for each kind of user. */
-export const homeFor = (role?: Role) => (role === 'CUSTOMER' ? '/portal' : isManager(role) ? '/overview' : '/home');
+export const homeFor = (role?: Role) => (role === 'CUSTOMER' ? '/portal' : role === 'CUSTOMER_CARE' ? '/care' : isManager(role) ? '/overview' : '/home');
 
 /** Where to go right after signing in: a forced password change comes first. */
 export const afterLogin = (user: User) => (user.mustChangePassword ? '/change-password?forced=1' : homeFor(user.role));

@@ -48,7 +48,7 @@ export default function Users() {
             iconTint={colors.text}
             title={u.name}
             subtitle={u.role === 'CUSTOMER' ? [u.customerAccount, u.phone].filter(Boolean).join(' · ') : `${u.staffNo} · ${humanize(u.role)}${u.region ? ` · ${u.region}` : ''}`}
-            right={u.mustChangePassword ? <Badge label="New" tone="info" dot={false} /> : u.role === 'TECHNICIAN' && u.unitsInCustody ? <Badge label={`${u.unitsInCustody} dev`} tone="neutral" dot={false} /> : undefined}
+            right={u.mustChangePassword ? <Badge label="Not signed in · resend" tone="info" dot={false} /> : u.role === 'TECHNICIAN' && u.unitsInCustody ? <Badge label={`${u.unitsInCustody} dev`} tone="neutral" dot={false} /> : undefined}
             onPress={() => router.push(`/admin/user/${u.id}`)}
           />
         ))}

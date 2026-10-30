@@ -1,4 +1,4 @@
-export type Role = 'ADMIN' | 'SUPERVISOR' | 'STOREKEEPER' | 'TECHNICIAN' | 'CUSTOMER';
+export type Role = 'ADMIN' | 'SUPERVISOR' | 'STOREKEEPER' | 'TECHNICIAN' | 'CUSTOMER' | 'CUSTOMER_CARE';
 export type CapturePurpose = 'CHECK_IN' | 'CHECK_OUT' | 'TASK_START' | 'TASK_END';
 export type TaskStatus = 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'VERIFIED' | 'REJECTED' | 'CANCELLED';
 export type TaskType = 'INSTALLATION' | 'REPAIR' | 'MAINTENANCE' | 'RELOCATION' | 'SURVEY';

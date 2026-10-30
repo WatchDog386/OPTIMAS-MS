@@ -9,9 +9,13 @@ import { colors, fonts } from '../../src/theme';
 import { call } from '../../src/utils/contact';
 import { dateTime, humanize } from '../../src/utils/format';
 import { toast } from '../../src/store/feedback';
+import { useAuth } from '../../src/store/auth';
+import { openChatWith } from '../../src/utils/chat';
 
 /** Supervisor inbox of customer service requests → turn into jobs, or close with a note. */
 export default function Requests() {
+  // Supervisors and admins turn requests into jobs; customer care answers the customer
+  const dispatcher = useAuth((s) => s.user?.role === 'ADMIN' || s.user?.role === 'SUPERVISOR');
   const [status, setStatus] = useState<RequestStatus>('OPEN');
   const { data, refresh, refreshing, loading, reload } = useApi<{ requests: ServiceRequest[] }>(`/requests?status=${status}`);
   const [closing, setClosing] = useState<string | null>(null);
@@ -93,7 +97,11 @@ export default function Requests() {
               <View style={styles.row}>
                 {r.phone ?? r.customer?.phone ? <Button label="Call" icon="call" variant="secondary" style={{ flex: 1 }} onPress={() => call(r.phone ?? r.customer?.phone)} /> : null}
                 <Button label="Close" variant="secondary" style={{ flex: 1 }} onPress={() => setClosing(r.id)} />
-                <Button label="Assign" icon="add" style={{ flex: 1.2 }} onPress={() => toJob(r)} />
+                {dispatcher ? (
+                  <Button label="Assign" icon="add" style={{ flex: 1.2 }} onPress={() => toJob(r)} />
+                ) : r.customer ? (
+                  <Button label="Message" icon="chatbubble-ellipses-outline" style={{ flex: 1.2 }} onPress={() => openChatWith({ customerId: r.customer!.id })} />
+                ) : null}
               </View>
             )
           ) : null}

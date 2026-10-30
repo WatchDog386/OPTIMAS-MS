@@ -16,8 +16,8 @@ searchRouter.get(
     const user = me(req);
     const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
     if (q.length < 2) throw badRequest('Type at least 2 characters');
-    const store = ROLES.STORE.includes(user.role);
-    const managers = ROLES.MANAGERS.includes(user.role);
+    const store = ROLES.JOB_VIEWERS.includes(user.role);
+    const managers = ROLES.CARE.includes(user.role);
     const like = { contains: q, mode: 'insensitive' as const };
 
     const [tasks, units, staff, customers, requests] = await Promise.all([

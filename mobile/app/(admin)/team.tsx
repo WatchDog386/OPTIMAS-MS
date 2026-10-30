@@ -53,7 +53,7 @@ export default function Team() {
                 left={<Avatar name={u.name} tint={u.today ? colors.primary : colors.textDim} />}
                 title={u.name}
                 subtitle={`${humanize(u.role)} · ${u.openTasks} open job(s) · ${u.unitsInCustody} device(s)`}
-                right={<Badge label={status.label} tone={status.tone} />}
+                right={u.mustChangePassword && u.active ? <Badge label="Not signed in · resend" tone="info" dot={false} /> : <Badge label={status.label} tone={status.tone} />}
                 onPress={role === 'ADMIN' || role === 'SUPERVISOR' ? () => router.push(`/admin/user/${u.id}`) : undefined}
               />
             </Reveal>

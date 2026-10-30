@@ -7,7 +7,7 @@ import { ah } from '../../middleware/async';
 import { me } from '../../middleware/auth';
 import { parse } from '../../middleware/validate';
 import { notify } from '../notifications/notifications.service';
-import { MANAGER_ROLES, chatBlockedReason, isManagerRole, linkingJobs, pairKey } from './chat.service';
+import { SUPPORT_ROLES, chatBlockedReason, isManagerRole, isSupportRole, linkingJobs, pairKey } from './chat.service';
 
 /** Messaging between technicians, customers and the office. The app polls; there is no socket to keep open. */
 export const chatRouter = Router();
@@ -26,7 +26,8 @@ async function loadConversation(id: string) {
 /** Members can read; on a support line or a team group every supervisor and admin can too. */
 function assertAccess(conv: ConvWithMembers, user: Me) {
   if (conv.members.some((m) => m.userId === user.id)) return;
-  if ((conv.kind === 'SUPPORT' || conv.kind === 'TEAM') && isManagerRole(user.role)) return;
+  if (conv.kind === 'SUPPORT' && isSupportRole(user.role)) return;
+  if (conv.kind === 'TEAM' && isManagerRole(user.role)) return;
   throw forbidden('You are not part of this conversation');
 }
 
@@ -68,7 +69,7 @@ function describe(conv: ConvWithMembers, user: Me) {
     return { title: customer?.name ?? 'Customer', subtitle: `Customer${customer?.customerAccount ? ` · ${customer.customerAccount}` : ''}`, role: 'CUSTOMER' as const, other: customer ?? null };
   }
   const other = conv.members.find((m) => m.userId !== user.id)?.user;
-  const label: Record<Role, string> = { ADMIN: 'Admin', SUPERVISOR: 'Supervisor', STOREKEEPER: 'Store', TECHNICIAN: 'Technician', CUSTOMER: 'Customer' };
+  const label: Record<Role, string> = { ADMIN: 'Admin', SUPERVISOR: 'Supervisor', STOREKEEPER: 'Store', TECHNICIAN: 'Technician', CUSTOMER: 'Customer', CUSTOMER_CARE: 'Customer care' };
   return { title: other?.name ?? 'Conversation', subtitle: other ? `${label[other.role]}${other.role === 'CUSTOMER' && other.customerAccount ? ` · ${other.customerAccount}` : ''}` : '', role: other?.role ?? null, other: other ?? null };
 }
 
@@ -79,7 +80,11 @@ async function unreadIn(conv: ConvWithMembers, user: Me) {
 
 async function myConversations(user: Me) {
   return (await prisma.conversation.findMany({
-    where: isManagerRole(user.role) ? { OR: [{ members: { some: { userId: user.id } } }, { kind: { in: ['SUPPORT', 'TEAM'] } }] } : { members: { some: { userId: user.id } } },
+    where: isManagerRole(user.role)
+      ? { OR: [{ members: { some: { userId: user.id } } }, { kind: { in: ['SUPPORT', 'TEAM'] } }] }
+      : isSupportRole(user.role)
+        ? { OR: [{ members: { some: { userId: user.id } } }, { kind: 'SUPPORT' }] }
+        : { members: { some: { userId: user.id } } },
     include: { members: { include: { user: memberUser } }, messages: { orderBy: { createdAt: 'desc' }, take: 1, include: { sender: { select: { name: true } } } } },
     orderBy: { lastMessageAt: 'desc' },
     take: 60,
@@ -158,10 +163,10 @@ chatRouter.get(
       res.json({ support: true, contacts });
       return;
     }
-    const staffRoles: Role[] = ['ADMIN', 'SUPERVISOR', 'STOREKEEPER', 'TECHNICIAN'];
+    const staffRoles: Role[] = ['ADMIN', 'SUPERVISOR', 'STOREKEEPER', 'TECHNICIAN', 'CUSTOMER_CARE'];
     const staff = await prisma.user.findMany({ where: { active: true, role: { in: staffRoles }, id: { not: user.id }, ...search }, select, orderBy: { name: 'asc' }, take: 50 });
     contacts = staff;
-    if (isManagerRole(user.role) && q) {
+    if (isSupportRole(user.role) && q) {
       contacts = contacts.concat(await prisma.user.findMany({ where: { active: true, role: 'CUSTOMER', OR: [...search.OR!, { customerAccount: { contains: q, mode: 'insensitive' } }] }, select, take: 20 }));
     }
     if (user.role === 'TECHNICIAN') {
@@ -211,7 +216,7 @@ chatRouter.post(
     if ('support' in body || 'customerId' in body) {
       const customerId = 'support' in body ? user.id : body.customerId;
       if ('support' in body && user.role !== 'CUSTOMER') throw badRequest('Only customers have a support line');
-      if ('customerId' in body && !isManagerRole(user.role)) throw forbidden();
+      if ('customerId' in body && !isSupportRole(user.role)) throw forbidden();
       const customer = await prisma.user.findUnique({ where: { id: customerId } });
       if (!customer || customer.role !== 'CUSTOMER') throw notFound('Customer');
       conv = await prisma.conversation.upsert({
@@ -306,7 +311,7 @@ chatRouter.post(
     let to = conv.members.map((m) => m.userId).filter((id) => id !== user.id);
     if (conv.kind === 'SUPPORT') {
       if (user.role === 'CUSTOMER') {
-        const office = await prisma.user.findMany({ where: { role: { in: MANAGER_ROLES }, active: true }, select: { id: true } });
+        const office = await prisma.user.findMany({ where: { role: { in: SUPPORT_ROLES }, active: true }, select: { id: true } });
         to = office.map((u) => u.id);
       } else to = conv.customerId ? [conv.customerId] : [];
     }

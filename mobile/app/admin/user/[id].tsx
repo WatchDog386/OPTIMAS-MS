@@ -55,6 +55,13 @@ export default function UserProfile() {
       await reload();
     });
 
+  // For people who never got their details: no warning needed, they have not chosen a password yet
+  const resend = () =>
+    run('resend', async () => {
+      setTemp((await api<{ temporaryPassword: string }>(`/users/${u.id}/reset-password`, { body: {} })).temporaryPassword);
+      await reload();
+    });
+
   const toggleActive = () =>
     run('active', async () => {
       const deactivate = u.active;
@@ -79,7 +86,17 @@ export default function UserProfile() {
         {u.role === 'TECHNICIAN' ? <Button label="See their day, with photos" icon="time-outline" onPress={() => router.push(`/admin/activity?userId=${u.id}`)} style={{ marginTop: 8 }} /> : null}
       </Glass>
 
-      {temp ? <TempPasswordCard loginId={u.staffNo} password={temp} name={u.name} /> : null}
+      {temp ? (
+        <TempPasswordCard loginId={u.staffNo} password={temp} name={u.name} phone={u.phone} />
+      ) : u.active && u.mustChangePassword ? (
+        <Glass strong style={{ gap: 10, borderWidth: 1.5, borderColor: colors.brand }}>
+          <Text variant="title">Not signed in yet</Text>
+          <Text variant="bodySm" color={colors.textMuted}>
+            {u.name.split(' ')[0]} has not used their sign-in details yet. Send them again: a new one-time password is made (the old one stops working) and you can send it on WhatsApp.
+          </Text>
+          <Button label="Resend sign-in details" icon="paper-plane-outline" loading={busy === 'resend'} onPress={resend} />
+        </Glass>
+      ) : null}
 
       {tech ? (
         <>

@@ -192,3 +192,7 @@ Customers receive `JOB_UPDATE` notifications when a technician is assigned, star
 - `GET /chat/conversations/:id` returns `receipts: { deliveredAt, readAt }` (how far the other side has got with your messages) and `replyTo` on each message.
 - `POST /chat/conversations/:id/messages` takes an optional `replyToId` (a message in the same chat).
 
+## Customer care role
+
+`CUSTOMER_CARE` (created by admins only): answers `SUPPORT` chats; `GET /requests` and `POST /requests/:id/close`; reads every job (`GET /tasks`, `/tasks/:id`, `/tasks/:id/track`); `GET /users?role=CUSTOMER`, `GET /users/:id` (customers), `POST /users` (customers only), `POST /users/:id/reset-password` (customers only). Everything else answers `403`.
+

@@ -63,11 +63,15 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
 
 /** Role groups used across modules. */
 export const ROLES = {
-  STAFF: ['ADMIN', 'SUPERVISOR', 'STOREKEEPER', 'TECHNICIAN'] as Role[],
+  STAFF: ['ADMIN', 'SUPERVISOR', 'STOREKEEPER', 'TECHNICIAN', 'CUSTOMER_CARE'] as Role[],
   CUSTOMER: ['CUSTOMER'] as Role[],
   MANAGERS: ['ADMIN', 'SUPERVISOR'] as Role[],
   STORE: ['ADMIN', 'SUPERVISOR', 'STOREKEEPER'] as Role[],
   ADMIN: ['ADMIN'] as Role[],
+  /** Look after customers: support chats, requests, customer logins. */
+  CARE: ['ADMIN', 'SUPERVISOR', 'CUSTOMER_CARE'] as Role[],
+  /** May see every job and follow it live (dispatching stays with managers). */
+  JOB_VIEWERS: ['ADMIN', 'SUPERVISOR', 'STOREKEEPER', 'CUSTOMER_CARE'] as Role[],
 };
 
 export const requireRole =

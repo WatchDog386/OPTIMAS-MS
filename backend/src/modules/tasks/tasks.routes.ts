@@ -65,7 +65,7 @@ tasksRouter.get(
   '/',
   ah(async (req, res) => {
     const user = me(req);
-    const isManager = ROLES.STORE.includes(user.role);
+    const isManager = ROLES.JOB_VIEWERS.includes(user.role);
     const status = typeof req.query.status === 'string'
       ? (req.query.status.split(',').filter((s) => s in TaskStatus) as TaskStatus[])
       : undefined;
@@ -90,7 +90,7 @@ tasksRouter.get(
   ah(async (req, res) => {
     const user = me(req);
     const task = await loadTask(req.params.id);
-    if (!onCrew(task, user.id) && !ROLES.STORE.includes(user.role)) throw forbidden();
+    if (!onCrew(task, user.id) && !ROLES.JOB_VIEWERS.includes(user.role)) throw forbidden();
     res.json({ task });
   }),
 );
@@ -226,7 +226,7 @@ tasksRouter.get(
     const user = me(req);
     const task = await prisma.task.findUnique({ where: { id: req.params.id }, include: { team: { select: { members: { select: { userId: true } } } } } });
     if (!task) throw notFound('Task');
-    if (!onCrew(task, user.id) && !ROLES.STORE.includes(user.role)) throw forbidden();
+    if (!onCrew(task, user.id) && !ROLES.JOB_VIEWERS.includes(user.role)) throw forbidden();
     const { team: _team, ...plain } = task;
     res.json(await trackJob(plain));
   }),

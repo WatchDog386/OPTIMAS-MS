@@ -7,7 +7,7 @@ import type { JobTrack } from '../../src/api/field';
 import { Avatar, HeaderButton, LiveBadge, Loading, MapCanvas, Text, type MapPin } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { useAuth } from '../../src/store/auth';
-import { colors, fonts, radius, space } from '../../src/theme';
+import { colors, fonts, space } from '../../src/theme';
 import { call } from '../../src/utils/contact';
 import { clockAt, distanceLabel, minutesLabel } from '../../src/utils/location';
 import { NATIVE, prefersReducedMotion, spring } from '../../src/utils/motion';
@@ -30,6 +30,8 @@ export default function TrackJob() {
   const { data, updatedAt } = useApi<JobTrack>(customer ? `/customer/jobs/${id}/track` : `/tasks/${id}/track`, { poll: 8_000 });
   const [recenter, setRecenter] = useState(0);
   const [panned, setPanned] = useState(false);
+  // Height of the floating card, so the map keeps the route in the part left visible above it
+  const [sheetH, setSheetH] = useState(360);
   const [, tick] = useState(0);
   useEffect(() => {
     const t = setInterval(() => tick((n) => n + 1), 1000);
@@ -64,7 +66,7 @@ export default function TrackJob() {
         fitKey={`${job.id}-${!!pos}`}
         recenterKey={recenter}
         padTop={90}
-        padBottom={260}
+        padBottom={sheetH + 24}
         onUserPan={() => setPanned(true)}
         style={StyleSheet.absoluteFill}
       />
@@ -78,16 +80,16 @@ export default function TrackJob() {
         </View>
       </View>
 
-      <Animated.View style={[styles.bottom, { paddingBottom: insets.bottom + 14, opacity: rise, transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [80, 0] }) }] }]}>
-        {panned ? (
-          <Pressable onPress={() => (setRecenter((n) => n + 1), setPanned(false))} style={styles.recenter} accessibilityRole="button" accessibilityLabel="Recentre">
-            <Ionicons name="scan-outline" size={17} color={colors.text} />
-            <Text variant="label" style={{ fontFamily: fonts.semibold }}>
-              Show all
-            </Text>
-          </Pressable>
-        ) : null}
-        <View style={styles.card}>
+      {/* The card floats over the lower part of the map; the map stays visible above it */}
+      <Animated.View
+        onLayout={(e) => setSheetH(e.nativeEvent.layout.height)}
+        style={[styles.bottom, { opacity: rise, transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [80, 0] }) }] }]}
+        pointerEvents="box-none"
+      >
+        <Pressable onPress={() => (setRecenter((n) => n + 1), setPanned(false))} style={[styles.recenter, panned && styles.recenterOn]} accessibilityRole="button" accessibilityLabel="Show the technician and the site">
+          <Ionicons name="locate" size={24} color={colors.text} />
+        </Pressable>
+        <View style={[styles.card, { paddingBottom: insets.bottom + 18 }]}>
           <View style={styles.handle} />
           {/* Arrival, with the technician on the right (ride-hailing style) */}
           <View style={styles.sheetTop}>
@@ -224,9 +226,11 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgTop },
   top: { position: 'absolute', left: 0, right: 0, top: 0, paddingHorizontal: space.lg, flexDirection: 'row', alignItems: 'center', gap: 10 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.glassStrong, borderRadius: 20, height: 40, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.glassBorder },
-  bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: space.md, gap: 10 },
-  recenter: { alignSelf: 'flex-end', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.surface, borderRadius: 20, paddingHorizontal: 14, height: 38, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 10 },
-  card: { backgroundColor: colors.surface, borderRadius: radius.xl + 2, padding: space.lg, gap: 14, shadowColor: '#000', shadowOpacity: 0.16, shadowRadius: 20, shadowOffset: { width: 0, height: -2 } },
+  bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, gap: 12 },
+  recenter: { alignSelf: 'flex-end', marginRight: space.lg, width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 6 },
+  recenterOn: { borderWidth: 2, borderColor: colors.brand },
+  // Edge to edge, rounded on top, like a ride-hailing pickup sheet
+  card: { backgroundColor: colors.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: space.lg, paddingTop: space.lg, gap: 14, shadowColor: '#000', shadowOpacity: 0.16, shadowRadius: 20, shadowOffset: { width: 0, height: -4 }, elevation: 16 },
   dest: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   forward: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 48, borderRadius: 24, backgroundColor: colors.primary },
 });

@@ -40,16 +40,20 @@ const isStaffRole = (r: Role) => r !== 'CUSTOMER';
 function assertCanManage(actor: { id: string; role: Role }, targetRole: Role) {
   if (actor.role === 'ADMIN') return;
   if (actor.role === 'SUPERVISOR' && (targetRole === 'TECHNICIAN' || targetRole === 'CUSTOMER')) return;
-  throw forbidden('You can only manage technicians and customers');
+  // Customer care looks after customer logins only
+  if (actor.role === 'CUSTOMER_CARE' && targetRole === 'CUSTOMER') return;
+  throw forbidden(actor.role === 'CUSTOMER_CARE' ? 'Customer care can only manage customer accounts' : 'You can only manage technicians and customers');
 }
 
 /** Team / directory list. Staff see staff; pass ?role=CUSTOMER (managers) for customers. */
 usersRouter.get(
   '/',
-  requireRole([...ROLES.STORE]),
+  requireRole([...ROLES.STORE, 'CUSTOMER_CARE']),
   ah(async (req, res) => {
     const role = typeof req.query.role === 'string' && req.query.role in Role ? (req.query.role as Role) : undefined;
-    if (role === 'CUSTOMER' && !ROLES.MANAGERS.includes(req.user!.role)) throw forbidden();
+    if (role === 'CUSTOMER' && !ROLES.CARE.includes(req.user!.role)) throw forbidden();
+    // Customer care sees the customer list, not the staff directory
+    if (req.user!.role === 'CUSTOMER_CARE' && role !== 'CUSTOMER') throw forbidden('Customer care can see customer accounts only');
     const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
     const active = req.query.active === 'true' ? true : req.query.active === 'false' ? false : undefined;
     const today = workDateOf();
@@ -102,10 +106,11 @@ usersRouter.get(
 /** Full profile for supervisors: attendance (30 days), job stats, recent jobs, custody. */
 usersRouter.get(
   '/:id',
-  requireRole(ROLES.MANAGERS),
+  requireRole(ROLES.CARE),
   ah(async (req, res) => {
     const user = await prisma.user.findUnique({ where: { id: req.params.id } });
     if (!user) throw notFound('User');
+    if (req.user!.role === 'CUSTOMER_CARE' && user.role !== 'CUSTOMER') throw forbidden('Customer care can see customer accounts only');
     const since = new Date(Date.now() - 30 * DAY_MS);
     const [attendance, taskGroups, avg, recentTasks, units, bulk, lastCount] = await Promise.all([
       prisma.attendance.findMany({ where: { userId: user.id, workDate: { gte: since } }, orderBy: { workDate: 'desc' } }),
@@ -186,7 +191,7 @@ const createSchema = z
 
 usersRouter.post(
   '/',
-  requireRole(ROLES.MANAGERS),
+  requireRole(ROLES.CARE),
   ah(async (req, res) => {
     const actor = req.user!;
     const { password, staffNo, ...data } = parse(createSchema, req.body);
@@ -364,7 +369,7 @@ usersRouter.patch(
 
 usersRouter.post(
   '/:id/reset-password',
-  requireRole(ROLES.MANAGERS),
+  requireRole(ROLES.CARE),
   ah(async (req, res) => {
     const actor = req.user!;
     const target = await prisma.user.findUnique({ where: { id: req.params.id } });

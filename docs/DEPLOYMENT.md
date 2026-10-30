@@ -214,3 +214,15 @@ Anyone can turn on **Fingerprint lock** in Profile / Account (shown only on phon
 - Editing a job can move it to another team or back to one technician. Forwarding to the nearest technician makes it a one-person job.
 - The Jobs report has a **Team (members)** column.
 
+## Customer care accounts
+
+- Only an admin can make one: **New account → Customer care** (staff numbers `FBI-CC-001`, …).
+- They sign in to their own screens: Chats (every customer's support line), Requests, Jobs (to follow a technician live and answer "where is my technician?"), and Profile.
+- They can make customer logins and resend their details. They cannot assign or forward jobs, approve work, see stock, or manage staff.
+- New customer requests alert customer care as well as supervisors and admins.
+
+## Sending sign-in details
+
+- After making an account, **Send on WhatsApp** opens a chat with the person's number and the details already typed. You only press Send. (Kenyan numbers like `07…`, `01…` or `+254…` all work.)
+- Someone who never got their details shows **Not signed in · resend** in the lists. Open them and tap **Resend sign-in details**: a new one-time password is made (the old one stops working) and you can send it on WhatsApp.
+

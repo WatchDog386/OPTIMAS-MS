@@ -18,6 +18,8 @@ enum Role {
   STOREKEEPER
   TECHNICIAN
   CUSTOMER
+  /// Office staff who look after customers: support chats, requests, customer logins; can follow jobs.
+  CUSTOMER_CARE
 }
 
 model User {

@@ -93,7 +93,7 @@ export default function Onboard() {
           </Glass>
         </Reveal>
         <Reveal index={1}>
-          <TempPasswordCard loginId={done.loginId} password={done.temporaryPassword} name={done.user.name} />
+          <TempPasswordCard loginId={done.loginId} password={done.temporaryPassword} name={done.user.name} phone={phone} />
         </Reveal>
         <Reveal index={2}>
           <Glass style={{ gap: 8 }}>

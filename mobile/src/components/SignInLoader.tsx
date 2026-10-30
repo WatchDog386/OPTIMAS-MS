@@ -9,7 +9,7 @@ import { BarsLoader } from './Loaders';
 const DURATION = 5000;
 const NATIVE = Platform.OS !== 'web';
 
-const PLAN: Record<'TECH' | 'CUSTOMER' | 'STAFF', { steps: string[]; paths: string[] }> = {
+const PLAN: Record<'TECH' | 'CUSTOMER' | 'STAFF' | 'CARE', { steps: string[]; paths: string[] }> = {
   TECH: {
     steps: ['Verifying your account', 'Syncing today’s jobs', 'Loading your devices & stock', 'Preparing your dashboard'],
     paths: ['/attendance/today', '/tasks?status=IN_PROGRESS,ASSIGNED', '/tasks?status=COMPLETED,VERIFIED', '/inventory/my', '/reports/me', '/notifications/unread-count'],
@@ -17,6 +17,10 @@ const PLAN: Record<'TECH' | 'CUSTOMER' | 'STAFF', { steps: string[]; paths: stri
   CUSTOMER: {
     steps: ['Verifying your account', 'Finding your visits', 'Loading your devices', 'Preparing your dashboard'],
     paths: ['/customer/overview', '/notifications/unread-count'],
+  },
+  CARE: {
+    steps: ['Verifying your account', 'Loading support chats', 'Loading customer requests', 'Preparing your dashboard'],
+    paths: ['/chat/conversations', '/requests?status=OPEN', '/tasks?status=ASSIGNED,IN_PROGRESS', '/notifications/unread-count'],
   },
   STAFF: {
     steps: ['Verifying your account', 'Syncing team attendance', 'Loading jobs & stock', 'Preparing your dashboard'],
@@ -42,7 +46,7 @@ async function prefetch(paths: string[]) {
  * loads in the background. Calls `onDone` when both the animation and the prefetch are finished.
  */
 export function SignInLoader({ user, onDone }: { user: User; onDone: () => void }) {
-  const plan = user.role === 'TECHNICIAN' ? PLAN.TECH : user.role === 'CUSTOMER' ? PLAN.CUSTOMER : PLAN.STAFF;
+  const plan = user.role === 'TECHNICIAN' ? PLAN.TECH : user.role === 'CUSTOMER' ? PLAN.CUSTOMER : user.role === 'CUSTOMER_CARE' ? PLAN.CARE : PLAN.STAFF;
   const progress = useRef(new Animated.Value(0)).current;
   const enter = useRef(new Animated.Value(0)).current;
 

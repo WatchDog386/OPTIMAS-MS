@@ -3,14 +3,13 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useApi } from '../hooks/useApi';
-import { useAuth } from '../store/auth';
+import { homeFor, useAuth } from '../store/auth';
 import { colors, fonts } from '../theme';
 import { Text } from './Text';
 
 /** Where "back" goes when there is no history (page opened directly or from the tab bar). */
 function home() {
-  const role = useAuth.getState().user?.role;
-  return role === 'CUSTOMER' ? '/portal' : role === 'TECHNICIAN' ? '/home' : '/overview';
+  return homeFor(useAuth.getState().user?.role);
 }
 
 /**

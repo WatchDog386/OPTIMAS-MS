@@ -62,6 +62,7 @@ export default function UserEdit() {
             options={[
               { value: 'TECHNICIAN', label: 'Technician' },
               { value: 'STOREKEEPER', label: 'Storekeeper' },
+              { value: 'CUSTOMER_CARE', label: 'Customer care' },
               { value: 'SUPERVISOR', label: 'Supervisor' },
               { value: 'ADMIN', label: 'Admin' },
             ]}

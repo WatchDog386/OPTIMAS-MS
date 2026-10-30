@@ -11,6 +11,9 @@ import { prisma } from '../../lib/prisma';
 
 export const MANAGER_ROLES: Role[] = ['ADMIN', 'SUPERVISOR'];
 export const isManagerRole = (r: Role) => MANAGER_ROLES.includes(r);
+/** The office side of the customer support line: managers and customer care. */
+export const SUPPORT_ROLES: Role[] = ['ADMIN', 'SUPERVISOR', 'CUSTOMER_CARE'];
+export const isSupportRole = (r: Role) => SUPPORT_ROLES.includes(r);
 /** A technician can keep chatting with a customer this long after the visit ended. */
 export const AFTER_VISIT_MS = 14 * 24 * 60 * 60_000;
 
@@ -45,7 +48,7 @@ export async function chatBlockedReason(a: Person, b: Person): Promise<string | 
   if (!aCust && !bCust) return null;
   const staff = aCust ? b : a;
   const customer = aCust ? a : b;
-  if (isManagerRole(staff.role)) return null;
+  if (isSupportRole(staff.role)) return null;
   if (staff.role === 'TECHNICIAN' && (await linkingJobs(staff.id, customer.id)).length) return null;
   return staff.role === 'TECHNICIAN' ? 'You can only message customers you have a current or recent job for' : 'Customers can message the office or their technician';
 }

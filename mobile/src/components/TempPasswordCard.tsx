@@ -1,5 +1,6 @@
 import { Linking, Pressable, Share, StyleSheet, View } from 'react-native';
 import { colors, fonts } from '../theme';
+import { whatsapp, whatsappNumber } from '../utils/contact';
 import { Button } from './Button';
 import { Glass } from './Glass';
 import { Text } from './Text';
@@ -7,8 +8,12 @@ import { Text } from './Text';
 /** The web console the person signs in at (staff and customers use the same app). */
 export const APP_SIGNIN_URL = 'https://ms.optimaswifi.co.ke';
 
-/** Shows a one-time password exactly once, with a share button. */
-export function TempPasswordCard({ loginId, password, name }: { loginId: string; password: string; name: string }) {
+/**
+ * Shows a one-time password exactly once. "Send on WhatsApp" opens a chat with the person's number
+ * with the details already typed, so it only takes a tap on Send.
+ */
+export function TempPasswordCard({ loginId, password, name, phone }: { loginId: string; password: string; name: string; phone?: string | null }) {
+  const to = whatsappNumber(phone);
   const message = `Optimas MS sign-in for ${name}\nOpen: ${APP_SIGNIN_URL}\nUser: ${loginId}\nTemporary password: ${password}\nYou will be asked to choose your own password when you sign in.`;
   return (
     <Glass strong style={{ gap: 12, borderColor: colors.highlight, borderWidth: 2 }}>
@@ -41,7 +46,12 @@ export function TempPasswordCard({ loginId, password, name }: { loginId: string;
           {password}
         </Text>
       </View>
-      <Button label="Share sign-in details" icon="share-outline" variant="secondary" onPress={() => void Share.share({ message })} />
+      <Button label={to ? `Send on WhatsApp to ${phone}` : 'Send on WhatsApp'} icon="logo-whatsapp" onPress={() => void whatsapp(phone, message)} style={{ backgroundColor: '#25D366' }} />
+      <Pressable onPress={() => void Share.share({ message })} hitSlop={8} style={{ alignSelf: 'center' }} accessibilityRole="button">
+        <Text variant="bodySm" color={colors.textMuted} style={{ textDecorationLine: 'underline' }}>
+          {to ? 'Share another way' : 'No phone number saved · share another way'}
+        </Text>
+      </Pressable>
     </Glass>
   );
 }

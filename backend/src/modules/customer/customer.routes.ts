@@ -120,7 +120,7 @@ customerRouter.post(
         lng: body.lng ?? user.lastLng,
       },
     });
-    void notifyRoles(['SUPERVISOR', 'ADMIN'], {
+    void notifyRoles(['SUPERVISOR', 'ADMIN', 'CUSTOMER_CARE'], {
       type: 'SERVICE_REQUEST',
       title: `New ${body.type.toLowerCase()} request — ${user.name}`,
       body: body.description.slice(0, 140),
