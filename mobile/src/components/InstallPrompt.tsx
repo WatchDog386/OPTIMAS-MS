@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Image, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, radius, space } from '../theme';
-import { useInstallPrompt } from '../utils/install';
+import { installSteps, useInstallPrompt } from '../utils/install';
 import { GlassCircle } from './Glass';
 import { Text } from './Text';
 
@@ -24,18 +24,46 @@ const snooze = () => {
 };
 
 /** Round "install" button for top bars — only shown in a browser where installing is possible. */
-export function InstallButton() {
-  const { available } = useInstallPrompt();
+export function InstallButton({ round }: { round?: boolean }) {
+  const { available, canInstall, install } = useInstallPrompt();
   const [open, setOpen] = useState(false);
   if (!available) return null;
+  // One tap installs where the browser allows it; otherwise the steps for this browser
+  const tap = async () => {
+    if (canInstall) await install();
+    else setOpen(true);
+  };
   return (
     <>
-      <GlassCircle onPress={() => setOpen(true)} label="Install app" highlight>
-        <Ionicons name="download-outline" size={20} color={colors.onHighlight} />
-      </GlassCircle>
+      {round ? (
+        <GlassCircle onPress={tap} label="Install app" highlight>
+          <Ionicons name="download-outline" size={20} color={colors.onHighlight} />
+        </GlassCircle>
+      ) : (
+        <Pressable onPress={tap} style={({ pressed }) => [styles.installChip, pressed && { opacity: 0.85 }]} accessibilityRole="button" accessibilityLabel="Install app">
+          <Ionicons name="download-outline" size={17} color={colors.onHighlight} />
+          <Text variant="bodySm" color={colors.onHighlight} fixedColor style={{ fontFamily: fonts.bold }}>
+            Install app
+          </Text>
+        </Pressable>
+      )}
       <InstallSheet visible={open} onClose={() => setOpen(false)} />
     </>
   );
+}
+
+/** Opens the install sheet (or installs in one tap) from anywhere, e.g. a Profile tile. */
+export function useInstallAction() {
+  const { available, canInstall, install } = useInstallPrompt();
+  const [open, setOpen] = useState(false);
+  return {
+    available,
+    start: async () => {
+      if (canInstall) await install();
+      else setOpen(true);
+    },
+    sheet: <InstallSheet visible={open} onClose={() => setOpen(false)} />,
+  };
 }
 
 /** Full-width pill version for the sign-in page. */
@@ -79,7 +107,7 @@ export function InstallPrompt() {
 }
 
 function InstallSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
-  const { canInstall, needsIosSteps, install } = useInstallPrompt();
+  const { canInstall, install } = useInstallPrompt();
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} />
@@ -100,26 +128,18 @@ function InstallSheet({ visible, onClose }: { visible: boolean; onClose: () => v
             </Pressable>
           </View>
 
-          {needsIosSteps ? (
+          {!canInstall ? (
             <View style={styles.steps}>
-              <View style={styles.step}>
-                <Text variant="bodySm" color={colors.white} fixedColor>
-                  1. Tap
-                </Text>
-                <Ionicons name="share-outline" size={17} color={colors.highlight} />
-                <Text variant="bodySm" color={colors.white} fixedColor>
-                  at the bottom of Safari
-                </Text>
-              </View>
-              <View style={styles.step}>
-                <Text variant="bodySm" color={colors.white} fixedColor>
-                  2. Choose
-                </Text>
-                <Ionicons name="add-circle-outline" size={17} color={colors.highlight} />
-                <Text variant="bodySm" color={colors.white} fixedColor style={{ fontFamily: fonts.semibold }}>
-                  Add to Home Screen
-                </Text>
-              </View>
+              {installSteps().map((step, i) => (
+                <View key={i} style={styles.step}>
+                  <Text variant="bodySm" color={colors.highlight} fixedColor style={{ fontFamily: fonts.bold, width: 18 }}>
+                    {i + 1}.
+                  </Text>
+                  <Text variant="bodySm" color={colors.white} fixedColor style={{ flex: 1 }}>
+                    {step}
+                  </Text>
+                </View>
+              ))}
             </View>
           ) : null}
 
@@ -148,6 +168,7 @@ function InstallSheet({ visible, onClose }: { visible: boolean; onClose: () => v
 }
 
 const styles = StyleSheet.create({
+  installChip: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 36, paddingHorizontal: 14, borderRadius: 18, backgroundColor: colors.highlight },
   pill: { height: 48, borderRadius: radius.pill, backgroundColor: colors.highlight, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm },
   backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.25)' },
   sheetWrap: { flex: 1, justifyContent: 'flex-end', padding: space.md, alignItems: 'center' },

@@ -88,6 +88,9 @@ export default function ItemDetail() {
         </View>
       </Section>
 
+      {item.tracking === 'SERIALIZED' ? (
+        <Button label="Print labels for units in the store" icon="qr-code-outline" variant="secondary" onPress={() => router.push(`/admin/labels?itemId=${item.id}`)} />
+      ) : null}
       {item.tracking === 'BULK' ? (
         <Section title="Stock-take adjustment" subtitle="Correct the store quantity after a count. Recorded in the ledger with your reason.">
           <View style={{ gap: 12 }}>

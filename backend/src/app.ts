@@ -2,7 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
+import { verifyToken } from './lib/jwt';
 import { env } from './config/env';
 import { prisma } from './lib/prisma';
 import { ROLES, requireAuth, requireRole } from './middleware/auth';
@@ -26,7 +27,7 @@ import { auditRouter } from './modules/audit/audit.routes';
 import { locationRouter } from './modules/location/location.routes';
 import { chatRouter } from './modules/chat/chat.routes';
 import { publicRouter } from './modules/public/public.routes';
-import { passkeyRouter } from './modules/auth/passkey.routes';
+import { passkeyLoginRouter, passkeyRouter } from './modules/auth/passkey.routes';
 
 export function createApp() {
   const app = express();
@@ -49,11 +50,24 @@ export function createApp() {
   });
 
   const api = express.Router();
-  // A ceiling on how fast one address can hammer the API (the login route has its own, stricter limit below)
+  // A ceiling on how fast one person (signed in) or one address (not signed in) can hammer the API. Signed-in
+  // people count on their own, so a whole office behind one Wi-Fi address does not share one allowance.
+  // The login route has its own, stricter limit below.
   api.use(
     rateLimit({
       windowMs: 60_000,
       limit: env.API_RATE_LIMIT,
+      keyGenerator: (req) => {
+        const header = req.headers.authorization;
+        if (header?.startsWith('Bearer ')) {
+          try {
+            return `user:${verifyToken(header.slice(7)).sub}`;
+          } catch {
+            /* not a valid token: counted by address */
+          }
+        }
+        return `ip:${ipKeyGenerator(req.ip ?? '')}`;
+      },
       standardHeaders: 'draft-7',
       legacyHeaders: false,
       message: { error: { message: 'Too many requests. Slow down and try again in a minute.', code: 'RATE_LIMITED' } },
@@ -61,18 +75,21 @@ export function createApp() {
   );
   // Customer logins can only reach /customer, /notifications, /location and /chat.
   const staff = requireRole(ROLES.STAFF);
-  api.use(
-    '/auth/login',
-    rateLimit({
-      windowMs: 15 * 60_000,
-      limit: env.LOGIN_RATE_LIMIT,
-      // Only wrong passwords count: a whole office signing in from one Wi-Fi in the morning must not lock itself out
-      skipSuccessfulRequests: true,
-      standardHeaders: 'draft-7',
-      legacyHeaders: false,
-      message: { error: { message: 'Too many sign-in attempts. Try again in 15 minutes.', code: 'RATE_LIMITED' } },
-    }),
-  );
+  const loginLimit = rateLimit({
+    windowMs: 15 * 60_000,
+    limit: env.LOGIN_RATE_LIMIT,
+    // Only wrong passwords count: a whole office signing in from one Wi-Fi in the morning must not lock itself out
+    skipSuccessfulRequests: true,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    message: { error: { message: 'Too many sign-in attempts. Try again in 15 minutes.', code: 'RATE_LIMITED' } },
+  });
+  api.use('/auth/login', loginLimit);
+  // Fingerprint sign-in (no session yet): same limit as the password, then its own router before the signed-in one
+  api.use('/auth/passkeys/login', loginLimit);
+  api.use('/auth/passkeys/login-options', loginLimit);
+
+  api.use('/auth/passkeys', passkeyLoginRouter);
   api.use('/auth/passkeys', requireAuth, passkeyRouter);
   api.use('/auth', authRouter);
   api.use('/public', publicRouter);

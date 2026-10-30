@@ -11,6 +11,9 @@ import * as svc from './inventory.service';
 import { buildReconciliation } from './reconciliation';
 import { notify, notifyRoles } from '../notifications/notifications.service';
 import { audit } from '../../lib/audit';
+import { readCode, tagFor } from '../../lib/assetTag';
+import { forbidden } from '../../lib/http-error';
+import { AFTER_VISIT_MS } from '../chat/chat.service';
 
 export const inventoryRouter = Router();
 const store = requireRole(ROLES.STORE);
@@ -247,8 +250,8 @@ inventoryRouter.get(
 inventoryRouter.post(
   '/accept',
   ah(async (req, res) => {
-    const { unitIds } = parse(z.object({ unitIds: z.array(z.string()).optional() }), req.body ?? {});
-    res.json(await prisma.$transaction((tx) => svc.acceptUnits(tx, me(req).id, unitIds)));
+    const { unitIds, serials } = parse(z.object({ unitIds: z.array(z.string()).optional(), serials: z.array(z.string()).max(100).optional() }), req.body ?? {});
+    res.json(await prisma.$transaction((tx) => svc.acceptUnits(tx, me(req).id, unitIds, serials)));
   }),
 );
 
@@ -301,7 +304,7 @@ inventoryRouter.get(
   store,
   ah(async (req, res) => {
     const unit = await prisma.serialUnit.findUnique({
-      where: { serialNumber: req.params.serial.toUpperCase() },
+      where: { serialNumber: readCode(req.params.serial).serial },
       include: {
         item: true,
         holder: { select: { id: true, name: true, staffNo: true } },
@@ -351,5 +354,147 @@ inventoryRouter.get(
   store,
   ah(async (_req, res) => {
     res.json(await buildReconciliation());
+  }),
+);
+
+// ───────────────────────────── Labels & checking a device ────────────
+
+/** QR labels to print and stick on devices: by serial numbers, or every unit of an item still in the store. */
+inventoryRouter.get(
+  '/labels',
+  store,
+  ah(async (req, res) => {
+    const serials = typeof req.query.serials === 'string' ? req.query.serials.split(',').map((s) => readCode(s).serial).filter(Boolean) : [];
+    const itemId = typeof req.query.itemId === 'string' ? req.query.itemId : undefined;
+    if (!serials.length && !itemId) throw badRequest('Choose the devices to print labels for');
+    const units = await prisma.serialUnit.findMany({
+      where: serials.length ? { serialNumber: { in: serials } } : { itemId, status: 'IN_STORE' },
+      include: { item: { select: { name: true, sku: true } } },
+      orderBy: { serialNumber: 'asc' },
+      take: 300,
+    });
+    res.json({ labels: units.map((u) => ({ serial: u.serialNumber, mac: u.macAddress, item: u.item.name, sku: u.item.sku, code: tagFor(u.serialNumber) })) });
+  }),
+);
+
+const fmt = (d: Date) => d.toLocaleString('en-KE', { timeZone: 'Africa/Nairobi', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+/**
+ * "Is this the one we issued?" Scan a label (or type a serial or MAC) and get a plain answer for the
+ * person asking: whether the label is genuine, what the device is, who has it and since when.
+ */
+inventoryRouter.post(
+  '/verify',
+  ah(async (req, res) => {
+    const user = me(req);
+    const { code } = parse(z.object({ code: z.string().trim().min(3).max(200) }), req.body);
+    let read: { serial: string; labelled: boolean };
+    try {
+      read = readCode(code);
+    } catch {
+      res.json({ label: 'fake', unit: null, verdict: { tone: 'danger', title: 'Fake or altered label', detail: 'This sticker was not printed by Optimas, or someone changed it. Do not install or accept this device; hand it to the store.' } });
+      return;
+    }
+    const mac = read.serial.replace(/[^0-9A-F]/g, '');
+    const unit = await prisma.serialUnit.findFirst({
+      where: { OR: [{ serialNumber: read.serial }, ...(mac.length === 12 ? [{ macAddress: { in: [mac.match(/../g)!.join(':'), mac.match(/../g)!.join('-'), mac] } }] : [])] },
+      include: {
+        item: { select: { name: true, sku: true, category: true } },
+        holder: { select: { id: true, name: true, staffNo: true } },
+        task: { select: { id: true, code: true, assigneeId: true } },
+        movements: { where: { type: 'ISSUE' }, orderBy: { createdAt: 'desc' }, take: 1, include: { actor: { select: { name: true } }, toUser: { select: { name: true } } } },
+      },
+    });
+    const label = read.labelled ? 'genuine' : 'none';
+    if (!unit) {
+      res.json({ label, unit: null, verdict: { tone: 'danger', title: 'Not an Optimas device', detail: `${read.serial} is not in the Optimas register. It was never received into the store, so it was not issued by us.` } });
+      return;
+    }
+    const issue = unit.movements[0];
+    const issued = issue ? `issued by ${issue.actor.name} on ${fmt(issue.createdAt)}` : '';
+    const mine = unit.holderId === user.id;
+    const staffView = ROLES.STORE.includes(user.role);
+    let verdict: { tone: 'success' | 'info' | 'warning' | 'danger'; title: string; detail: string };
+    switch (unit.status) {
+      case 'IN_STORE':
+        verdict = staffView ? { tone: 'success', title: 'In the store', detail: 'Not issued to anyone yet.' } : { tone: 'warning', title: 'Not issued to you', detail: 'The register says this device is still in the store. Ask the store to issue it to you first.' };
+        break;
+      case 'IN_TRANSIT':
+      case 'WITH_TECHNICIAN':
+        if (mine) verdict = { tone: 'success', title: 'Yes, this is the one issued to you', detail: `${issued[0]?.toUpperCase()}${issued.slice(1)}.${unit.status === 'IN_TRANSIT' ? ' Confirm you received it in My stock.' : ''}` };
+        else if (staffView) verdict = { tone: 'info', title: `With ${unit.holder?.name ?? 'a technician'}`, detail: `${unit.status === 'IN_TRANSIT' ? 'Not yet confirmed by them · ' : ''}${issued || 'issue not recorded'}.` };
+        else verdict = { tone: 'danger', title: 'Not yours', detail: `This device was issued to ${unit.holder?.name ?? 'another technician'}. Do not install it; return it to them or to the store.` };
+        break;
+      case 'INSTALLED':
+        verdict = { tone: 'info', title: `Installed at ${unit.customerAccount ?? 'a customer'}`, detail: `Installed${unit.installedAt ? ` on ${fmt(unit.installedAt)}` : ''}${unit.task ? ` on job ${unit.task.code}` : ''}.` };
+        break;
+      case 'FAULTY':
+        verdict = { tone: 'warning', title: 'Marked faulty', detail: 'This device came back faulty. It should not be issued or installed.' };
+        break;
+      default:
+        verdict = { tone: 'danger', title: 'Reported lost', detail: 'This device was reported lost. Hand it to the store so the register can be put right.' };
+    }
+    await audit(user.id, 'DEVICE_CHECKED', 'SerialUnit', unit.id, `Checked ${unit.serialNumber}${read.labelled ? ' (label)' : ''}: ${verdict.title}`);
+    res.json({
+      label,
+      unit: {
+        serial: unit.serialNumber,
+        mac: unit.macAddress,
+        item: unit.item,
+        status: unit.status,
+        holder: unit.holder,
+        heldSince: unit.heldSince,
+        customerAccount: staffView || unit.task?.assigneeId === user.id ? unit.customerAccount : null,
+        installedAt: unit.installedAt,
+        task: unit.task ? { id: unit.task.id, code: unit.task.code } : null,
+        issued: issue ? { by: issue.actor.name, to: issue.toUser?.name ?? null, at: issue.createdAt } : null,
+      },
+      verdict,
+    });
+  }),
+);
+
+/**
+ * Taking a device back from a customer (relocation, disconnection, faulty swap). A technician can only
+ * collect from a customer they have a current or recent job for; it comes into their custody, to be
+ * returned to the store. The store can take it straight back in.
+ */
+inventoryRouter.post(
+  '/recover',
+  ah(async (req, res) => {
+    const user = me(req);
+    const b = parse(z.object({ code: z.string().trim().min(3).max(200), reason: z.string().trim().min(3, 'Say why the device is being collected').max(300), condition: z.enum(['GOOD', 'FAULTY']).default('GOOD') }), req.body);
+    const { serial } = readCode(b.code);
+    const unit = await prisma.serialUnit.findUnique({ where: { serialNumber: serial }, include: { item: true } });
+    if (!unit) throw badRequest(`${serial} is not in the Optimas register`, 'NOT_FOUND');
+    if (unit.status !== 'INSTALLED') throw badRequest(`${serial} is not installed at a customer (${unit.status.toLowerCase().replace('_', ' ')})`, 'NOT_INSTALLED');
+    const storeSide = ROLES.STORE.includes(user.role);
+    let taskId: string | null = null;
+    if (!storeSide) {
+      if (user.role !== 'TECHNICIAN') throw forbidden();
+      const job = await prisma.task.findFirst({
+        where: {
+          customerAccount: unit.customerAccount ?? '__none__',
+          OR: [{ assigneeId: user.id }, { team: { members: { some: { userId: user.id } } } }],
+          AND: [{ OR: [{ status: { in: ['ASSIGNED', 'IN_PROGRESS'] } }, { endedAt: { gte: new Date(Date.now() - AFTER_VISIT_MS) } }] }],
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (!job) throw forbidden('You can only collect a device from a customer you have a current or recent job for');
+      taskId = job.id;
+    }
+    const now = new Date();
+    const status = storeSide ? (b.condition === 'GOOD' ? 'IN_STORE' : 'FAULTY') : 'WITH_TECHNICIAN';
+    await prisma.$transaction([
+      prisma.serialUnit.update({ where: { id: unit.id }, data: { status, holderId: storeSide ? null : user.id, heldSince: storeSide ? null : now, customerAccount: null, taskId: null, installedAt: null } }),
+      prisma.stockMovement.create({
+        data: { type: 'RECOVER', itemId: unit.itemId, serialUnitId: unit.id, quantity: 1, toUserId: storeSide ? null : user.id, actorId: user.id, taskId, note: `From ${unit.customerAccount ?? 'customer'} · ${b.condition === 'GOOD' ? 'working' : 'faulty'} · ${b.reason}` },
+      }),
+    ]);
+    await audit(user.id, 'DEVICE_RECOVERED', 'SerialUnit', unit.id, `Collected ${serial} from ${unit.customerAccount ?? 'customer'} (${b.condition.toLowerCase()}): ${b.reason}`);
+    if (!storeSide) {
+      void notifyRoles(['STOREKEEPER', 'SUPERVISOR', 'ADMIN'], { type: 'STOCK_ISSUED', title: `${user.name} collected ${unit.item.name}`, body: `${serial} from ${unit.customerAccount ?? 'a customer'}${b.condition === 'FAULTY' ? ' · faulty' : ''} — ${b.reason}` }, user.id);
+    }
+    res.json({ serial, status, holder: storeSide ? null : user.name });
   }),
 );

@@ -226,3 +226,22 @@ Anyone can turn on **Fingerprint lock** in Profile / Account (shown only on phon
 - After making an account, **Send on WhatsApp** opens a chat with the person's number and the details already typed. You only press Send. (Kenyan numbers like `07…`, `01…` or `+254…` all work.)
 - Someone who never got their details shows **Not signed in · resend** in the lists. Open them and tap **Resend sign-in details**: a new one-time password is made (the old one stops working) and you can send it on WhatsApp.
 
+## Device labels: knowing who has which router
+
+How a device is tracked from the supplier to the customer:
+
+1. **Receive** (Store → Receive): scan or type each device's serial (and MAC). The app then opens **Device labels**: print them on sticker paper and stick one on each device, matching the serial. Each label has a QR code signed with a key only the server holds.
+2. **Issue** (Store → Issue): scan the labels of the devices you hand over. They are now *on the way* to that technician.
+3. **Technician confirms** (My stock → Scan to confirm): they scan each device they received. Only devices issued to them are accepted, so this proves the right devices reached the right person.
+4. **Install**: at job completion the technician scans the device. Only a device in their own hands can be installed, and it is linked to the customer's account.
+5. **Collect** (job page or My stock → Collect from customer): a device taken back (relocation, disconnection, swap) comes into the technician's stock, then goes back to the store with **Return**.
+
+Anyone can open **Check a device** (Store, or My stock) and scan a label to see whether the label is genuine and who has the device: *"Yes, this is the one issued to you"*, *"Not yours"*, *"Installed at FBI-CUS-…"*, or *"Fake or altered label"*. Every movement is in **Ledger**, and **Find unit** shows one device's full history.
+
+The label key (`ASSET_TAG_SECRET`) is created once by `deploy.sh` and kept in `deploy/.env`. Back that file up and never change the key: if it changes, every printed label reads as fake.
+
+## Check-in and scanning
+
+- Everyone checks in and out except admins: technicians, supervisors, storekeepers and customer care. Supervisors and the store find **Check in** first in the dashboard's Quick Actions and as **My shift** on their Profile; customer care has it on their home page. All of them appear in the daily attendance register.
+- Scanning router/ONT stickers uses the **SN** barcode. The PROD ID and MAC barcodes are recognised and skipped. On Android, Chrome's own barcode reader (the same one the phone's scanner uses) is used at full camera resolution. **Use phone camera** takes a photo with the phone's camera app and reads the SN from it.
+

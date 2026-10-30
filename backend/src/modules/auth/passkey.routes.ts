@@ -157,7 +157,13 @@ const loginOptionsSchema = z.object({
   identifier: z.string().trim().min(1, 'Staff number or account number is required').max(120),
 });
 
-passkeyRouter.post(
+/**
+ * Signing in with a fingerprint happens before there is a session, so these two routes live on their own
+ * router, mounted without requireAuth (and behind the same rate limit as the password sign-in).
+ */
+export const passkeyLoginRouter = Router();
+
+passkeyLoginRouter.post(
   '/login-options',
   ah(async (req, res) => {
     const { identifier } = parse(loginOptionsSchema, req.body);
@@ -184,7 +190,7 @@ const loginSchema = z.object({
   response: z.record(z.string(), z.unknown()),
 });
 
-passkeyRouter.post(
+passkeyLoginRouter.post(
   '/login',
   ah(async (req, res) => {
     const { identifier, response } = parse(loginSchema, req.body);

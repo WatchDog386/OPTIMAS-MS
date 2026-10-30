@@ -14,7 +14,7 @@ export function GlassTopBar({ profileHref, calendarHref, calendarIcon = 'calenda
         <Ionicons name="person-outline" size={20} color={colors.text} />
       </GlassCircle>
       <View style={{ flex: 1 }} />
-      <InstallButton />
+      <InstallButton round />
       <NotificationBell />
       <GlassCircle onPress={() => router.push(calendarHref as never)} label="Attendance">
         <Ionicons name={calendarIcon} size={20} color={colors.text} />

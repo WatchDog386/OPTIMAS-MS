@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Image, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,24 +7,14 @@ import { api, ApiError } from '../api/client';
 import { useAuth } from '../store/auth';
 import { useLock } from '../store/lock';
 import { promptDialog, toast } from '../store/feedback';
-import { colors, fonts, space } from '../theme';
+import { fonts } from '../theme';
 import { biometricProblem, lockKeyOnThisDevice, prepareBiometric, unlockWithBiometric } from '../utils/biometric';
-import { NATIVE, prefersReducedMotion } from '../utils/motion';
 import { firstName } from '../utils/format';
+import { setThemeColor, STATUS_BAR_COLOR } from '../utils/install';
 import { Text } from './Text';
 
-const LOGO = require('../../assets/logo.png');
 /** Coming back to the app after this long in the background asks for the fingerprint again. */
 const RELOCK_AFTER_MS = 60_000;
-
-/** WhatsApp's light-theme colours, used for the fingerprint unlock screen. */
-const WA = {
-  wallpaper: '#EFEAE2',
-  green: '#25D366',
-  greenDark: '#128C7E',
-  ink: '#111B21',
-  meta: '#667781',
-};
 
 /**
  * The fingerprint lock: when it is on for this device, the app opens locked and locks again after a
@@ -65,27 +55,34 @@ export function LockHost() {
   return <LockScreen name={firstName(user.name)} onUnlocked={() => setLocked(false)} />;
 }
 
-function LockScreen({ name, onUnlocked }: { name: string; onUnlocked: () => void }) {
+/** Lock-screen colours (like WhatsApp's): near-black page, green lock and green "Unlock". */
+const LOCK = { bg: '#0B141A', green: '#25D366', text: '#E9EDEF', line: '#3B4A54', dim: '#8696A0' };
+
+/**
+ * The lock screen, as in WhatsApp: a green lock, "Optimas Locked" and one Unlock button. Tapping Unlock
+ * brings up the phone's fingerprint prompt; the app opens by itself as soon as the finger is accepted.
+ */
+function LockScreen({ onUnlocked }: { name: string; onUnlocked: () => void }) {
   const insets = useSafeAreaInsets();
   const [busy, setBusy] = useState(false);
-  const pulse = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    if (prefersReducedMotion()) return;
-    const loop = Animated.loop(Animated.timing(pulse, { toValue: 1, duration: 1800, easing: Easing.out(Easing.quad), useNativeDriver: NATIVE }));
-    loop.start();
-    return () => loop.stop();
-  }, [pulse]);
+  // The password and sign-out ways in show after a fingerprint attempt does not work
+  const [other, setOther] = useState(false);
   useEffect(() => {
     void prepareBiometric('unlock');
+    setThemeColor(LOCK.bg);
+    return () => setThemeColor(STATUS_BAR_COLOR);
   }, []);
 
-  const fingerprint = async () => {
+  const unlock = async () => {
     if (busy) return;
     setBusy(true);
     try {
       if (await unlockWithBiometric()) onUnlocked();
     } catch (e) {
-      toast.error('Not unlocked', biometricProblem(e));
+      setOther(true);
+      // Closing the phone's prompt is not worth a pop-up; anything else says why
+      const n = (e as { name?: string })?.name;
+      if (n !== 'NotAllowedError' && n !== 'AbortError') toast.error('Not unlocked', biometricProblem(e));
       void prepareBiometric('unlock');
     } finally {
       setBusy(false);
@@ -109,47 +106,42 @@ function LockScreen({ name, onUnlocked }: { name: string; onUnlocked: () => void
   };
 
   return (
-    <View style={[StyleSheet.absoluteFill, styles.root, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]} accessibilityViewIsModal>
-      <Image source={LOGO} style={styles.logo} resizeMode="contain" accessibilityLabel="Optimas Networks" />
-      <View style={{ alignItems: 'center', gap: 6 }}>
-        <Text variant="h2" align="center" style={{ color: WA.ink, fontFamily: fonts.semibold }}>
-          Welcome back, {name}
+    <View style={[StyleSheet.absoluteFill, styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom + 24 }]} accessibilityViewIsModal>
+      <View style={styles.middle}>
+        <Ionicons name="lock-closed" size={72} color={LOCK.green} accessibilityElementsHidden />
+        <Text variant="h2" color={LOCK.text} fixedColor align="center" style={styles.title}>
+          Optimas Locked
         </Text>
-        <Text variant="bodySm" color={WA.meta} align="center">
-          Optimas MS is locked
-        </Text>
+        <Pressable onPress={unlock} disabled={busy} accessibilityRole="button" accessibilityLabel="Unlock with fingerprint" style={({ pressed }) => [styles.unlock, pressed && { backgroundColor: 'rgba(37,211,102,0.08)' }]}>
+          <Text variant="body" color={LOCK.green} fixedColor style={{ fontFamily: fonts.medium, fontSize: 16 }}>
+            {busy ? 'Waiting for fingerprint…' : 'Unlock'}
+          </Text>
+        </Pressable>
       </View>
-
-      <Pressable onPress={fingerprint} accessibilityRole="button" accessibilityLabel="Unlock with fingerprint" style={({ pressed }) => [styles.touch, pressed && { transform: [{ scale: 0.96 }] }]}>
-        <Animated.View style={[styles.wave, { opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0] }), transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.6] }) }] }]} />
-        <View style={styles.circle}>
-          <Ionicons name="finger-print" size={64} color={busy ? colors.textDim : WA.green} />
+      {other ? (
+        <View style={styles.other}>
+          <Pressable onPress={password} hitSlop={8} accessibilityRole="button">
+            <Text variant="bodySm" color={LOCK.green} fixedColor style={styles.link}>
+              Use password instead
+            </Text>
+          </Pressable>
+          <Pressable onPress={signOut} hitSlop={8} accessibilityRole="button">
+            <Text variant="bodySm" color={LOCK.dim} fixedColor style={styles.link}>
+              Sign out
+            </Text>
+          </Pressable>
         </View>
-      </Pressable>
-      <Text variant="title" align="center" style={{ fontFamily: fonts.semibold, color: WA.ink }}>
-        {busy ? 'Checking…' : 'Touch to unlock with your fingerprint'}
-      </Text>
-
-      <View style={{ flex: 1 }} />
-      <Pressable onPress={password} hitSlop={8} accessibilityRole="button">
-        <Text variant="bodySm" color={WA.greenDark} style={styles.link}>
-          Use password instead
-        </Text>
-      </Pressable>
-      <Pressable onPress={signOut} hitSlop={8} accessibilityRole="button">
-        <Text variant="bodySm" color={WA.meta} style={styles.link}>
-          Sign out
-        </Text>
-      </Pressable>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { zIndex: 65, backgroundColor: WA.wallpaper, alignItems: 'center', gap: space.xl, paddingHorizontal: 28 },
-  logo: { width: 200, height: 76 },
-  touch: { width: 150, height: 150, alignItems: 'center', justifyContent: 'center', marginTop: 20 },
-  wave: { position: 'absolute', width: 130, height: 130, borderRadius: 65, backgroundColor: WA.green },
-  circle: { width: 130, height: 130, borderRadius: 65, backgroundColor: 'rgba(37, 211, 102, 0.14)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: WA.green },
+  // Above the app and its alert banners (60), below toasts (70) and dialogs (80) so the password prompt shows
+  root: { zIndex: 65, backgroundColor: LOCK.bg, paddingHorizontal: 28 },
+  middle: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 22, paddingTop: 140 },
+  title: { fontFamily: fonts.regular, fontSize: 26 },
+  unlock: { alignSelf: 'stretch', height: 56, borderRadius: 28, borderWidth: 1.5, borderColor: LOCK.line, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  other: { alignItems: 'center', gap: 14 },
   link: { fontFamily: fonts.semibold, paddingVertical: 4 },
 });

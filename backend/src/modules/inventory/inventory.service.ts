@@ -2,11 +2,13 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { env } from '../../config/env';
 import { badRequest, conflict, notFound } from '../../lib/http-error';
+import { readCode } from '../../lib/assetTag';
 
 type Tx = Prisma.TransactionClient;
 
 const CUSTODY = ['IN_TRANSIT', 'WITH_TECHNICIAN'] as const;
-const normalise = (serials: string[]) => [...new Set(serials.map((s) => s.trim().toUpperCase()).filter(Boolean))];
+/** Serial numbers from what was scanned or typed: Optimas labels are checked and read, the rest taken as is. */
+const normalise = (serials: string[]) => [...new Set(serials.map((s) => readCode(s).serial).filter(Boolean))];
 
 async function unitsBySerial(tx: Tx, serials: string[]) {
   const list = normalise(serials);
@@ -35,7 +37,8 @@ export async function receiveStock(
 
   if (item.tracking === 'SERIALIZED') {
     if (!input.serials?.length) throw badRequest('Scan or enter the serial number of every unit received');
-    const serials = input.serials.map((s) => ({ ...s, serialNumber: s.serialNumber.trim().toUpperCase() }));
+    // A scanned Optimas label gives its serial number (never "OPTIMAS:…" as a serial)
+    const serials = input.serials.map((s) => ({ ...s, serialNumber: readCode(s.serialNumber).serial }));
     const existing = await tx.serialUnit.findMany({ where: { serialNumber: { in: serials.map((s) => s.serialNumber) } } });
     if (existing.length) throw conflict(`Already registered: ${existing.map((e) => e.serialNumber).join(', ')}`, 'DUPLICATE_SERIAL');
     for (const s of serials) {
@@ -134,7 +137,14 @@ export async function issueBulk(tx: Tx, actorId: string, toUserId: string, itemI
 }
 
 /** Technician confirms physical receipt of issued units (all pending ones if no ids are given). */
-export async function acceptUnits(tx: Tx, userId: string, unitIds?: string[]) {
+export async function acceptUnits(tx: Tx, userId: string, unitIds?: string[], scanned?: string[]) {
+  // Accepting by scanning: every scanned device must be one issued to this person and not yet accepted
+  if (scanned?.length) {
+    const found = await unitsBySerial(tx, scanned);
+    const wrong = found.filter((u) => u.holderId !== userId || u.status !== 'IN_TRANSIT');
+    if (wrong.length) throw conflict(`Not waiting for you: ${wrong.map((u) => u.serialNumber).join(', ')}. Only accept the devices issued to you.`, 'NOT_ISSUED_TO_YOU');
+    unitIds = found.map((u) => u.id);
+  }
   const units = await tx.serialUnit.findMany({
     where: { holderId: userId, status: 'IN_TRANSIT', ...(unitIds?.length ? { id: { in: unitIds } } : {}) },
   });

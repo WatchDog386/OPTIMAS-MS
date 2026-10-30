@@ -196,3 +196,14 @@ Customers receive `JOB_UPDATE` notifications when a technician is assigned, star
 
 `CUSTOMER_CARE` (created by admins only): answers `SUPPORT` chats; `GET /requests` and `POST /requests/:id/close`; reads every job (`GET /tasks`, `/tasks/:id`, `/tasks/:id/track`); `GET /users?role=CUSTOMER`, `GET /users/:id` (customers), `POST /users` (customers only), `POST /users/:id/reset-password` (customers only). Everything else answers `403`.
 
+## Device labels and checks
+
+| Method | Path | Who | Notes |
+|---|---|---|---|
+| GET | `/inventory/labels?serials=A,B` or `?itemId=` | store | `{ labels: [{ serial, mac, item, sku, code }] }`: `code` is the signed QR content `OPTIMAS:<serial>:<sig>` |
+| POST | `/inventory/verify` | all staff | `{ code }`: label, serial or MAC → `{ label: genuine/none/fake, unit, verdict: { tone, title, detail } }` |
+| POST | `/inventory/recover` | technician on the customer's job, store | `{ code, reason, condition: GOOD/FAULTY }`: installed device → technician's custody (store: straight into store) |
+| POST | `/inventory/accept` | technician | `{ serials }` (scanned) accepts exactly those; refuses any not issued to you (`NOT_ISSUED_TO_YOU`) |
+
+Every endpoint that takes serial numbers also takes label codes; an altered label is refused (`FAKE_LABEL`).
+
