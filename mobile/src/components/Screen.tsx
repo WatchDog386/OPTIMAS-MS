@@ -8,6 +8,7 @@ import { NATIVE, prefersReducedMotion, spring } from '../utils/motion';
 import { PageHeader } from './PageHeader';
 import { ScreenHeader } from './ScreenHeader';
 import { Text } from './Text';
+import { useDesktop } from '../theme/desktop';
 
 interface Props {
   children: ReactNode;
@@ -56,6 +57,7 @@ export const TAB_BAR_CLEARANCE = 112;
 
 export function Screen({ children, scroll = true, refreshing, onRefresh, edges = ['top'], contentStyle, footer, scrollEnabled = true, glow = true, stickyHeader }: Props) {
   const ptr = usePullToRefresh(onRefresh, refreshing);
+  const desktop = useDesktop();
   const scrollY = useRef(new Animated.Value(0)).current;
   const items = Children.toArray(children);
   const pinned = scroll && items.length > 1 && (stickyHeader ?? isPageHeader(items[0]));
@@ -68,8 +70,8 @@ export function Screen({ children, scroll = true, refreshing, onRefresh, edges =
     Animated.spring(enter, { toValue: 1, ...spring.settle, useNativeDriver: NATIVE }).start();
   }, [enter]);
   return (
-    <View style={styles.root}>
-      {glow ? <GlassBackground /> : null}
+    <View style={[styles.root, desktop && { backgroundColor: '#F7F8FA' }]}>
+      {glow && !desktop ? <GlassBackground /> : null}
       <Animated.View style={{ flex: 1, opacity: enter.interpolate({ inputRange: [0, 1], outputRange: [0, 1], extrapolate: 'clamp' }), transform: [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) }] }}>
       <SafeAreaView style={{ flex: 1 }} edges={edges}>
         {scroll ? (
@@ -78,7 +80,7 @@ export function Screen({ children, scroll = true, refreshing, onRefresh, edges =
             <Animated.View style={ptr.style ?? { flex: 1 }}>
               <ScrollView
                 ref={ptr.scrollRef}
-                contentContainerStyle={[styles.content, footer ? { paddingBottom: space.xxl } : null, contentStyle, pinned ? { paddingTop: 0 } : null]}
+                contentContainerStyle={[styles.content, footer ? { paddingBottom: space.xxl } : null, contentStyle, pinned ? { paddingTop: 0 } : null, desktop && styles.desktop]}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
                 scrollEnabled={scrollEnabled}
@@ -94,7 +96,11 @@ export function Screen({ children, scroll = true, refreshing, onRefresh, edges =
         ) : (
           <View style={[styles.content, { flex: 1 }, contentStyle]}>{children}</View>
         )}
-        {footer ? <View style={styles.footer}>{footer}</View> : null}
+        {footer ? (
+          <View style={[styles.footer, desktop && styles.desktopFooter]}>
+            {desktop ? <View style={{ width: '100%', maxWidth: 460, alignSelf: 'flex-end' }}>{footer}</View> : footer}
+          </View>
+        ) : null}
       </SafeAreaView>
       </Animated.View>
     </View>
@@ -103,6 +109,9 @@ export function Screen({ children, scroll = true, refreshing, onRefresh, edges =
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgBottom },
+  // Desktop: the Business-SME page — light grey, roomier margins, nothing hidden behind a tab bar
+  desktop: { paddingHorizontal: 32, paddingTop: 28, paddingBottom: 48, width: '100%', maxWidth: 1320, alignSelf: 'center' },
+  desktopFooter: { paddingHorizontal: 32, backgroundColor: '#FFFFFF', borderTopColor: '#E5E7EB' },
   content: {
     padding: space.lg,
     paddingBottom: TAB_BAR_CLEARANCE,

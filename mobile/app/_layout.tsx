@@ -16,6 +16,9 @@ import {
   Figtree_800ExtraBold,
   useFonts,
 } from '@expo-google-fonts/figtree';
+import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from '@expo-google-fonts/inter';
+import { OPENED_ON_DESKTOP } from '../src/theme/desktop';
+import { DesktopShell } from '../src/components/desktop/DesktopShell';
 import { useAuth } from '../src/store/auth';
 import { registerForPush } from '../src/utils/push';
 import { openNotificationTarget } from '../src/utils/notifications';
@@ -57,13 +60,13 @@ export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Pro
 }
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
-    Figtree_400Regular,
-    Figtree_500Medium,
-    Figtree_600SemiBold,
-    Figtree_700Bold,
-    Figtree_800ExtraBold,
-  });
+  // Figtree on phones; Inter on a desktop browser, like the Business-SME app (loaded under the same names,
+  // so every screen picks it up)
+  const [fontsLoaded] = useFonts(
+    OPENED_ON_DESKTOP
+      ? { Figtree_400Regular: Inter_400Regular, Figtree_500Medium: Inter_500Medium, Figtree_600SemiBold: Inter_600SemiBold, Figtree_700Bold: Inter_700Bold, Figtree_800ExtraBold: Inter_800ExtraBold }
+      : { Figtree_400Regular, Figtree_500Medium, Figtree_600SemiBold, Figtree_700Bold, Figtree_800ExtraBold },
+  );
   const hydrated = useAuth((s) => s.hydrated);
   const [splashDone, setSplashDone] = useState(false);
   const hideSplash = useCallback(() => setSplashDone(true), []);
@@ -116,10 +119,12 @@ export default function RootLayout() {
 function AppStack() {
   return (
     <>
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg }, animation: 'slide_from_right' }}>
-        <Stack.Screen name="capture" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
-        <Stack.Screen name="scan" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
-      </Stack>
+      <DesktopShell>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg }, animation: 'slide_from_right' }}>
+          <Stack.Screen name="capture" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
+          <Stack.Screen name="scan" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
+        </Stack>
+      </DesktopShell>
       <RouteLoader />
       <BackGuard />
       <InstallPrompt />

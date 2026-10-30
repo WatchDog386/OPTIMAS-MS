@@ -54,3 +54,34 @@ describe('customer care accounts', () => {
     expect((await api().get('/api/v1/approvals/summary').set(auth(care.token))).status).toBe(403);
   });
 });
+
+describe('customer care opens jobs', () => {
+  it('takes the customer, issue, account, phone, location and urgency and assigns a technician', async () => {
+    const admin = (await login('FBI-ADM-001')).token;
+    const care = await newCare(admin);
+    const tech = await newTechnician(admin);
+    expect((await api().get('/api/v1/users?role=TECHNICIAN').set(auth(care.token))).status).toBe(200);
+    expect((await api().get('/api/v1/teams').set(auth(care.token))).status).toBe(200);
+    const res = await api()
+      .post('/api/v1/tasks')
+      .set(auth(care.token))
+      .send({ type: 'REPAIR', title: 'No internet since morning', customerName: 'Amina Hassan', customerPhone: '0722000111', customerAccount: 'ACC-55501', address: 'Kilimani, Argwings Kodhek Rd', priority: 'URGENT', assigneeId: tech.user.id });
+    expect(res.status).toBe(201);
+    expect(res.body.task).toMatchObject({ priority: 'URGENT', customerAccount: 'ACC-55501', assigneeId: tech.user.id });
+    expect(res.body.task.createdBy.id).toBe(care.user.id);
+
+    // Reassign before it starts
+    const other = await newTechnician(admin);
+    const moved = await api().patch(`/api/v1/tasks/${res.body.task.id}`).set(auth(care.token)).send({ assigneeId: other.user.id });
+    expect(moved.status).toBe(200);
+    expect(moved.body.task.assigneeId).toBe(other.user.id);
+
+    // New teams stay with managers
+    const team = await api()
+      .post('/api/v1/tasks')
+      .set(auth(care.token))
+      .send({ type: 'REPAIR', title: 'x', customerName: 'y', address: 'z', newTeam: { name: 'Care crew', memberIds: [tech.user.id, other.user.id], leaderId: tech.user.id } });
+    expect(team.status).toBe(403);
+    expect((await api().get('/api/v1/users').set(auth(care.token))).status).toBe(403);
+  });
+});

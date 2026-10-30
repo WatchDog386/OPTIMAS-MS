@@ -93,6 +93,8 @@ export default function TaskDetail() {
           <Button label="Edit / reassign" icon="create-outline" variant={dispatcher ? 'secondary' : 'primary'} onPress={() => router.push(`/admin/task-edit?id=${task.id}`)} style={{ flex: 1.4 }} />
         </View>
       </View>
+    ) : user.role === 'CUSTOMER_CARE' && task.status === 'ASSIGNED' ? (
+      <Button label="Edit / reassign" icon="create-outline" onPress={() => router.push(`/admin/task-edit?id=${task.id}`)} />
     ) : manager && task.status === 'IN_PROGRESS' ? (
       <Button label="Cancel job" variant="danger" icon="close-circle-outline" loading={busy} onPress={cancel} />
     ) : helper && open ? (

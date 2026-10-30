@@ -6,6 +6,7 @@ import type { Task, TaskPriority, TaskType } from '../../src/api/types';
 import { AssignPicker, Button, Input, NO_ASSIGNMENT, Screen, ScreenHeader, SectionHeader, Segmented, Text, assignmentBody, assignmentProblem, type Assignment } from '../../src/components';
 import { colors, space } from '../../src/theme';
 import { toast } from '../../src/store/feedback';
+import { isCare, useAuth } from '../../src/store/auth';
 
 const TYPES: { value: TaskType; label: string }[] = [
   { value: 'INSTALLATION', label: 'Installation' },
@@ -39,6 +40,7 @@ const dueDate = (v: string) => {
 
 export default function NewTask() {
   // Optional pre-fill when turning a customer request into a job.
+  const care = isCare(useAuth((s) => s.user?.role));
   const p = useLocalSearchParams<{ requestId?: string; type?: TaskType; title?: string; description?: string; customerName?: string; customerPhone?: string; customerAccount?: string; address?: string }>();
   const [assign, setAssign] = useState<Assignment>(NO_ASSIGNMENT);
   const [type, setType] = useState<TaskType>(p.type ?? 'INSTALLATION');
@@ -56,6 +58,11 @@ export default function NewTask() {
   const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   const submit = async () => {
+    if (care) {
+      // Customer care takes the call: these are what the technician needs to find and fix it
+      const need = !form.customerName.trim() ? 'the customer\'s name' : !form.title.trim() ? 'the issue' : !form.customerPhone.trim() ? 'a phone number' : !form.address.trim() ? 'the location' : null;
+      if (need) return toast.warning(`Add ${need}`);
+    }
     const missing = assignmentProblem(assign);
     if (missing) return toast.warning(missing);
     setBusy(true);
@@ -79,30 +86,44 @@ export default function NewTask() {
     }
   };
 
+  const customer = (
+    <>
+      <SectionHeader title="Customer" />
+      <View style={{ gap: space.md }}>
+        <Input label="Customer / premises" icon="person-outline" value={form.customerName} onChangeText={set('customerName')} />
+        <Input label="Phone" icon="call-outline" keyboardType="phone-pad" value={form.customerPhone} onChangeText={set('customerPhone')} />
+        <Input label="Account no." icon="document-text-outline" autoCapitalize="characters" value={form.customerAccount} onChangeText={set('customerAccount')} />
+        <Input label={care ? 'Location' : 'Address / directions'} icon="location-outline" multiline value={form.address} onChangeText={set('address')} placeholder={care ? 'Estate, road, building, house no.' : undefined} />
+      </View>
+    </>
+  );
+  const assignTo = (
+    <>
+      <SectionHeader title="Assign to" />
+      <AssignPicker value={assign} onChange={setAssign} allowNewTeam={!care} />
+    </>
+  );
+
   return (
     <Screen footer={<Button label="Create & assign job" icon="send" size="lg" loading={busy} onPress={submit} />}>
-      <ScreenHeader title="New job" subtitle={p.requestId ? 'From a customer request · the customer is notified too' : 'The technician is notified in their app'} />
-      <SectionHeader title="Assign to" />
-      <AssignPicker value={assign} onChange={setAssign} />
-      <SectionHeader title="Job" />
+      <ScreenHeader
+        title="New job"
+        subtitle={p.requestId ? 'From a customer request · the customer is notified too' : care ? 'From a customer call · the technician is notified in their app' : 'The technician is notified in their app'}
+      />
+      {care ? customer : assignTo}
+      <SectionHeader title={care ? 'Issue' : 'Job'} />
       <Segmented options={TYPES} value={type} onChange={setType} />
-      <Input label="Title" value={form.title} onChangeText={set('title')} placeholder="e.g. New fibre installation — 20 Mbps" />
+      <Input label={care ? 'Issue' : 'Title'} value={form.title} onChangeText={set('title')} placeholder={care ? 'e.g. No internet since morning, red LOS light' : 'e.g. New fibre installation — 20 Mbps'} />
       <Input label="Details (optional)" multiline value={form.description} onChangeText={set('description')} />
       <Text variant="label" color={colors.textMuted}>
-        Priority
+        {care ? 'Level of urgency' : 'Priority'}
       </Text>
       <Segmented options={PRIORITIES} value={priority} onChange={setPriority} />
       <Text variant="label" color={colors.textMuted}>
         Due
       </Text>
       <Segmented options={DUE} value={due} onChange={setDue} />
-      <SectionHeader title="Customer" />
-      <View style={{ gap: space.md }}>
-        <Input label="Customer / premises" icon="person-outline" value={form.customerName} onChangeText={set('customerName')} />
-        <Input label="Phone" icon="call-outline" keyboardType="phone-pad" value={form.customerPhone} onChangeText={set('customerPhone')} />
-        <Input label="Account no." icon="document-text-outline" autoCapitalize="characters" value={form.customerAccount} onChangeText={set('customerAccount')} />
-        <Input label="Address / directions" icon="location-outline" multiline value={form.address} onChangeText={set('address')} />
-      </View>
+      {care ? assignTo : customer}
     </Screen>
   );
 }

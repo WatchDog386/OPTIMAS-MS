@@ -21,6 +21,11 @@ import { createTeam, newTeamSchema, teamInclude } from '../teams/teams.routes';
 
 export const tasksRouter = Router();
 const managers = requireRole(ROLES.MANAGERS);
+const dispatchers = requireRole(ROLES.DISPATCH);
+/** Customer care can give a job to a technician or a saved team, but only managers make new teams. */
+const mayMakeTeam = (role: string, newTeam: unknown) => {
+  if (newTeam && role === 'CUSTOMER_CARE') throw forbidden('Only a supervisor or admin can make a new team. Choose a saved team or one technician.');
+};
 
 const person = { select: { id: true, name: true, staffNo: true, phone: true } } as const;
 const photo = { select: { id: true, flags: true, lat: true, lng: true, receivedAt: true } } as const;
@@ -158,8 +163,9 @@ function announce(task: { id: string; title: string; priority: string; customerN
 
 tasksRouter.post(
   '/',
-  managers,
+  dispatchers,
   ah(async (req, res) => {
+    mayMakeTeam(me(req).role, req.body?.newTeam);
     const { newTeam, teamId: _teamId, assigneeId: _assigneeId, ...body } = parse(taskSchema, req.body);
     if (body.requestId) {
       const request = await prisma.serviceRequest.findUnique({ where: { id: body.requestId }, include: { task: true } });
@@ -190,9 +196,10 @@ tasksRouter.post(
 
 tasksRouter.patch(
   '/:id',
-  managers,
+  dispatchers,
   ah(async (req, res) => {
     // Linking to a customer request is only allowed at creation, where it is validated.
+    mayMakeTeam(me(req).role, req.body?.newTeam);
     const { newTeam, teamId, assigneeId, ...body } = parse(taskSchema.omit({ requestId: true }).partial(), req.body);
     const task = await loadTask(req.params.id);
     if (task.status !== 'ASSIGNED') throw conflict('Only tasks that have not started can be edited or reassigned');
@@ -238,7 +245,7 @@ tasksRouter.get(
  */
 tasksRouter.get(
   '/:id/nearby',
-  managers,
+  dispatchers,
   ah(async (req, res) => {
     const task = await prisma.task.findUnique({ where: { id: req.params.id }, select: { id: true, lat: true, lng: true, assigneeId: true, status: true } });
     if (!task) throw notFound('Task');

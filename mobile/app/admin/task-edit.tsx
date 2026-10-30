@@ -7,6 +7,7 @@ import { AssignPicker, Button, Glass, Input, Loading, NO_ASSIGNMENT, Screen, Scr
 import { useApi } from '../../src/hooks/useApi';
 import { colors } from '../../src/theme';
 import { toast } from '../../src/store/feedback';
+import { isCare, useAuth } from '../../src/store/auth';
 
 const PRIORITIES: { value: TaskPriority; label: string }[] = [
   { value: 'LOW', label: 'Low' },
@@ -18,6 +19,7 @@ const PRIORITIES: { value: TaskPriority; label: string }[] = [
 /** Edit or reassign a job that has not started yet (to one technician or a team). Everyone affected is notified. */
 export default function TaskEdit() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const care = isCare(useAuth((s) => s.user?.role));
   const { data } = useApi<{ task: Task }>(`/tasks/${id}`);
   const [assign, setAssign] = useState<Assignment>(NO_ASSIGNMENT);
   const [priority, setPriority] = useState<TaskPriority>('NORMAL');
@@ -71,7 +73,7 @@ export default function TaskEdit() {
     <Screen footer={<Button label="Save job" icon="checkmark" size="lg" loading={busy} onPress={save} />}>
       <ScreenHeader title={`Edit ${t.code}`} subtitle="Change details or reassign" />
       <SectionHeader title="Assign to" />
-      <AssignPicker value={assign} onChange={setAssign} />
+      <AssignPicker value={assign} onChange={setAssign} allowNewTeam={!care} />
       <Text variant="label" color={colors.textMuted}>
         Priority
       </Text>

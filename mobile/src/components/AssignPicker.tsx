@@ -40,13 +40,13 @@ export function assignmentBody(a: Assignment): Record<string, unknown> {
  * "Individual" picks one technician. "Team" picks a saved team or makes one: a name or number, the
  * members, and the leader who files the report for everyone.
  */
-export function AssignPicker({ value, onChange }: { value: Assignment; onChange: (a: Assignment) => void }) {
+export function AssignPicker({ value, onChange, allowNewTeam = true }: { value: Assignment; onChange: (a: Assignment) => void; allowNewTeam?: boolean }) {
   const teams = useApi<{ teams: JobTeam[] }>('/teams');
   const techs = useApi<{ users: TeamMember[] }>('/users?role=TECHNICIAN');
   const people = (techs.data?.users ?? []).filter((u) => u.active);
 
   const setMode = (mode: 'individual' | 'team') =>
-    onChange(mode === 'individual' ? { mode, assigneeId: null } : { mode, teamId: null, newTeam: teams.data?.teams.length ? null : { name: '', memberIds: [], leaderId: null } });
+    onChange(mode === 'individual' ? { mode, assigneeId: null } : { mode, teamId: null, newTeam: teams.data?.teams.length || !allowNewTeam ? null : { name: '', memberIds: [], leaderId: null } });
 
   return (
     <View style={{ gap: space.md }}>
@@ -80,6 +80,7 @@ export function AssignPicker({ value, onChange }: { value: Assignment; onChange:
                 </Pressable>
               );
             })}
+            {allowNewTeam ? (
             <Pressable
               onPress={() => onChange({ mode: 'team', teamId: null, newTeam: value.newTeam ?? { name: '', memberIds: [], leaderId: null } })}
               style={[styles.team, !!value.newTeam && styles.teamOn]}
@@ -91,6 +92,12 @@ export function AssignPicker({ value, onChange }: { value: Assignment; onChange:
                 New team
               </Text>
             </Pressable>
+            ) : null}
+            {!allowNewTeam && !teams.data?.teams.length ? (
+              <Text variant="bodySm" color={colors.textMuted}>
+                No saved teams yet. A supervisor makes teams; choose one technician for now.
+              </Text>
+            ) : null}
           </View>
 
           {value.newTeam ? (

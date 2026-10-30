@@ -7,7 +7,7 @@ import { NATIVE, haptic, prefersReducedMotion, spring } from '../utils/motion';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline';
 
 interface Props {
   label: string;
@@ -24,12 +24,14 @@ interface Props {
   style?: StyleProp<ViewStyle>;
 }
 
-/** Material 3 buttons: filled (primary), outlined (secondary), text (ghost), and tonal danger. */
+/** Material 3 buttons: filled (primary), outlined (secondary), text (ghost), tonal danger, and the green outline pill. */
 const light: Record<Variant, { bg: string; fg: string; border?: string }> = {
   primary: { bg: colors.primary, fg: colors.onPrimary },
   secondary: { bg: colors.glassStrong, fg: colors.text, border: colors.glassBorder },
   ghost: { bg: 'transparent', fg: colors.primary },
   danger: { bg: colors.dangerSoft, fg: colors.danger },
+  // The Business-SME pill: green outline and green label ("Manage", "See all")
+  outline: { bg: 'transparent', fg: colors.brand, border: colors.brand },
 };
 
 /** On navy hero cards the primary action becomes the lime brand button. */
@@ -38,6 +40,7 @@ const inverse: Record<Variant, { bg: string; fg: string; border?: string }> = {
   secondary: { bg: colors.heroInset, fg: colors.onHero, border: colors.heroBorder },
   ghost: { bg: 'transparent', fg: colors.onHero },
   danger: { bg: colors.dangerSoft, fg: colors.danger },
+  outline: { bg: 'transparent', fg: colors.highlight, border: colors.highlight },
 };
 
 export function Button({ label, onPress, variant = 'primary', icon, trailingIcon, caps, loading, disabled, size = 'md', style }: Props) {

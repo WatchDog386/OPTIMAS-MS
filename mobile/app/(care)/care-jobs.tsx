@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Task, TaskStatus } from '../../src/api/types';
-import { EmptyState, PageHeader, Reveal, Screen, Segmented, TaskCard } from '../../src/components';
+import { router } from 'expo-router';
+import { EmptyState, HeaderButton, PageHeader, Reveal, Screen, Segmented, TaskCard } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 
 type Show = 'open' | 'done';
@@ -12,7 +13,7 @@ export default function CareJobs() {
   const { data, refresh, refreshing, loading } = useApi<{ tasks: Task[] }>(`/tasks?status=${STATUSES[show].join(',')}`, { poll: 30_000 });
   return (
     <Screen refreshing={refreshing} onRefresh={refresh}>
-      <PageHeader title="Jobs" />
+      <PageHeader title="Jobs" right={<HeaderButton icon="add" label="New job" primary onPress={() => router.push('/admin/task-new')} />} />
       <Segmented
         options={[
           { value: 'open', label: 'Open' },
@@ -21,7 +22,7 @@ export default function CareJobs() {
         value={show}
         onChange={setShow}
       />
-      {!loading && !data?.tasks.length ? <EmptyState icon="briefcase-outline" title="No jobs here" message="Jobs the office assigns show up here." /> : null}
+      {!loading && !data?.tasks.length ? <EmptyState icon="briefcase-outline" title="No jobs here" message="Tap New job to log a customer's issue and send it to a technician." /> : null}
       {data?.tasks.map((t, i) => (
         <Reveal key={t.id} index={Math.min(i, 8)}>
           <TaskCard task={t} showAssignee />

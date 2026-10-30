@@ -72,7 +72,9 @@ export const ROLES = {
   CARE: ['ADMIN', 'SUPERVISOR', 'CUSTOMER_CARE'] as Role[],
   /** Check in and out every day: everyone on staff except admins. */
   CHECK_IN: ['SUPERVISOR', 'STOREKEEPER', 'TECHNICIAN', 'CUSTOMER_CARE'] as Role[],
-  /** May see every job and follow it live (dispatching stays with managers). */
+  /** Open jobs for customers and assign or reassign them (making new teams stays with managers). */
+  DISPATCH: ['ADMIN', 'SUPERVISOR', 'CUSTOMER_CARE'] as Role[],
+  /** May see every job and follow it live. */
   JOB_VIEWERS: ['ADMIN', 'SUPERVISOR', 'STOREKEEPER', 'CUSTOMER_CARE'] as Role[],
 };
 

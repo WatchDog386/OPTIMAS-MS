@@ -25,9 +25,9 @@ export default function Team() {
         right={role === 'ADMIN' || role === 'SUPERVISOR' ? <HeaderButton icon="person-add-outline" label="Add a person" onPress={() => router.push('/admin/user-new')} /> : undefined}
       />
       <View style={{ flexDirection: 'row', gap: 10 }}>
-        <Button label="Register" icon="calendar-outline" variant="secondary" style={{ flex: 1 }} onPress={() => router.push('/admin/attendance')} />
-        {role === 'ADMIN' || role === 'SUPERVISOR' ? <Button label="People" icon="people-outline" style={{ flex: 1 }} onPress={() => router.push('/admin/users')} /> : null}
-        {role === 'ADMIN' || role === 'SUPERVISOR' ? <Button label="Create team" icon="people-outline" style={{ flex: 1 }} onPress={() => router.push('/admin/team-new')} /> : null}
+        <Button label="Register" icon="calendar-outline" variant="outline" style={{ flex: 1, paddingHorizontal: 10 }} onPress={() => router.push('/admin/attendance')} />
+        {role === 'ADMIN' || role === 'SUPERVISOR' ? <Button label="People" icon="people-outline" variant="outline" style={{ flex: 1, paddingHorizontal: 10 }} onPress={() => router.push('/admin/users')} /> : null}
+        {role === 'ADMIN' || role === 'SUPERVISOR' ? <Button label="Team" icon="people-circle-outline" variant="outline" style={{ flex: 1, paddingHorizontal: 10 }} onPress={() => router.push('/admin/team-new')} /> : null}
       </View>
       <Segmented<Filter>
         options={[

@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabBarProps, BottomTabNavigationOptions } from 'expo-router/js-tabs';
 import { colors, fonts } from '../theme';
 import { Text } from './Text';
+import { useDesktop } from '../theme/desktop';
 
 /*
  * Floating black tab bar with a smooth dip that follows the active tab, whose icon
@@ -51,7 +52,12 @@ const tabCenter = (i: number, width: number, count: number) =>
 
 type IconFn = (p: { focused: boolean; color: ColorValue; size: number }) => React.ReactNode;
 
-export function FloatingTabBar({ state, descriptors, navigateToTab }: BottomTabBarProps) {
+/** On a desktop browser the side rail does the navigating, so the floating bar steps aside. */
+export function FloatingTabBar(props: BottomTabBarProps) {
+  return useDesktop() ? null : <PhoneTabBar {...props} />;
+}
+
+function PhoneTabBar({ state, descriptors, navigateToTab }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const routes = state.routes.filter((r) => !(descriptors[r.key].options as { hidden?: boolean }).hidden);
   const activeKey = state.routes[state.index]?.key;

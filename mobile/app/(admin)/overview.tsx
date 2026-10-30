@@ -29,6 +29,11 @@ import type { ApprovalSummary } from '../../src/api/approvals';
 import { requestScan } from '../../src/store/bridge';
 import { colors, fonts } from '../../src/theme';
 import { duration, firstName } from '../../src/utils/format';
+import { useDesktop } from '../../src/theme/desktop';
+import { DeskButton, KpiCard, MiniStat, Panel, PanelRow } from '../../src/components/desktop/Kit';
+import { desk } from '../../src/components/desktop/DesktopShell';
+import { Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function Overview() {
   const user = useAuth((s) => s.user)!;
@@ -216,6 +221,123 @@ export default function Overview() {
   ];
   const actions = all.filter((a): a is QuickAction => !!a).slice(0, 8);
 
+  const desktop = useDesktop();
+  if (desktop) {
+    const reload = () => {
+      refresh();
+      done.refresh();
+      approvals.refresh();
+    };
+    const today = new Date().toLocaleDateString('en-KE', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Africa/Nairobi' });
+    const toApprove = managers ? (approvals.data?.total ?? 0) : (d?.tasks.awaitingVerification ?? 0);
+    return (
+      <Screen refreshing={refreshing} onRefresh={reload} contentStyle={{ gap: 20 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <Text variant="display" color={desk.ink} fixedColor style={{ fontFamily: fonts.regular, fontSize: 30, lineHeight: 38, flex: 1 }}>
+            Command Center
+          </Text>
+          {managers ? (
+            <>
+              <DeskButton label="Add a person" icon="person-add-outline" onPress={() => router.push('/admin/user-new')} />
+              <DeskButton label="New job" icon="add" filled onPress={() => router.push('/admin/task-new')} />
+            </>
+          ) : (
+            <>
+              <DeskButton label="Receive" icon="download-outline" onPress={() => router.push('/admin/receive')} />
+              <DeskButton label="Issue stock" icon="add" filled onPress={() => router.push('/admin/transfer?direction=issue')} />
+            </>
+          )}
+        </View>
+        <View style={{ flexDirection: 'row', gap: 8, marginTop: -6 }}>
+          <View style={deskChip}>
+            <Ionicons name="calendar-outline" size={15} color={desk.muted} />
+            <Text variant="bodySm" color={desk.muted} fixedColor>
+              {today}
+            </Text>
+          </View>
+          <View style={deskChip}>
+            <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: desk.green }} />
+            <Text variant="bodySm" color={desk.muted} fixedColor>
+              Live · jobs done over the last 7 days
+            </Text>
+          </View>
+        </View>
+
+        <View style={{ flexDirection: 'row', gap: 16, flexWrap: 'wrap' }}>
+          <KpiCard tone="blue" value={d ? d.tasks.assigned + d.tasks.inProgress : 0} title="Open jobs" sub={`${d?.tasks.inProgress ?? 0} in progress`} icon="briefcase-outline" onPress={() => router.push('/board')} />
+          <KpiCard tone="green" value={d?.tasks.completedLast7Days ?? 0} title="Jobs done · 7 days" sub={`KES ${kes(d?.tasks.amountCollectedLast7Days)} collected`} icon="checkmark-done-outline" onPress={() => router.push('/admin/reports')} />
+          <KpiCard tone="amber" value={toApprove} title="Awaiting approval" sub={managers ? 'Photos, check-outs and jobs' : 'Jobs to verify'} icon="flag-outline" onPress={() => router.push(managers ? '/admin/approvals' : '/board?status=COMPLETED')} />
+          <KpiCard tone="red" value={flagged} title="Flagged devices" sub={flagged ? 'Overdue · missing · lost' : 'All accounted for'} icon="pie-chart-outline" onPress={() => router.push('/admin/reconciliation')} />
+        </View>
+
+        <View style={{ flexDirection: 'row', gap: 16, alignItems: 'stretch' }}>
+          <Panel title="Jobs done this week" link="All jobs" onLink={() => router.push('/board')} style={{ flex: 2 }}>
+            <View style={{ flexDirection: 'row', gap: 40 }}>
+              <View style={{ gap: 4 }}>
+                <Text variant="bodySm" color={desk.muted} fixedColor>
+                  Last 7 days
+                </Text>
+                <Text variant="h1" color={desk.ink} fixedColor style={{ fontFamily: fonts.semibold, fontSize: 22, lineHeight: 28 }}>
+                  {d?.tasks.completedLast7Days ?? 0} jobs
+                </Text>
+              </View>
+              <View style={{ gap: 4 }}>
+                <Text variant="bodySm" color={desk.muted} fixedColor>
+                  Average time
+                </Text>
+                <Text variant="h1" color={desk.ink} fixedColor style={{ fontFamily: fonts.semibold, fontSize: 22, lineHeight: 28 }}>
+                  {duration(d?.tasks.avgDurationMinutes)}
+                </Text>
+              </View>
+            </View>
+            <PillChart data={week} activeIndex={week.length - 1} format={(n) => `${n} ${n === 1 ? 'job' : 'jobs'}`} />
+          </Panel>
+          <Panel title="Attendance today" link={managers ? 'See all' : undefined} onLink={() => router.push('/admin/attendance')} style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <MiniStat value={`${d?.attendance.checkedIn ?? 0}/${techs}`} label="Checked in" color={desk.green} />
+              <MiniStat value={d?.attendance.late ?? 0} label="Late" color="#D97706" />
+              <MiniStat value={d?.attendance.absent ?? 0} label="Absent" color="#DC2626" />
+            </View>
+            <View style={{ gap: 6 }}>
+              <PanelRow label="Checked out" value={d?.attendance.checkedOut ?? 0} />
+              <PanelRow label="Dress reviews waiting" value={d?.attendance.pendingDressReviews ?? 0} onPress={managers ? () => router.push('/admin/reviews') : undefined} />
+              <PanelRow label="Customer requests" value={d?.requests?.open ?? 0} onPress={managers ? () => router.push('/admin/requests') : undefined} />
+              <PanelRow label="Jobs to verify" value={d?.tasks.awaitingVerification ?? 0} onPress={() => router.push('/board?status=COMPLETED')} />
+            </View>
+          </Panel>
+        </View>
+
+        <View style={{ flexDirection: 'row', gap: 16, alignItems: 'stretch' }}>
+          <Panel title="Store" link="Full report" onLink={() => router.push('/store')} style={{ flex: 1 }}>
+            <View style={{ gap: 6 }}>
+              <PanelRow label="Routers in store" value={d?.routers.inStore ?? 0} />
+              <PanelRow label="With technicians" value={inField} />
+              <PanelRow label="Installed at customers" value={d?.routers.installed ?? 0} />
+              <PanelRow label="Low-stock items" value={d?.lowStockItems ?? 0} onPress={() => router.push('/admin/items')} />
+            </View>
+          </Panel>
+          <Panel title="Quick actions" style={{ flex: 2 }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+              {actions.map((a) => (
+                <Pressable key={a.label} onPress={a.onPress} style={(st) => [deskAction, (st as { hovered?: boolean }).hovered && { borderColor: desk.green }]} accessibilityRole="button">
+                  <Ionicons name={a.icon} size={19} color={desk.green} />
+                  <Text variant="body" color={desk.ink} fixedColor style={{ fontFamily: fonts.medium }} numberOfLines={1}>
+                    {a.label}
+                  </Text>
+                  {a.badge ? (
+                    <Text variant="label" color="#DC2626" fixedColor style={{ fontFamily: fonts.semibold }}>
+                      {a.badge}
+                    </Text>
+                  ) : null}
+                </Pressable>
+              ))}
+            </View>
+          </Panel>
+        </View>
+      </Screen>
+    );
+  }
+
   const scan = async () => {
     const r = await requestScan({ title: 'Scan a device' });
     if (r?.[0]) router.push(`/admin/unit?serial=${encodeURIComponent(r[0])}`);
@@ -355,3 +477,6 @@ export default function Overview() {
     </Screen>
   );
 }
+
+const deskChip = { flexDirection: 'row', alignItems: 'center', gap: 6, height: 32, paddingHorizontal: 12, borderRadius: 6, borderWidth: 1, borderColor: desk.border, backgroundColor: '#FFFFFF' } as const;
+const deskAction = { flexDirection: 'row', alignItems: 'center', gap: 10, width: '31.5%', minWidth: 170, height: 46, paddingHorizontal: 14, borderRadius: 8, borderWidth: 1, borderColor: desk.border, backgroundColor: '#FFFFFF' } as const;

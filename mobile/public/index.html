@@ -27,6 +27,16 @@
       body {
         overflow: hidden;
         margin: 0;
+        /* Lettering like the Business-SME app: a touch of tracking on phones, even-width numbers */
+        letter-spacing: 0.01em;
+        font-variant-numeric: tabular-nums;
+        -webkit-font-smoothing: antialiased;
+      }
+      @media (min-width: 1024px) {
+        body {
+          letter-spacing: 0;
+          background: #f7f8fa;
+        }
       }
       #root {
         display: flex;

@@ -47,7 +47,8 @@ export async function createTeam(tx: Prisma.TransactionClient, input: NewTeam, c
 
 teamsRouter.get(
   '/',
-  requireRole(ROLES.STORE),
+  // Customer care picks a saved team when assigning a job
+  requireRole([...ROLES.STORE, 'CUSTOMER_CARE']),
   ah(async (_req, res) => {
     const teams = await prisma.team.findMany({
       include: { ...teamInclude, _count: { select: { tasks: { where: { status: { in: ['ASSIGNED', 'IN_PROGRESS'] } } } } } },

@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { View } from 'react-native';
 import type { ConversationRow } from '../../src/api/field';
 import type { ServiceRequest, Task, User } from '../../src/api/types';
-import { Avatar, Badge, BellButton, ListRow, Screen, ShiftCard, SectionHeader, Text, TileGrid } from '../../src/components';
+import { Avatar, Badge, BellButton, Button, ListRow, Screen, ShiftCard, SectionHeader, Text, TileGrid } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { useAuth } from '../../src/store/auth';
 import { colors, fonts } from '../../src/theme';
@@ -40,6 +40,11 @@ export default function CareHome() {
       </View>
 
       <ShiftCard />
+
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        <Button label="New job" icon="add-circle-outline" style={{ flex: 1 }} onPress={() => router.push('/admin/task-new')} />
+        <Button label="Jobs" icon="briefcase-outline" variant="outline" style={{ flex: 1 }} onPress={() => router.push('/care-jobs')} />
+      </View>
 
       <TileGrid
         columns={2}

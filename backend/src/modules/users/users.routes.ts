@@ -52,8 +52,8 @@ usersRouter.get(
   ah(async (req, res) => {
     const role = typeof req.query.role === 'string' && req.query.role in Role ? (req.query.role as Role) : undefined;
     if (role === 'CUSTOMER' && !ROLES.CARE.includes(req.user!.role)) throw forbidden();
-    // Customer care sees the customer list, not the staff directory
-    if (req.user!.role === 'CUSTOMER_CARE' && role !== 'CUSTOMER') throw forbidden('Customer care can see customer accounts only');
+    // Customer care sees the customer list and the technicians it gives jobs to, not the whole staff directory
+    if (req.user!.role === 'CUSTOMER_CARE' && role !== 'CUSTOMER' && role !== 'TECHNICIAN') throw forbidden('Customer care can see customers and technicians only');
     const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
     const active = req.query.active === 'true' ? true : req.query.active === 'false' ? false : undefined;
     const today = workDateOf();

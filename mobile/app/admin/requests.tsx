@@ -15,7 +15,8 @@ import { openChatWith } from '../../src/utils/chat';
 /** Supervisor inbox of customer service requests → turn into jobs, or close with a note. */
 export default function Requests() {
   // Supervisors and admins turn requests into jobs; customer care answers the customer
-  const dispatcher = useAuth((s) => s.user?.role === 'ADMIN' || s.user?.role === 'SUPERVISOR');
+  // Supervisors, admins and customer care turn a request into a job
+  const dispatcher = useAuth((s) => s.user?.role === 'ADMIN' || s.user?.role === 'SUPERVISOR' || s.user?.role === 'CUSTOMER_CARE');
   const [status, setStatus] = useState<RequestStatus>('OPEN');
   const { data, refresh, refreshing, loading, reload } = useApi<{ requests: ServiceRequest[] }>(`/requests?status=${status}`);
   const [closing, setClosing] = useState<string | null>(null);
