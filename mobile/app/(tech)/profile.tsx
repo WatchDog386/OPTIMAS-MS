@@ -1,6 +1,6 @@
 import type { Attendance } from '../../src/api/types';
 import { router } from 'expo-router';
-import { Badge, ListRow, LocationSetting, ProfileView, Screen, SectionHeader, StatGrid, StatTile } from '../../src/components';
+import { Badge, ListRow, LocationSetting, PrivacyRows, ProfileView, Screen, SectionHeader, StatGrid, StatTile } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { colors } from '../../src/theme';
 import { date, duration, time } from '../../src/utils/format';
@@ -18,6 +18,7 @@ export default function Profile() {
         <LocationSetting />
         <ListRow icon="key-outline" iconTint={colors.text} title="Change password" onPress={() => router.push('/change-password')} />
         <ListRow icon="search" iconTint={colors.text} title="Search my jobs and devices" onPress={() => router.push('/search')} />
+        <PrivacyRows />
         <SectionHeader title="Attendance history" />
         {history.data?.records.slice(0, 20).map((r) => (
           <ListRow

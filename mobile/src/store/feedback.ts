@@ -34,7 +34,8 @@ export interface DialogSpec {
   /** Omit for a single-button message (alert). */
   cancelLabel?: string | null;
   /** Ask for a line of text (e.g. the reason for a rejection). */
-  input?: { placeholder?: string; required?: boolean };
+  /** `secret`: a hidden, untrimmed single line (passwords). */
+  input?: { placeholder?: string; required?: boolean; secret?: boolean };
 }
 interface OpenDialog extends DialogSpec {
   resolve: (ok: boolean, value?: string) => void;
@@ -106,7 +107,7 @@ export const confirmDialog = (spec: DialogSpec) =>
 /** Dialog with a text box; resolves the text, or null when cancelled. */
 export const promptDialog = (spec: DialogSpec) =>
   new Promise<string | null>((resolve) =>
-    useFeedback.getState().open({ cancelLabel: 'Cancel', confirmLabel: 'OK', input: {}, ...spec, resolve: (ok, value) => resolve(ok ? (value ?? '').trim() : null) }),
+    useFeedback.getState().open({ cancelLabel: 'Cancel', confirmLabel: 'OK', input: {}, ...spec, resolve: (ok, value) => resolve(ok ? (spec.input?.secret ? (value ?? '') : (value ?? '').trim()) : null) }),
   );
 
 /** One-button message dialog. */

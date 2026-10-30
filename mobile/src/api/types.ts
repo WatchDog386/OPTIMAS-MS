@@ -252,7 +252,8 @@ export interface CustomerOverview {
   history: CustomerJob[];
   devices: { serialNumber: string; installedAt: string | null; item: { name: string; category: string } }[];
   requests: ServiceRequest[];
-  support: { phone: string; whatsapp: string };
+  /** Null when the office hasn't set that contact (the button is then hidden). */
+  support: { phone: string | null; whatsapp: string | null };
 }
 
 /** GET /reports/me — a technician's own performance. */

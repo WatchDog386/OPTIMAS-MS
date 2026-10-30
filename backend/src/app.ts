@@ -24,6 +24,7 @@ import { searchRouter } from './modules/search/search.routes';
 import { auditRouter } from './modules/audit/audit.routes';
 import { locationRouter } from './modules/location/location.routes';
 import { chatRouter } from './modules/chat/chat.routes';
+import { publicRouter } from './modules/public/public.routes';
 
 export function createApp() {
   const app = express();
@@ -71,6 +72,7 @@ export function createApp() {
     }),
   );
   api.use('/auth', authRouter);
+  api.use('/public', publicRouter);
   api.use('/users', requireAuth, staff, usersRouter);
   api.use('/capture', requireAuth, staff, captureRouter);
   api.use('/attendance', requireAuth, staff, attendanceRouter);

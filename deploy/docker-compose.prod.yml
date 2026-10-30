@@ -55,8 +55,12 @@ services:
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@example.com}
       API_RATE_LIMIT: ${API_RATE_LIMIT:-600}
       LOGIN_RATE_LIMIT: ${LOGIN_RATE_LIMIT:-10}
-      SUPPORT_PHONE: ${SUPPORT_PHONE:-+254700000000}
-      SUPPORT_WHATSAPP: ${SUPPORT_WHATSAPP:-254700000000}
+      SUPPORT_PHONE: ${SUPPORT_PHONE:-}
+      SUPPORT_WHATSAPP: ${SUPPORT_WHATSAPP:-}
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL:-}
+      COMPANY_NAME: ${COMPANY_NAME:-Optimas Networks}
+      COMPANY_ADDRESS: ${COMPANY_ADDRESS:-Nairobi, Kenya}
+      PRIVACY_EMAIL: ${PRIVACY_EMAIL:-}
     volumes:
       - uploads:/app/uploads
     networks: [internal]

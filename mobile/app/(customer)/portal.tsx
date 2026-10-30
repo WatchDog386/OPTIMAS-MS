@@ -75,7 +75,7 @@ export default function Portal() {
         unread={unread.data?.unread}
         updatedAt={updatedAt}
         onAvatar={() => router.push('/account')}
-        extra={support ? { icon: 'headset-outline', label: 'Call Optimas support', onPress: () => call(support.phone) } : undefined}
+        extra={support?.phone ? { icon: 'headset-outline', label: 'Call Optimas support', onPress: () => call(support.phone) } : undefined}
         onBell={() => router.push('/notifications')}
       />
       <View style={{ marginHorizontal: -16 }}>
@@ -135,8 +135,8 @@ export default function Portal() {
             { label: 'Report a fault', icon: 'construct-outline', onPress: () => router.push('/request-new?type=REPAIR') },
             { label: 'Move router', icon: 'swap-horizontal-outline', onPress: () => router.push('/request-new?type=RELOCATION') },
             { label: 'Chat with us', icon: 'chatbubble-ellipses-outline', onPress: () => openChatWith({ support: true }) },
-            { label: 'Call us', icon: 'call-outline', onPress: () => call(support?.phone) },
-            { label: 'WhatsApp', icon: 'logo-whatsapp', onPress: () => support && whatsapp(support.whatsapp), tint: '#25D366' },
+            ...(support?.phone ? [{ label: 'Call us', icon: 'call-outline' as const, onPress: () => call(support.phone) }] : []),
+            ...(support?.whatsapp ? [{ label: 'WhatsApp', icon: 'logo-whatsapp' as const, onPress: () => whatsapp(support.whatsapp!), tint: '#25D366' }] : []),
           ]}
         />
       </Reveal>

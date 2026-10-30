@@ -1,0 +1,8 @@
+# Optimas MS: a signed-in app. Only the public information pages are meant for search engines.
+User-agent: *
+Allow: /$
+Allow: /login
+Allow: /help
+Allow: /privacy
+Allow: /terms
+Disallow: /

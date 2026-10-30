@@ -36,3 +36,4 @@ export * from './NotchCards';
 export * from './PageHeader';
 export * from './map';
 export * from './LocationSetting';
+export * from './PrivacyRows';

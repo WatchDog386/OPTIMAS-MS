@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 import type { User } from '../../src/api/types';
-import { GlassBackground, Text } from '../../src/components';
+import { GlassBackground, PrivacyRows, Text } from '../../src/components';
 import { TAB_BAR_CLEARANCE } from '../../src/components/Screen';
 import { useApi } from '../../src/hooks/useApi';
 import { useAuth } from '../../src/store/auth';
@@ -108,6 +108,10 @@ export default function More() {
               </Text>
             </Pressable>
           ))}
+        </View>
+
+        <View style={{ marginHorizontal: 20, marginBottom: 16, gap: 8 }}>
+          <PrivacyRows />
         </View>
 
         <Pressable onPress={signOut} style={({ pressed }) => [styles.signOut, pressed && { opacity: 0.7 }]} accessibilityRole="button">

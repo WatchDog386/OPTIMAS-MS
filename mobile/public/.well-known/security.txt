@@ -1,0 +1,5 @@
+# Found a security problem in Optimas MS? Please tell us privately so we can fix it.
+Contact: https://optimaswifi.co.ke
+Policy: /privacy
+Preferred-Languages: en, sw
+Expires: 2027-10-30T00:00:00.000Z

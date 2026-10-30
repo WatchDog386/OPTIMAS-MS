@@ -74,7 +74,7 @@ customerRouter.get(
       history,
       devices,
       requests,
-      support: { phone: env.SUPPORT_PHONE, whatsapp: env.SUPPORT_WHATSAPP },
+      support: { phone: env.SUPPORT_PHONE || null, whatsapp: env.SUPPORT_WHATSAPP || null },
     });
   }),
 );

@@ -175,9 +175,11 @@ function DialogView() {
             placeholder={dialog.input.placeholder}
             placeholderTextColor={colors.textDim}
             autoFocus
-            multiline
+            multiline={!dialog.input.secret}
+            secureTextEntry={!!dialog.input.secret}
+            autoCapitalize={dialog.input.secret ? 'none' : 'sentences'}
             maxLength={500}
-            style={styles.input}
+            style={[styles.input, dialog.input.secret && styles.secret]}
             accessibilityLabel={dialog.input.placeholder ?? 'Text'}
           />
         ) : null}
@@ -233,6 +235,7 @@ const styles = StyleSheet.create({
   cardIcon: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   title: { fontFamily: fonts.semibold, fontSize: 19, textAlign: 'center' },
   message: { textAlign: 'center', marginTop: 8, lineHeight: 20 },
+  secret: { minHeight: 48 },
   input: { alignSelf: 'stretch', minHeight: 72, maxHeight: 140, marginTop: 16, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceAlt, paddingHorizontal: 14, paddingVertical: 12, fontFamily: fonts.regular, fontSize: 15, color: colors.text, textAlignVertical: 'top' },
   actions: { flexDirection: 'row', gap: 10, alignSelf: 'stretch', marginTop: 22 },
 });

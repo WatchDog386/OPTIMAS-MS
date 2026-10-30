@@ -44,8 +44,15 @@ const schema = z.object({
   ROUTING_URL: z.string().default('https://router.project-osrm.org'),
   /** Nominatim server used to find coordinates for typed addresses. Empty switches it off. */
   GEOCODING_URL: z.string().default('https://nominatim.openstreetmap.org'),
-  SUPPORT_PHONE: z.string().default('+254700000000'),
-  SUPPORT_WHATSAPP: z.string().default('254700000000'),
+  /** Shown to customers and on the help, privacy and terms pages. Leave empty to hide a contact. */
+  SUPPORT_PHONE: z.string().default(''),
+  SUPPORT_WHATSAPP: z.string().default(''),
+  SUPPORT_EMAIL: z.string().default(''),
+  /** The company that runs the app (the data controller named in the Privacy Policy). */
+  COMPANY_NAME: z.string().default('Optimas Networks'),
+  COMPANY_ADDRESS: z.string().default('Nairobi, Kenya'),
+  /** Where people send data-protection requests and complaints; falls back to SUPPORT_EMAIL. */
+  PRIVACY_EMAIL: z.string().default(''),
 });
 
 const parsed = schema.safeParse(process.env);

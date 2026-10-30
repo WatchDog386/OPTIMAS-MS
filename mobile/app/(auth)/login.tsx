@@ -7,7 +7,6 @@ import { api, ApiError } from '../../src/api/client';
 import type { User } from '../../src/api/types';
 import { Button, GlassBackground, InstallButton, Input, Reveal, SignInLoader, Text } from '../../src/components';
 import { afterLogin, useAuth } from '../../src/store/auth';
-import { alertDialog } from '../../src/store/feedback';
 import { colors, fonts, radius, space } from '../../src/theme';
 import { NATIVE, spring } from '../../src/utils/motion';
 
@@ -66,8 +65,7 @@ export default function Login() {
 
   const help = () => {
     setMenu(false);
-    const msg = 'Staff: sign in with your staff number (e.g. FBI-TEC-001).\nCustomers: use your Optimas account number.\n\nForgot your password? Ask your supervisor or call Optimas support.';
-    void alertDialog({ title: 'Signing in', message: msg, icon: 'help-buoy-outline', confirmLabel: 'Got it' });
+    router.push('/help');
   };
 
   const onChange = (set: (v: string) => void) => (v: string) => {
@@ -167,6 +165,18 @@ export default function Login() {
                   </Text>
                 </Text>
               </Pressable>
+
+              <Text variant="label" color={colors.textDim} align="center" style={styles.legal}>
+                By signing in you agree to the{' '}
+                <Text variant="label" style={styles.legalLink} onPress={() => router.push('/terms')} accessibilityRole="link">
+                  Terms of Service
+                </Text>{' '}
+                and{' '}
+                <Text variant="label" style={styles.legalLink} onPress={() => router.push('/privacy')} accessibilityRole="link">
+                  Privacy Policy
+                </Text>
+                .
+              </Text>
             </View>
 
             <View style={styles.secure}>
@@ -246,5 +256,7 @@ const styles = StyleSheet.create({
   eye: { position: 'absolute', right: space.lg, bottom: 18 },
   error: { flexDirection: 'row', gap: space.sm, alignItems: 'center', backgroundColor: colors.dangerSoft, padding: space.md, borderRadius: radius.md },
   help: { alignSelf: 'center' },
+  legal: { marginTop: 4, paddingHorizontal: 12, lineHeight: 18 },
+  legalLink: { textDecorationLine: 'underline', color: colors.textMuted },
   secure: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
 });
