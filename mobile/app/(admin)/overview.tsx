@@ -286,8 +286,8 @@ export default function Overview() {
               alignItems: 'flex-start',
             }}
           >
-            <Text variant="h1" style={{ fontFamily: fonts.medium, fontSize: 24, lineHeight: 29 }}>
-              {'Jobs done\nThis week'}
+            <Text variant="title" style={{ fontFamily: fonts.semibold, fontSize: 17, lineHeight: 22 }}>
+              Jobs done this week
             </Text>
             <GlassLink label="All jobs" onPress={() => router.push('/board')} />
           </View>
@@ -318,7 +318,7 @@ export default function Overview() {
         <GlassStatCard
           notched
           onTab={() => router.push('/admin/attendance')}
-          title={'Attendance\nToday'}
+          title="Attendance today"
           value={`${d?.attendance.checkedIn ?? 0}/${techs}`}
           progress={techs ? (d?.attendance.checkedIn ?? 0) / techs : 0}
           caption="Late · absent · checked out"

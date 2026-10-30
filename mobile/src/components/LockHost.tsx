@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, ApiError } from '../api/client';
 import { useAuth } from '../store/auth';
-import { useLock } from '../store/lock';
+import { endExcuse, leavingExcused, useLock } from '../store/lock';
 import { promptDialog, toast } from '../store/feedback';
 import { fonts } from '../theme';
 import { biometricProblem, lockKeyOnThisDevice, prepareBiometric, rememberFingerprintAccount, unlockWithBiometric } from '../utils/biometric';
@@ -13,12 +13,10 @@ import { firstName } from '../utils/format';
 import { setThemeColor, STATUS_BAR_COLOR } from '../utils/install';
 import { Text } from './Text';
 
-/** Coming back to the app after this long in the background asks for the fingerprint again. */
-const RELOCK_AFTER_MS = 60_000;
 
 /**
- * The fingerprint lock: when it is on for this device, the app opens locked and locks again after a
- * minute in the background. The fingerprint is checked by the phone and confirmed by the server.
+ * The fingerprint lock: when it is on for this device, the app opens locked and locks again the moment
+ * it is left or closed. The fingerprint is checked by the phone and confirmed by the server.
  */
 export function LockHost() {
   const user = useAuth((s) => s.user);
@@ -44,13 +42,15 @@ export function LockHost() {
     if (enabled && user) rememberFingerprintAccount(user);
   }, [enabled, user]);
 
-  // Lock again after a while in the background
+  // Lock again as soon as the app is left
   useEffect(() => {
     if (!enabled || typeof document === 'undefined') return;
-    let hiddenAt = 0;
+    // Locks the moment the app is left or closed (so even the recent-apps preview shows the lock), except
+    // while the phone's own camera is open for a photo or a scan
     const onChange = () => {
-      if (document.visibilityState === 'hidden') hiddenAt = Date.now();
-      else if (hiddenAt && Date.now() - hiddenAt > RELOCK_AFTER_MS) setLocked(true);
+      if (document.visibilityState === 'hidden') {
+        if (!leavingExcused()) setLocked(true);
+      } else endExcuse();
     };
     document.addEventListener('visibilitychange', onChange);
     return () => document.removeEventListener('visibilitychange', onChange);
@@ -135,7 +135,13 @@ export function LockedView({ busy, onUnlock, links }: { busy: boolean; onUnlock:
   unlockRef.current = onUnlock;
   useEffect(() => {
     const t = setTimeout(() => unlockRef.current(), 250);
-    const onShow = () => document.visibilityState === 'visible' && unlockRef.current();
+    // Back from another app: ask again. Not when the fingerprint prompt itself hid the page (cancelling
+    // it must not reopen it, or "Use password instead" could never be reached)
+    let ownPrompt = false;
+    const onShow = () => {
+      if (document.visibilityState === 'hidden') ownPrompt = leavingExcused();
+      else if (!ownPrompt) unlockRef.current();
+    };
     if (typeof document !== 'undefined') document.addEventListener('visibilitychange', onShow);
     return () => {
       clearTimeout(t);

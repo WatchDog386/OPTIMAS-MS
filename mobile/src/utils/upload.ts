@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { excuseLeaving } from '../store/lock';
 
 /**
  * Adds a picture to multipart form data on every platform.
@@ -66,6 +67,7 @@ export function photoFromPhoneCamera(facing: 'front' | 'back'): Promise<{ blob: 
     input.type = 'file';
     input.accept = 'image/*';
     input.setAttribute('capture', facing === 'front' ? 'user' : 'environment');
+    excuseLeaving();
     input.onchange = () => {
       const file = input.files?.[0];
       if (!file) return resolve(null);

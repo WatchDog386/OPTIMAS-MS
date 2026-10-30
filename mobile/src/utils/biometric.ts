@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import { browserSupportsWebAuthn, platformAuthenticatorIsAvailable, startAuthentication, startRegistration } from '@simplewebauthn/browser';
 import { api, ApiError } from '../api/client';
 import { useAuth } from '../store/auth';
+import { endExcuse, excuseLeaving } from '../store/lock';
 import type { User } from '../api/types';
 
 /**
@@ -70,7 +71,8 @@ async function take(kind: 'register' | 'unlock') {
 /** Registers this phone's sensor and turns the lock on for this device. */
 export async function enableBiometricLock(userId: string) {
   const optionsJSON = (await take('register')) as RegOptions;
-  const response = await startRegistration({ optionsJSON });
+  excuseLeaving(60_000); // the phone's fingerprint prompt may count as leaving the app
+  const response = await startRegistration({ optionsJSON }).finally(endExcuse);
   const device = typeof navigator !== 'undefined' ? navigator.userAgent.replace(/\s*\(.*?\)\s*/g, ' ').slice(0, 70) : undefined;
   const { id } = await api<{ id: string }>('/auth/passkeys/register', { body: { response: response as unknown as Record<string, unknown>, deviceName: device } });
   storage()?.setItem(KEY(userId), id);
@@ -112,7 +114,8 @@ export async function disableBiometricLock(userId: string) {
 /** Asks for the fingerprint and has the server check it. Resolves true when unlocked. */
 export async function unlockWithBiometric(): Promise<boolean> {
   const optionsJSON = (await take('unlock')) as AuthOptions;
-  const response = await startAuthentication({ optionsJSON });
+  excuseLeaving(60_000);
+  const response = await startAuthentication({ optionsJSON }).finally(endExcuse);
   await api('/auth/passkeys/unlock', { body: { response: response as unknown as Record<string, unknown> } });
   return true;
 }
@@ -120,7 +123,8 @@ export async function unlockWithBiometric(): Promise<boolean> {
 /** Sign in with fingerprint alone: enter the staff/account number, tap the sensor, get a session. */
 export async function loginWithBiometric(identifier: string): Promise<User> {
   const optionsJSON = await api<AuthOptions>('/auth/passkeys/login-options', { body: { identifier } });
-  const response = await startAuthentication({ optionsJSON: optionsJSON as unknown as AuthOptions });
+  excuseLeaving(60_000);
+  const response = await startAuthentication({ optionsJSON: optionsJSON as unknown as AuthOptions }).finally(endExcuse);
   const { token, user } = await api<{ token: string; user: User }>('/auth/passkeys/login', {
     body: { identifier, response: response as unknown as Record<string, unknown> },
   });

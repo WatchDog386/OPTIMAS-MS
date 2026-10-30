@@ -24,7 +24,7 @@ export function QuickActions({ items, title = 'Quick Actions', action }: { items
   return (
     <View>
       <View style={styles.head}>
-        <Text variant="h2" style={{ marginLeft: 4 }}>
+        <Text variant="title" style={{ marginLeft: 4, fontFamily: fonts.semibold, fontSize: 17 }}>
           {title}
         </Text>
         {action ? (
@@ -56,7 +56,7 @@ export function QuickActions({ items, title = 'Quick Actions', action }: { items
                 </View>
               ) : null}
             </View>
-            <Text variant="bodySm" align="center" numberOfLines={2} style={{ fontSize: 12.5, lineHeight: 16 }}>
+            <Text variant="bodySm" align="center" numberOfLines={2} style={{ fontSize: 12, lineHeight: 15 }}>
               {a.label}
             </Text>
           </Pressable>

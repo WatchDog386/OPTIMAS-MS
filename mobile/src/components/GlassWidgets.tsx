@@ -14,13 +14,13 @@ export function HatchedProgress({ value, label, height = 56 }: { value: number; 
       <Hatch radius={height / 2} />
       {pct > 0 ? (
         <View style={[styles.fill, { width: `${Math.max(pct * 100, height / 3.2)}%`, borderRadius: height / 2 }]}>
-          <Text variant="title" color={colors.onHighlight} fixedColor style={{ fontFamily: fonts.semibold, fontSize: 15 }}>
+          <Text variant="title" color={colors.onHighlight} fixedColor style={{ fontFamily: fonts.semibold, fontSize: 13 }}>
             {label ?? `${Math.round(pct * 100)}%`}
           </Text>
         </View>
       ) : (
         <View style={styles.zero}>
-          <Text variant="title" color={colors.textMuted} style={{ fontSize: 15 }}>
+          <Text variant="title" color={colors.textMuted} style={{ fontSize: 13 }}>
             {label ?? '0%'}
           </Text>
         </View>
@@ -102,7 +102,7 @@ export function GlassStatCard({
           {title}
         </Text>
         {value !== undefined ? (
-          <Text variant="h1" style={{ fontFamily: fonts.semibold, fontSize: 24 }}>
+          <Text variant="h1" style={styles.value}>
             {value}
           </Text>
         ) : null}
@@ -112,12 +112,12 @@ export function GlassStatCard({
         <View style={styles.footer}>
           <View style={{ flex: 1 }}>
             {caption ? (
-              <Text variant="label" color={colors.textMuted}>
+              <Text variant="label" color={colors.textMuted} style={{ fontSize: 12 }}>
                 {caption}
               </Text>
             ) : null}
             {footer ? (
-              <Text variant="h1" numberOfLines={1} style={{ fontFamily: fonts.medium, fontSize: 24, letterSpacing: -0.3 }}>
+              <Text variant="h1" numberOfLines={1} style={{ fontFamily: fonts.semibold, fontSize: 15, lineHeight: 20 }}>
                 {footer}
               </Text>
             ) : null}
@@ -192,7 +192,7 @@ export function ProfileHero({ name, role, stat, statLabel, portrait }: { name: s
 export function GlassLink({ label, onPress }: { label: string; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} hitSlop={10}>
-      <Text variant="title" style={{ fontFamily: fonts.semibold, textDecorationLine: 'underline' }}>
+      <Text variant="title" style={{ fontFamily: fonts.semibold, fontSize: 14, textDecorationLine: 'underline' }}>
         {label}
       </Text>
     </Pressable>
@@ -207,9 +207,11 @@ const styles = StyleSheet.create({
   callout: { alignItems: 'center', height: 30 },
   calloutLine: { width: 1, flex: 1, backgroundColor: colors.text, marginTop: 2 },
   pill: { width: '100%', borderRadius: 28, overflow: 'hidden', justifyContent: 'flex-end', alignItems: 'center', paddingBottom: 14 },
-  pillLabel: { fontFamily: fonts.medium, fontSize: 13 },
+  pillLabel: { fontFamily: fonts.medium, fontSize: 12 },
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
-  title: { flex: 1, fontFamily: fonts.medium, fontSize: 24, lineHeight: 29, letterSpacing: -0.3 },
+  // Card headings match the "Hello …" greeting: Figtree SemiBold 17
+  title: { flex: 1, fontFamily: fonts.semibold, fontSize: 17, lineHeight: 22 },
+  value: { fontFamily: fonts.semibold, fontSize: 17, lineHeight: 22 },
   footer: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
   hero: { flexDirection: 'row', gap: 12, minHeight: 200 },
   name: { fontFamily: fonts.medium, fontSize: 36, lineHeight: 40, letterSpacing: -0.8 },

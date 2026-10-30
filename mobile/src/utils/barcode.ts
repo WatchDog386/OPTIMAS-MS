@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { excuseLeaving } from '../store/lock';
 
 export type BarcodeKind = 'label' | 'serial' | 'mac' | 'product';
 
@@ -36,6 +37,7 @@ export function scanWithPhoneCamera(): Promise<string[] | null> {
     input.type = 'file';
     input.accept = 'image/*';
     input.setAttribute('capture', 'environment');
+    excuseLeaving();
     input.onchange = async () => {
       const file = input.files?.[0];
       if (!file) return resolve(null);
