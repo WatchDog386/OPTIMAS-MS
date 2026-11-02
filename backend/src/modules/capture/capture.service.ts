@@ -5,6 +5,7 @@ import { prisma } from '../../lib/prisma';
 import { storage } from '../../lib/storage';
 import { distanceMetres } from '../../lib/geo';
 import { badRequest, conflict, forbidden, notFound } from '../../lib/http-error';
+import { getOffice } from '../../lib/office';
 
 /** A photo must be used by its action within this window after upload. */
 const PHOTO_USE_WINDOW_MS = 10 * 60_000;
@@ -80,9 +81,10 @@ export async function acceptCapture(userId: string, file: Buffer, input: Capture
   else if (input.deviceTime && Math.abs(input.deviceTime.getTime() - Date.now()) > 5 * 60_000) flags.push('DEVICE_CLOCK_SKEW');
 
   const atOffice = challenge.purpose === 'CHECK_IN' || challenge.purpose === 'CHECK_OUT';
-  if (atOffice && hasLocation && env.OFFICE_LAT !== undefined && env.OFFICE_LNG !== undefined) {
-    const d = distanceMetres(input.lat!, input.lng!, env.OFFICE_LAT, env.OFFICE_LNG);
-    if (d > env.OFFICE_RADIUS_M) flags.push('OUTSIDE_GEOFENCE');
+  const office = atOffice && hasLocation ? await getOffice() : null;
+  if (office) {
+    const d = distanceMetres(input.lat!, input.lng!, office.lat, office.lng);
+    if (d > office.radiusM) flags.push('OUTSIDE_GEOFENCE');
   }
 
   const now = new Date();

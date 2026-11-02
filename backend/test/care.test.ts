@@ -19,7 +19,7 @@ describe('customer care accounts', () => {
   it('creates customer logins and resends their details, but cannot touch staff', async () => {
     const admin = (await login('FBI-ADM-001')).token;
     const care = await newCare(admin);
-    const account = `FBI-CUS-${String(Date.now()).slice(-6)}`;
+    const account = `ACC-${String(Date.now()).slice(-6)}`;
     const cust = await api().post('/api/v1/users').set(auth(care.token)).send({ role: 'CUSTOMER', name: 'Wanjiku Home', phone: '0712345678', customerAccount: account });
     expect(cust.status).toBe(201);
     expect(cust.body.temporaryPassword).toBeTruthy();
@@ -134,5 +134,32 @@ describe('customer care: create now, assign later', () => {
     // Managers still get the photos
     const regAdmin = await api().get('/api/v1/attendance').set(auth(admin));
     for (const r of regAdmin.body.records) expect(r.checkInPhotoId).toBeTruthy();
+  });
+});
+
+describe('customer care chats', () => {
+  it('finds team groups and people, and talks to a team about its job', async () => {
+    const admin = (await login('FBI-ADM-001')).token;
+    const care = await newCare(admin);
+    const a = await newTechnician(admin);
+    const b = await newTechnician(admin);
+    const name = `Githurai crew ${Date.now().toString(36)}`;
+    const team = await api().post('/api/v1/teams').set(auth(admin)).send({ name, memberIds: [a.user.id, b.user.id], leaderId: a.user.id });
+    expect(team.status).toBe(201);
+    const found = await api().get(`/api/v1/chat/contacts?q=${encodeURIComponent('Githurai crew')}`).set(auth(care.token));
+    expect(found.body.groups.some((g: { title: string }) => g.title === name)).toBe(true);
+    const people = await api().get('/api/v1/chat/contacts?q=Test Tech').set(auth(care.token));
+    expect(people.body.contacts.some((c: { id: string }) => c.id === a.user.id)).toBe(true);
+    const open = await api().post('/api/v1/chat/conversations').set(auth(care.token)).send({ teamId: team.body.team.id });
+    expect(open.status).toBe(200);
+    const sent = await api().post(`/api/v1/chat/conversations/${open.body.conversation.id}/messages`).set(auth(care.token)).send({ body: 'Customer at Kahawa will be home after 2pm' });
+    expect(sent.status).toBe(201);
+    const inbox = await api().get('/api/v1/chat/conversations').set(auth(care.token));
+    expect(inbox.body.conversations.some((c: { id: string }) => c.id === open.body.conversation.id)).toBe(true);
+    const member = await api().get(`/api/v1/chat/conversations/${open.body.conversation.id}`).set(auth(b.token));
+    expect(JSON.stringify(member.body)).toContain('after 2pm');
+    // Technicians cannot open groups they are not in
+    const outsider = await newTechnician(admin);
+    expect((await api().post('/api/v1/chat/conversations').set(auth(outsider.token)).send({ teamId: team.body.team.id })).status).toBe(403);
   });
 });

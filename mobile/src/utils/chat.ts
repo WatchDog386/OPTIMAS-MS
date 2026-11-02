@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { api, ApiError } from '../api/client';
 import { toast } from '../store/feedback';
 
-type Target = { userId: string } | { support: true } | { customerId: string } | { taskId: string; with?: 'customer' | 'technician' };
+type Target = { userId: string } | { support: true } | { customerId: string } | { teamId: string } | { taskId: string; with?: 'customer' | 'technician' };
 
 /** Opens (or starts) the conversation with someone and shows it. */
 export async function openChatWith(target: Target) {

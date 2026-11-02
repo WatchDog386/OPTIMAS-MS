@@ -52,6 +52,7 @@ export default function More() {
     ...privacy.filter((t) => t.key === 'lock'),
     { key: 'alerts', icon: 'notifications-outline', title: 'Notifications', sub: 'Alerts and activity', onPress: go('/notifications'), count: unread.data?.unread },
     { key: 'trace', icon: 'barcode-outline', title: 'Trace a device', sub: 'Custody by serial number', onPress: go('/admin/unit') },
+    ...(managers ? [{ key: 'office', icon: 'business-outline' as IconName, title: 'Office location', sub: 'Where staff check in', onPress: go('/admin/office') }] : []),
     ...(role === 'ADMIN' ? [{ key: 'audit', icon: 'list-outline' as IconName, title: 'Audit log', sub: 'Who changed what', onPress: go('/admin/audit') }] : []),
     { key: 'pw', icon: 'key-outline', title: 'Change password', sub: 'Keep your account safe', onPress: go('/change-password') },
     ...privacy.filter((t) => t.key !== 'lock'),

@@ -208,25 +208,8 @@ const styles = StyleSheet.create({
   // Above the app and its alert banners (60), below toasts (70) and dialogs (80) so the password prompt shows
   root: { zIndex: 65, backgroundColor: LOCK.bg, paddingHorizontal: 28 },
   middle: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  // The pop-up card: logo, "Unlock to use Optimas" and a small Unlock button
-  card: {
-    width: '100%',
-    maxWidth: 320,
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 22,
-    paddingTop: 26,
-    paddingBottom: 20,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: LOCK.line,
-    backgroundColor: LOCK.card,
-    shadowColor: '#000',
-    shadowOpacity: isDark ? 0.4 : 0.08,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 8,
-  },
+  // Logo, "Unlock to use Optimas" and a small Unlock button, straight on the page (no card box)
+  card: { width: '100%', maxWidth: 320, alignItems: 'center', gap: 12, paddingHorizontal: 22 },
   logo: { width: 150, height: 57 },
   // The navy logo needs a light backing in dark mode
   logoPlate: { backgroundColor: '#FFFFFF', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6 },

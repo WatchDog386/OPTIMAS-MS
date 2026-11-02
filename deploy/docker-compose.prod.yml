@@ -47,6 +47,8 @@ services:
       OFFICE_LAT: ${OFFICE_LAT:-}
       OFFICE_LNG: ${OFFICE_LNG:-}
       OFFICE_RADIUS_M: ${OFFICE_RADIUS_M:-300}
+      # Found on the map when the app starts if no coordinates are set; a supervisor can also set it in the app
+      OFFICE_ADDRESS: "${OFFICE_ADDRESS:-Barber & Spa, Kahawa Station Road, Githurai, Kenya}"
       MAX_ROUTERS_IN_CUSTODY: ${MAX_ROUTERS_IN_CUSTODY:-5}
       CUSTODY_AGE_ALERT_DAYS: ${CUSTODY_AGE_ALERT_DAYS:-3}
       PUSH_ENABLED: ${PUSH_ENABLED:-true}

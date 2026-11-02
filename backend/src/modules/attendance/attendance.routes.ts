@@ -12,6 +12,7 @@ import { parse } from '../../middleware/validate';
 import { consumePhoto, eventTime } from '../capture/capture.service';
 import { notify, notifyRoles } from '../notifications/notifications.service';
 import { time as fmtTime } from '../../lib/time';
+import { getOffice, setOffice } from '../../lib/office';
 
 export const attendanceRouter = Router();
 
@@ -141,6 +142,30 @@ attendanceRouter.get(
       take: 60,
     });
     res.json({ records });
+  }),
+);
+
+/** Where check-in and check-out count as "at the office" (the camera shows the distance to it). */
+attendanceRouter.get(
+  '/office',
+  requireRole(ROLES.STAFF),
+  ah(async (_req, res) => {
+    res.json({ office: await getOffice() });
+  }),
+);
+
+/** A supervisor or admin standing at the office sets it from their phone's GPS. */
+attendanceRouter.put(
+  '/office',
+  requireRole(ROLES.MANAGERS),
+  ah(async (req, res) => {
+    const body = parse(
+      z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180), radiusM: z.number().int().min(50).max(2000).default(300), name: z.string().trim().min(2).max(120).default('Office') }),
+      req.body,
+    );
+    const office = await setOffice(body, me(req).id);
+    await audit(me(req).id, 'OFFICE_SET', 'Setting', 'office', `Office set to ${body.name} (${body.lat.toFixed(5)}, ${body.lng.toFixed(5)}, ${body.radiusM} m)`);
+    res.json({ office });
   }),
 );
 

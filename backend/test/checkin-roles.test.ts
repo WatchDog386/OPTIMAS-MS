@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CHECKLIST, api, auth, checkIn, login, photoId } from './helpers';
+import { CHECKLIST, api, auth, checkIn, login, newTechnician, photoId } from './helpers';
 
 describe('who checks in', () => {
   it('everyone on staff checks in except admins', async () => {
@@ -19,5 +19,20 @@ describe('who checks in', () => {
     // They show on the supervisors' register
     const register = await api().get('/api/v1/attendance').set(auth(sup));
     expect(register.body.records.some((r: { user: { staffNo: string } }) => r.user.staffNo === staffNo)).toBe(true);
+  });
+});
+
+describe('office location', () => {
+  it('is set by a supervisor standing at the office and used for check-in', async () => {
+    const sup = (await login('FBI-SUP-001')).token;
+    const admin = (await login('FBI-ADM-001')).token;
+    const tech = await newTechnician(admin);
+    // The same spot the other tests check photos against
+    const spot = { lat: -1.2921, lng: 36.8219, radiusM: 300, name: 'Barber & Spa, Kahawa Station Rd' };
+    expect((await api().put('/api/v1/attendance/office').set(auth(tech.token)).send(spot)).status).toBe(403);
+    const set = await api().put('/api/v1/attendance/office').set(auth(sup)).send(spot);
+    expect(set.status).toBe(200);
+    const got = await api().get('/api/v1/attendance/office').set(auth(tech.token));
+    expect(got.body.office).toMatchObject({ ...spot, source: 'app' });
   });
 });

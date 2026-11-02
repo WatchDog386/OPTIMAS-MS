@@ -181,6 +181,9 @@ export default function TaskDetail() {
       {team ? (
         <>
           <SectionHeader title={`Team · ${team.name}`} />
+          {assigner || mine || helper ? (
+            <Button label="Team chat" icon="chatbubbles-outline" variant="outline" onPress={() => openChatWith({ teamId: team.id })} />
+          ) : null}
           <Card style={{ gap: space.md }}>
             {team.members.map((m) => {
               const leads = m.userId === task.assignee?.id;
@@ -195,7 +198,7 @@ export default function TaskDetail() {
                     </Text>
                   </View>
                   {leads ? <Ionicons name="star" size={18} color={colors.brand} /> : null}
-                  {m.userId !== user.id && (manager || mine || helper) ? (
+                  {m.userId !== user.id && (manager || assigner || mine || helper) ? (
                     <Pressable onPress={() => openChatWith({ userId: m.userId })} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Message ${m.user.name}`}>
                       <Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.text} />
                     </Pressable>

@@ -83,6 +83,7 @@ function navFor(role: Role, open: { requests?: number; approvals?: number }): { 
               { label: 'Team', icon: 'people-outline' as Icon, href: '/team' },
               { label: 'People', icon: 'person-outline' as Icon, href: '/admin/users' },
               { label: 'Attendance', icon: 'calendar-outline' as Icon, href: '/admin/attendance' },
+              { label: 'Office location', icon: 'business-outline' as Icon, href: '/admin/office' },
             ],
           },
         ]

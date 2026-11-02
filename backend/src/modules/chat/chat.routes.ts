@@ -7,7 +7,7 @@ import { ah } from '../../middleware/async';
 import { me } from '../../middleware/auth';
 import { parse } from '../../middleware/validate';
 import { notify } from '../notifications/notifications.service';
-import { SUPPORT_ROLES, chatBlockedReason, isManagerRole, isSupportRole, linkingJobs, pairKey } from './chat.service';
+import { SUPPORT_ROLES, chatBlockedReason, isSupportRole, linkingJobs, pairKey } from './chat.service';
 
 /** Messaging between technicians, customers and the office. The app polls; there is no socket to keep open. */
 export const chatRouter = Router();
@@ -23,11 +23,14 @@ async function loadConversation(id: string) {
   return conv as ConvWithMembers;
 }
 
-/** Members can read; on a support line or a team group every supervisor and admin can too. */
+/**
+ * Members can read; on a support line or a team group the office (supervisors, admins and customer care,
+ * who give the teams their jobs) can too.
+ */
 function assertAccess(conv: ConvWithMembers, user: Me) {
   if (conv.members.some((m) => m.userId === user.id)) return;
   if (conv.kind === 'SUPPORT' && isSupportRole(user.role)) return;
-  if (conv.kind === 'TEAM' && isManagerRole(user.role)) return;
+  if (conv.kind === 'TEAM' && isSupportRole(user.role)) return;
   throw forbidden('You are not part of this conversation');
 }
 
@@ -80,11 +83,9 @@ async function unreadIn(conv: ConvWithMembers, user: Me) {
 
 async function myConversations(user: Me) {
   return (await prisma.conversation.findMany({
-    where: isManagerRole(user.role)
+    where: isSupportRole(user.role)
       ? { OR: [{ members: { some: { userId: user.id } } }, { kind: { in: ['SUPPORT', 'TEAM'] } }] }
-      : isSupportRole(user.role)
-        ? { OR: [{ members: { some: { userId: user.id } } }, { kind: 'SUPPORT' }] }
-        : { members: { some: { userId: user.id } } },
+      : { members: { some: { userId: user.id } } },
     include: { members: { include: { user: memberUser } }, messages: { orderBy: { createdAt: 'desc' }, take: 1, include: { sender: { select: { name: true } } } } },
     orderBy: { lastMessageAt: 'desc' },
     take: 60,
@@ -180,7 +181,18 @@ chatRouter.get(
       const customers = await prisma.user.findMany({ where: { active: true, role: 'CUSTOMER', OR: [{ customerAccount: { in: accounts } }, { id: { in: ids } }], ...(q ? search : {}) }, select });
       contacts = customers.map((c): Contact => ({ ...c, reason: `Customer · ${jobs.find((j) => j.customerAccount === c.customerAccount || j.request?.customerId === c.id)?.title ?? 'your job'}` })).concat(contacts);
     }
-    res.json({ support: false, contacts });
+    // The office can also find team groups to talk to a whole team about its job
+    const groups = isSupportRole(user.role)
+      ? (
+          await prisma.conversation.findMany({
+            where: { kind: 'TEAM', ...(q ? { title: { contains: q, mode: 'insensitive' as const } } : {}) },
+            select: { id: true, title: true, _count: { select: { members: true } } },
+            orderBy: { lastMessageAt: 'desc' },
+            take: 30,
+          })
+        ).map((g) => ({ id: g.id, title: g.title ?? 'Team', members: g._count.members }))
+      : [];
+    res.json({ support: false, contacts, groups });
   }),
 );
 
@@ -190,6 +202,8 @@ const openSchema = z.union([
   z.object({ customerId: z.string().min(1) }),
   /** The customer (or the technician) of a job. */
   z.object({ taskId: z.string().min(1), with: z.enum(['customer', 'technician']) }),
+  /** A team's group chat. */
+  z.object({ teamId: z.string().min(1) }),
 ]);
 
 /** The person on the other side of a job: its technician, or the customer's app account. */
@@ -216,6 +230,12 @@ chatRouter.post(
     const user = me(req);
     const body = parse(openSchema, req.body);
     let conv: Conversation;
+    if ('teamId' in body) {
+      const group = await prisma.conversation.findFirst({ where: { kind: 'TEAM', teamId: body.teamId }, include: { members: { include: { user: memberUser } } } });
+      if (!group) throw notFound('Team chat');
+      assertAccess(group as ConvWithMembers, user);
+      return void res.json({ conversation: group });
+    }
     if ('support' in body || 'customerId' in body) {
       const customerId = 'support' in body ? user.id : body.customerId;
       if ('support' in body && user.role !== 'CUSTOMER') throw badRequest('Only customers have a support line');

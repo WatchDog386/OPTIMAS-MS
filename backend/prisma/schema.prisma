@@ -503,6 +503,14 @@ model ServiceRequest {
 
 // ─────────────────────────────── Audit ───────────────────────────────
 
+/// App-wide settings kept in the database (e.g. the office location set from a phone at the office).
+model Setting {
+  key         String   @id
+  value       Json
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+}
+
 /// Append-only record of administrative actions (who changed what, when).
 model AuditLog {
   id        String   @id @default(cuid())
