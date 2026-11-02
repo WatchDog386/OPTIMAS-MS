@@ -14,8 +14,9 @@ import {
   Figtree_600SemiBold,
   Figtree_700Bold,
   Figtree_800ExtraBold,
-  useFonts,
 } from '@expo-google-fonts/figtree';
+import * as Font from 'expo-font';
+import { Asset } from 'expo-asset';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from '@expo-google-fonts/inter';
 import { OPENED_ON_DESKTOP } from '../src/theme/desktop';
 import { DesktopShell } from '../src/components/desktop/DesktopShell';
@@ -59,14 +60,48 @@ export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Pro
   );
 }
 
-export default function RootLayout() {
-  // Figtree on phones; Inter on a desktop browser, like the Business-SME app (loaded under the same names,
-  // so every screen picks it up)
-  const [fontsLoaded] = useFonts(
-    OPENED_ON_DESKTOP
-      ? { Figtree_400Regular: Inter_400Regular, Figtree_500Medium: Inter_500Medium, Figtree_600SemiBold: Inter_600SemiBold, Figtree_700Bold: Inter_700Bold, Figtree_800ExtraBold: Inter_800ExtraBold }
-      : { Figtree_400Regular, Figtree_500Medium, Figtree_600SemiBold, Figtree_700Bold, Figtree_800ExtraBold },
+const FIGTREE = { Figtree_400Regular, Figtree_500Medium, Figtree_600SemiBold, Figtree_700Bold, Figtree_800ExtraBold };
+// Inter under the same names, so every screen picks it up on a desktop browser (like the Business-SME app)
+const INTER = { Figtree_400Regular: Inter_400Regular, Figtree_500Medium: Inter_500Medium, Figtree_600SemiBold: Inter_600SemiBold, Figtree_700Bold: Inter_700Bold, Figtree_800ExtraBold: Inter_800ExtraBold };
+
+/**
+ * Figtree on phones, Inter on a laptop or desktop. A font that fails to download (a damaged or cut-off
+ * file) never keeps the app from opening: Inter falls back to Figtree, and after a few seconds the app
+ * opens anyway with the browser's own font.
+ */
+/** Inter would not load: put Figtree under the same names (added last, so it is the face the page uses). */
+async function figtreeInstead() {
+  if (typeof document === 'undefined' || typeof FontFace === 'undefined') return;
+  await Promise.all(
+    Object.entries(FIGTREE).map(async ([name, mod]) => {
+      const face = new FontFace(name, `url(${Asset.fromModule(mod).uri})`);
+      await face.load();
+      (document.fonts as unknown as { add: (f: FontFace) => void }).add(face);
+    }),
   );
+}
+
+function useAppFonts() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    let done = false;
+    const finish = () => {
+      if (!done) {
+        done = true;
+        setReady(true);
+      }
+    };
+    const giveUp = setTimeout(finish, 6000);
+    (OPENED_ON_DESKTOP ? Font.loadAsync(INTER).catch(figtreeInstead) : Font.loadAsync(FIGTREE))
+      .catch(() => undefined)
+      .finally(finish);
+    return () => clearTimeout(giveUp);
+  }, []);
+  return ready;
+}
+
+export default function RootLayout() {
+  const fontsLoaded = useAppFonts();
   const hydrated = useAuth((s) => s.hydrated);
   const [splashDone, setSplashDone] = useState(false);
   const hideSplash = useCallback(() => setSplashDone(true), []);

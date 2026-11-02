@@ -7,6 +7,19 @@ const SHELL = 'optimas-shell-v9';
 // the background AFTER the worker is running: the phone only offers "Install" once a worker is active, so
 // holding activation back for the whole download made the Install button wait (or fall back to steps).
 let precaching = null;
+
+/**
+ * Keeps a response only if it arrived whole. A file cut off on the way (a dropped connection on a phone or
+ * laptop) would otherwise be served from the cache on every visit: a broken font kept the app from opening.
+ */
+async function keepIfComplete(cache, req, res) {
+  if (!res || res.status !== 200 || res.type === 'opaque') return;
+  const body = await res.clone().arrayBuffer();
+  const length = Number(res.headers.get('content-length') || 0);
+  if (length && !res.headers.get('content-encoding') && body.byteLength !== length) return;
+  if (!body.byteLength) return;
+  await cache.put(req, new Response(body, { status: res.status, statusText: res.statusText, headers: res.headers }));
+}
 const precacheInBackground = () => (precaching = precaching || precache().finally(() => (precaching = null)));
 async function precache() {
   const cache = await caches.open(SHELL);
@@ -18,7 +31,7 @@ async function precache() {
   }
   // A few at a time, so a slow connection is not swamped; a file that fails is fetched when needed
   for (let i = 0; i < files.length; i += 6) {
-    await Promise.all(files.slice(i, i + 6).map((f) => cache.match(f).then((hit) => hit || cache.add(f)).catch(() => undefined)));
+    await Promise.all(files.slice(i, i + 6).map((f) => cache.match(f).then((hit) => hit || fetch(f).then((res) => keepIfComplete(cache, f, res))).catch(() => undefined)));
   }
 }
 
@@ -70,7 +83,7 @@ self.addEventListener('fetch', (event) => {
         fetch(req).then((res) => {
           if (res.ok) {
             const copy = res.clone();
-            caches.open(SHELL).then((c) => c.put(req, copy));
+            caches.open(SHELL).then((c) => keepIfComplete(c, req, copy)).catch(() => undefined);
           }
           return res;
         }),
