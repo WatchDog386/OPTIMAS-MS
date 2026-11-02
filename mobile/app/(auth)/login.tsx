@@ -10,7 +10,6 @@ import { afterLogin, useAuth } from '../../src/store/auth';
 import { colors, fonts, radius, space } from '../../src/theme';
 import { biometricAvailable, biometricProblem, fingerprintAccount, loginWithBiometric } from '../../src/utils/biometric';
 import { LockedView } from '../../src/components/LockHost';
-import { runningAsApp } from '../../src/utils/install';
 import { useInstallAction } from '../../src/components/InstallPrompt';
 import { toast } from '../../src/store/feedback';
 
@@ -63,7 +62,8 @@ export default function Login() {
 
   // Install: one tap where the browser has offered it; otherwise this browser's steps
   const installer = useInstallAction();
-  const showInstall = Platform.OS === 'web' && !runningAsApp();
+  // Shown only when tapping installs (the phone has offered it, or iPhone); gone once installed
+  const showInstall = installer.available;
 
   // The picture eases in once, as soon as its space is known
   useEffect(() => {
@@ -245,7 +245,7 @@ export default function Login() {
                   <Pressable onPress={() => void installer.start()} style={styles.install} accessibilityLabel="Install the Optimas MS app">
                     <Ionicons name="download-outline" size={20} color={colors.white} />
                     <Text variant="label" style={{ color: colors.white, fontWeight: '600' }}>
-                      {installer.installed ? 'Installed' : installer.busy ? 'Installing…' : 'Install'}
+                      {installer.busy ? 'Installing…' : 'Install'}
                     </Text>
                   </Pressable>
                 ) : null}

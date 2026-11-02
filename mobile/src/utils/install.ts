@@ -12,8 +12,6 @@ interface InstallEvent extends Event {
 }
 
 let deferred: InstallEvent | null = null;
-/** The app is installed on this phone (known from the phone, or just installed now). */
-let installedHere = false;
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
@@ -37,39 +35,7 @@ if (isWeb) {
   });
   window.addEventListener('appinstalled', () => {
     deferred = null;
-    installedHere = true;
     emit();
-  });
-  // Already installed on this phone (opened here in the browser instead)? Chrome does not offer to install
-  // it a second time, so the button says so instead of waiting for an offer that never comes
-  const related = (navigator as Navigator & { getInstalledRelatedApps?: () => Promise<{ platform: string }[]> }).getInstalledRelatedApps;
-  if (related) {
-    related
-      .call(navigator)
-      .then((apps) => {
-        if (apps.some((a) => a.platform === 'webapp')) {
-          installedHere = true;
-          emit();
-        }
-      })
-      .catch(() => undefined);
-  }
-}
-
-/** Resolves once the phone offers to install (or after `ms`). */
-function waitForOffer(ms: number) {
-  return new Promise<void>((resolve) => {
-    if (deferred) return resolve();
-    const done = () => {
-      listeners.delete(check);
-      clearTimeout(t);
-      resolve();
-    };
-    const check = () => {
-      if (deferred) done();
-    };
-    const t = setTimeout(done, ms);
-    listeners.add(check);
   });
 }
 
@@ -110,15 +76,6 @@ export function useInstallPrompt() {
     emit();
     return outcome === 'accepted';
   };
-  /**
-   * Install in one tap. If the phone has not offered it yet (it can take a few seconds after the page
-   * opens), wait for the offer and install the moment it arrives (within the few seconds a tap still
-   * counts, which the phone requires). null when there was no offer to use.
-   */
-  const installNow = async (waitMs = 4500) => {
-    if (!deferred) await waitForOffer(waitMs);
-    return deferred ? install() : null;
-  };
   const ios = isIosSafari();
   return {
     /** The browser has offered a one-tap install. */
@@ -126,15 +83,11 @@ export function useInstallPrompt() {
     /** iPhone Safari: install only via Share → Add to Home Screen. */
     needsIosSteps: ios && !deferred,
     /**
-     * Shown when tapping it can install: one tap where the browser allows (Chrome, Samsung Internet,
-     * Edge), or the only way there is (iPhone: Share → Add to Home Screen; WhatsApp/Facebook's own
-     * browser: open in Chrome first).
+     * Show Install only when it will work: the phone has offered to install the app (one tap installs it
+     * like any Android app), or on iPhone. Hidden once installed, and inside the installed app.
      */
-    available: isWeb && !runningAsApp() && (!!deferred || ['ios-safari', 'ios-other', 'in-app'].includes(browserKind())),
+    available: isWeb && !runningAsApp() && (!!deferred || ios),
     install,
-    installNow,
-    /** Installed on this phone already; this is the browser tab. */
-    installed: installedHere,
   };
 }
 

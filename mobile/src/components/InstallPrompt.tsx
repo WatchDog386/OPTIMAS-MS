@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { Image, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, radius, space } from '../theme';
-import { browserKind, installSteps, runningAsApp, useInstallPrompt } from '../utils/install';
-import { toast } from '../store/feedback';
+import { installSteps, useInstallPrompt } from '../utils/install';
 import { GlassCircle } from './Glass';
 import { Text } from './Text';
 
@@ -56,29 +55,27 @@ export function InstallButton({ round, stepsOnly }: { round?: boolean; stepsOnly
 
 /** Opens the install sheet (or installs in one tap) from anywhere, e.g. a Profile tile. */
 export function useInstallAction() {
-  const { available, installNow, installed } = useInstallPrompt();
+  const { available, canInstall, install } = useInstallPrompt();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   return {
+    /** Only true when tapping will install (see useInstallPrompt), so the button never dead-ends. */
     available,
     busy,
-    installed,
     start: async () => {
       if (busy) return;
-      if (installed) return void toast.info('Already installed', 'Open Optimas MS from your home screen.');
-      // iPhone has no install button for websites, and WhatsApp/Facebook's built-in browser cannot
-      // install at all: only there are the steps shown
-      const kind = browserKind();
-      if (kind === 'ios-safari' || kind === 'ios-other' || kind === 'in-app') return setOpen(true);
-      // Everywhere else: straight to the phone's own "Install app" prompt (waiting a moment for it if the
-      // page has only just opened)
-      setBusy(true);
-      try {
-        const offered = await installNow();
-        if (offered === null && !runningAsApp()) toast.info('Getting the app ready', 'Tap Install again in a few seconds.');
-      } finally {
-        setBusy(false);
+      // The phone has offered: its own install opens at once and the app installs like any Android app
+      if (canInstall) {
+        setBusy(true);
+        try {
+          await install();
+        } finally {
+          setBusy(false);
+        }
+        return;
       }
+      // iPhone only: websites install there through Share → Add to Home Screen
+      setOpen(true);
     },
     sheet: <InstallSheet visible={open} onClose={() => setOpen(false)} />,
   };
@@ -210,7 +207,7 @@ const styles = StyleSheet.create({
  */
 export function ProfileInstallCard() {
   const installer = useInstallAction();
-  if (Platform.OS !== 'web' || runningAsApp()) return null;
+  if (!installer.available) return null;
   return (
     <>
       <Pressable onPress={() => void installer.start()} style={({ pressed }) => [styles.profileCard, pressed && { opacity: 0.9 }]} accessibilityRole="button" accessibilityLabel="Install the Optimas MS app">
@@ -219,21 +216,17 @@ export function ProfileInstallCard() {
         </View>
         <View style={{ flex: 1, gap: 2 }}>
           <Text variant="title" style={{ fontFamily: fonts.semibold }}>
-            {installer.installed ? 'App installed' : 'Install the app'}
+            Install the app
           </Text>
           <Text variant="bodySm" color={colors.textMuted}>
-            {installer.installed ? 'Open Optimas MS from your home screen' : 'Add Optimas MS to your phone’s home screen'}
+            Install Optimas MS on this phone
           </Text>
         </View>
-        {installer.installed ? (
-          <Ionicons name="checkmark-circle" size={26} color={colors.brand} />
-        ) : (
-          <View style={styles.profileBtn}>
-            <Text variant="label" color="#FFFFFF" fixedColor style={{ fontFamily: fonts.semibold, fontSize: 13 }}>
-              {installer.busy ? 'Installing…' : 'Install'}
-            </Text>
-          </View>
-        )}
+        <View style={styles.profileBtn}>
+          <Text variant="label" color="#FFFFFF" fixedColor style={{ fontFamily: fonts.semibold, fontSize: 13 }}>
+            {installer.busy ? 'Installing…' : 'Install'}
+          </Text>
+        </View>
       </Pressable>
       {installer.sheet}
     </>

@@ -48,11 +48,13 @@ export default function More() {
   const go = (href: string) => () => router.push(href as never);
   const privacy = usePrivacyItems();
   const tiles: Tile[] = [
+    // Fingerprint first, where it is seen straight away
+    ...privacy.filter((t) => t.key === 'lock'),
     { key: 'alerts', icon: 'notifications-outline', title: 'Notifications', sub: 'Alerts and activity', onPress: go('/notifications'), count: unread.data?.unread },
     { key: 'trace', icon: 'barcode-outline', title: 'Trace a device', sub: 'Custody by serial number', onPress: go('/admin/unit') },
     ...(role === 'ADMIN' ? [{ key: 'audit', icon: 'list-outline' as IconName, title: 'Audit log', sub: 'Who changed what', onPress: go('/admin/audit') }] : []),
     { key: 'pw', icon: 'key-outline', title: 'Change password', sub: 'Keep your account safe', onPress: go('/change-password') },
-    ...privacy,
+    ...privacy.filter((t) => t.key !== 'lock'),
   ];
 
   // Back to wherever the person came from; straight to the dashboard if the page was opened directly

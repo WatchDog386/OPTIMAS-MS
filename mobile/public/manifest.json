@@ -1,12 +1,10 @@
 {
-  "id": "/",
   "name": "Optimas MS",
   "short_name": "Optimas MS",
   "description": "Field operations, attendance, jobs and stock for the Optimas team and customers.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "related_applications": [{ "platform": "webapp", "url": "/manifest.json" }],
   "orientation": "portrait",
   "background_color": "#FFFFFF",
   "theme_color": "#F3F3F3",

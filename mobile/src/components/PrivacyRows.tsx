@@ -89,8 +89,8 @@ export function usePrivacyItems(): PrivacyItem[] {
 
   const items: PrivacyItem[] = [];
   // Installing has its own card at the top of the profile (ProfileInstallCard)
-  items.push({ key: 'theme', icon: isDark ? 'moon' : 'moon-outline', title: 'Dark mode', sub: isDark ? 'On · tap for light mode' : 'Off · tap for dark mode', on: isDark, onPress: () => setThemeMode(isDark ? 'light' : 'dark') });
   if (lock) items.push({ key: 'lock', icon: 'finger-print', title: 'Fingerprint lock', sub: lock.busy ? 'Working…' : lock.on ? 'On · tap to turn off' : 'Off · tap to turn on', on: lock.on, onPress: () => void lock.toggle(!lock.on) });
+  items.push({ key: 'theme', icon: isDark ? 'moon' : 'moon-outline', title: 'Dark mode', sub: isDark ? 'On · tap for light mode' : 'Off · tap for dark mode', on: isDark, onPress: () => setThemeMode(isDark ? 'light' : 'dark') });
   items.push(
     { key: 'data', icon: 'download-outline', title: 'Download my data', sub: busy === 'download' ? 'Preparing…' : 'Everything the app holds', onPress: download },
     { key: 'privacy', icon: 'shield-checkmark-outline', title: 'Privacy Policy', sub: 'How your data is used', onPress: () => router.push('/privacy') },
@@ -103,7 +103,7 @@ export function usePrivacyItems(): PrivacyItem[] {
 
 /** The privacy items as list rows (technician Profile, customer Account). */
 export function PrivacyRows() {
-  const items = usePrivacyItems();
+  const items = usePrivacyItems().filter((i) => i.key !== 'lock');
   return (
     <>
       {items.map((i) =>
@@ -123,5 +123,22 @@ export function PrivacyRows() {
         ),
       )}
     </>
+  );
+}
+
+/** The fingerprint lock switch, at the top of the technician, customer care and customer profiles. */
+export function FingerprintRow() {
+  const lock = useBiometricSetting();
+  if (!lock) return null;
+  return (
+    <ListRow
+      icon="finger-print"
+      iconTint={colors.brand}
+      title="Fingerprint lock"
+      subtitle={lock.busy ? 'Working…' : lock.on ? 'On for this phone' : 'Unlock the app with your fingerprint'}
+      onPress={() => void lock.toggle(!lock.on)}
+      chevron={false}
+      right={<Switch value={lock.on} onValueChange={(v) => void lock.toggle(v)} trackColor={{ true: colors.brand, false: colors.border }} thumbColor={colors.white} accessibilityLabel="Fingerprint lock" />}
+    />
   );
 }
