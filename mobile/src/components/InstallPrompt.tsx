@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Image, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, radius, space } from '../theme';
-import { installSteps, runningAsApp, useInstallPrompt } from '../utils/install';
+import { browserKind, installSteps, runningAsApp, useInstallPrompt } from '../utils/install';
+import { toast } from '../store/feedback';
 import { GlassCircle } from './Glass';
 import { Text } from './Text';
 
@@ -55,13 +56,29 @@ export function InstallButton({ round, stepsOnly }: { round?: boolean; stepsOnly
 
 /** Opens the install sheet (or installs in one tap) from anywhere, e.g. a Profile tile. */
 export function useInstallAction() {
-  const { available, canInstall, install } = useInstallPrompt();
+  const { available, installNow, installed } = useInstallPrompt();
   const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
   return {
     available,
+    busy,
+    installed,
     start: async () => {
-      if (canInstall) await install();
-      else setOpen(true);
+      if (busy) return;
+      if (installed) return void toast.info('Already installed', 'Open Optimas MS from your home screen.');
+      // iPhone has no install button for websites, and WhatsApp/Facebook's built-in browser cannot
+      // install at all: only there are the steps shown
+      const kind = browserKind();
+      if (kind === 'ios-safari' || kind === 'ios-other' || kind === 'in-app') return setOpen(true);
+      // Everywhere else: straight to the phone's own "Install app" prompt (waiting a moment for it if the
+      // page has only just opened)
+      setBusy(true);
+      try {
+        const offered = await installNow();
+        if (offered === null && !runningAsApp()) toast.info('Getting the app ready', 'Tap Install again in a few seconds.');
+      } finally {
+        setBusy(false);
+      }
     },
     sheet: <InstallSheet visible={open} onClose={() => setOpen(false)} />,
   };
@@ -202,17 +219,21 @@ export function ProfileInstallCard() {
         </View>
         <View style={{ flex: 1, gap: 2 }}>
           <Text variant="title" style={{ fontFamily: fonts.semibold }}>
-            Install the app
+            {installer.installed ? 'App installed' : 'Install the app'}
           </Text>
           <Text variant="bodySm" color={colors.textMuted}>
-            Add Optimas MS to your phone’s home screen
+            {installer.installed ? 'Open Optimas MS from your home screen' : 'Add Optimas MS to your phone’s home screen'}
           </Text>
         </View>
-        <View style={styles.profileBtn}>
-          <Text variant="label" color="#FFFFFF" fixedColor style={{ fontFamily: fonts.semibold, fontSize: 13 }}>
-            Install
-          </Text>
-        </View>
+        {installer.installed ? (
+          <Ionicons name="checkmark-circle" size={26} color={colors.brand} />
+        ) : (
+          <View style={styles.profileBtn}>
+            <Text variant="label" color="#FFFFFF" fixedColor style={{ fontFamily: fonts.semibold, fontSize: 13 }}>
+              {installer.busy ? 'Installing…' : 'Install'}
+            </Text>
+          </View>
+        )}
       </Pressable>
       {installer.sheet}
     </>

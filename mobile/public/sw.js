@@ -3,11 +3,13 @@
 // Stamped with a hash of the file list at build time, so each release installs fresh
 const SHELL = 'optimas-shell-v9';
 
-// Every page's code, the fonts and images, listed at build time (scripts/precache.mjs). Downloading them
-// all at install means no page waits on the network the first time it is opened.
+// Every page's code, the fonts and images, listed at build time (scripts/precache.mjs). They download in
+// the background AFTER the worker is running: the phone only offers "Install" once a worker is active, so
+// holding activation back for the whole download made the Install button wait (or fall back to steps).
+let precaching = null;
+const precacheInBackground = () => (precaching = precaching || precache().finally(() => (precaching = null)));
 async function precache() {
   const cache = await caches.open(SHELL);
-  await cache.addAll(['/', '/manifest.json', '/icons/icon-192.png']);
   let files = [];
   try {
     files = (await (await fetch('/precache.json', { cache: 'no-store' })).json()).files || [];
@@ -20,14 +22,28 @@ async function precache() {
   }
 }
 
+// Install at once with just the shell, so the app is installable straight away
 self.addEventListener('install', (event) => {
-  event.waitUntil(precache().then(() => self.skipWaiting()));
+  event.waitUntil(
+    caches
+      .open(SHELL)
+      .then((cache) => cache.addAll(['/', '/manifest.json', '/icons/icon-192.png']))
+      .catch(() => undefined)
+      .then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== SHELL).map((k) => caches.delete(k)))).then(() => self.clients.claim()),
   );
+  // Then the rest of the app, in the background
+  precacheInBackground();
+});
+
+// The open app asks for the background download too (a worker can be stopped while idle; this resumes it)
+self.addEventListener('message', (event) => {
+  if (event.data === 'precache') event.waitUntil(precacheInBackground());
 });
 
 self.addEventListener('fetch', (event) => {

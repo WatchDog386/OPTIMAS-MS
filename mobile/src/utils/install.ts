@@ -12,6 +12,8 @@ interface InstallEvent extends Event {
 }
 
 let deferred: InstallEvent | null = null;
+/** The app is installed on this phone (known from the phone, or just installed now). */
+let installedHere = false;
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
@@ -35,7 +37,39 @@ if (isWeb) {
   });
   window.addEventListener('appinstalled', () => {
     deferred = null;
+    installedHere = true;
     emit();
+  });
+  // Already installed on this phone (opened here in the browser instead)? Chrome does not offer to install
+  // it a second time, so the button says so instead of waiting for an offer that never comes
+  const related = (navigator as Navigator & { getInstalledRelatedApps?: () => Promise<{ platform: string }[]> }).getInstalledRelatedApps;
+  if (related) {
+    related
+      .call(navigator)
+      .then((apps) => {
+        if (apps.some((a) => a.platform === 'webapp')) {
+          installedHere = true;
+          emit();
+        }
+      })
+      .catch(() => undefined);
+  }
+}
+
+/** Resolves once the phone offers to install (or after `ms`). */
+function waitForOffer(ms: number) {
+  return new Promise<void>((resolve) => {
+    if (deferred) return resolve();
+    const done = () => {
+      listeners.delete(check);
+      clearTimeout(t);
+      resolve();
+    };
+    const check = () => {
+      if (deferred) done();
+    };
+    const t = setTimeout(done, ms);
+    listeners.add(check);
   });
 }
 
@@ -64,13 +98,26 @@ export function useInstallPrompt() {
   const install = async () => {
     if (!deferred) return false;
     const e = deferred;
-    await e.prompt();
+    try {
+      await e.prompt();
+    } catch {
+      return false; // e.g. the tap was too long ago: the offer stays for the next tap
+    }
     const { outcome } = await e.userChoice;
     // The browser's offer can be used once
     deferred = null;
     (window as unknown as { __optimasInstall?: InstallEvent | null }).__optimasInstall = null;
     emit();
     return outcome === 'accepted';
+  };
+  /**
+   * Install in one tap. If the phone has not offered it yet (it can take a few seconds after the page
+   * opens), wait for the offer and install the moment it arrives (within the few seconds a tap still
+   * counts, which the phone requires). null when there was no offer to use.
+   */
+  const installNow = async (waitMs = 4500) => {
+    if (!deferred) await waitForOffer(waitMs);
+    return deferred ? install() : null;
   };
   const ios = isIosSafari();
   return {
@@ -85,6 +132,9 @@ export function useInstallPrompt() {
      */
     available: isWeb && !runningAsApp() && (!!deferred || ['ios-safari', 'ios-other', 'in-app'].includes(browserKind())),
     install,
+    installNow,
+    /** Installed on this phone already; this is the browser tab. */
+    installed: installedHere,
   };
 }
 
@@ -159,9 +209,9 @@ export function setupPwa() {
   add('meta', { name: 'mobile-web-app-capable', content: 'yes' });
   add('meta', { name: 'apple-mobile-web-app-title', content: 'Optimas MS' });
   add('meta', { name: 'apple-mobile-web-app-status-bar-style', content: 'default' });
-  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('/sw.js').catch(() => undefined);
-  } else if ('serviceWorker' in navigator && location.hostname === 'localhost') {
-    navigator.serviceWorker.register('/sw.js').catch(() => undefined);
+    // Finish downloading every page in the background once the worker is running
+    void navigator.serviceWorker.ready.then((r) => r.active?.postMessage('precache')).catch(() => undefined);
   }
 }

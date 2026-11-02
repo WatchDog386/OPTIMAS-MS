@@ -242,10 +242,10 @@ export default function Login() {
                 <Button label="Sign in" size="lg" trailingIcon="arrow-forward-circle-outline" loading={loading} onPress={submit} style={styles.signIn} />
 
                 {showInstall ? (
-                  <Pressable onPress={installer.start} style={styles.install} accessibilityLabel="Install the Optimas MS app">
+                  <Pressable onPress={() => void installer.start()} style={styles.install} accessibilityLabel="Install the Optimas MS app">
                     <Ionicons name="download-outline" size={20} color={colors.white} />
                     <Text variant="label" style={{ color: colors.white, fontWeight: '600' }}>
-                      Install
+                      {installer.installed ? 'Installed' : installer.busy ? 'Installing…' : 'Install'}
                     </Text>
                   </Pressable>
                 ) : null}
