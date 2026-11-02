@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { Role } from '../../api/types';
 import { useApi } from '../../hooks/useApi';
 import { homeFor, useAuth } from '../../store/auth';
-import { fonts } from '../../theme';
+import { fonts, isDark, setThemeMode } from '../../theme';
 import { useDesktop } from '../../theme/desktop';
 import { Text } from '../Text';
 
@@ -17,11 +17,13 @@ export const desk = {
   navActive: '#4DA3FF',
   navHover: 'rgba(255,255,255,0.06)',
   orgCard: 'rgba(255,255,255,0.06)',
-  page: '#F7F8FA',
-  bar: '#FFFFFF',
-  border: '#E5E7EB',
-  ink: '#17201C',
-  muted: '#6B7280',
+  page: isDark ? '#111214' : '#F7F8FA',
+  bar: isDark ? '#17181B' : '#FFFFFF',
+  panel: isDark ? '#1A1B1E' : '#FFFFFF',
+  mini: isDark ? '#24262A' : '#F3F4F6',
+  border: isDark ? '#2C2E33' : '#E5E7EB',
+  ink: isDark ? '#ECEFED' : '#17201C',
+  muted: isDark ? '#A3ADA8' : '#6B7280',
   green: '#2DA043',
 };
 
@@ -196,6 +198,12 @@ function Frame({ path, children }: { path: string; children: ReactNode }) {
           <Text variant="body" color={desk.ink} fixedColor style={{ fontSize: 15, flex: 1 }} numberOfLines={1}>
             {active?.label ?? ''}
           </Text>
+          <View style={styles.dark}>
+            <Switch value={isDark} onValueChange={() => setThemeMode(isDark ? 'light' : 'dark')} trackColor={{ true: desk.green, false: desk.border }} thumbColor="#FFFFFF" accessibilityLabel="Dark mode" />
+            <Text variant="body" color={isDark ? desk.green : desk.muted} fixedColor>
+              Dark
+            </Text>
+          </View>
           <Pressable onPress={() => go('/search')} style={styles.barBtn} accessibilityLabel="Search">
             <Ionicons name="search-outline" size={20} color={desk.muted} />
           </Pressable>
@@ -236,6 +244,7 @@ const styles = StyleSheet.create({
   railBottom: { paddingVertical: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)' },
   main: { flex: 1, minWidth: 0 },
   bar: { height: 56, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 24, backgroundColor: desk.bar, borderBottomWidth: 1, borderBottomColor: desk.border },
+  dark: { flexDirection: 'row', alignItems: 'center', gap: 8, marginRight: 10 },
   barBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   barBadge: { position: 'absolute', top: 2, right: 0, minWidth: 17, height: 17, borderRadius: 9 },
   me: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 6 },

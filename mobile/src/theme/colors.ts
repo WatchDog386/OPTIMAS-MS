@@ -5,7 +5,7 @@
  * Safaricom green actions, green-grey "ink" typography, grey-green fields,
  * a soft sky glow behind headers, and bank-card style hero cards.
  */
-export const colors = {
+const light = {
   // Canvas & surfaces
   bg: '#FFFFFF',
   surface: '#FFFFFF',
@@ -77,7 +77,85 @@ export const colors = {
   scrim: 'rgba(0,0,0,0.45)',
   white: '#FFFFFF',
   black: '#000000',
-} as const;
+};
+
+/** The same tokens at night: charcoal canvas, raised dark cards, light ink and green actions. */
+const dark: typeof light = {
+  ...light,
+  bg: '#111214',
+  surface: '#1A1B1E',
+  surfaceAlt: '#24262A',
+  surfaceHigh: '#2C2E33',
+  border: '#2C2E33',
+  borderStrong: '#3A3D42',
+
+  // Black buttons would vanish on a dark page: actions turn Safaricom green, as in the Business-SME dark mode
+  primary: '#2DA043',
+  primaryPressed: '#248A38',
+  onPrimary: '#FFFFFF',
+  primarySoft: 'rgba(255,255,255,0.08)',
+
+  glass: 'rgba(30,31,34,0.72)',
+  glassStrong: 'rgba(32,33,36,0.94)',
+  glassBorder: 'rgba(255,255,255,0.08)',
+  hatch: 'rgba(255,255,255,0.12)',
+  bgTop: '#17181B',
+  bgBottom: '#0E0F11',
+
+  brandSoft: 'rgba(45,160,67,0.18)',
+  accentSoft: 'rgba(58,143,145,0.2)',
+  garnetSoft: 'rgba(155,43,61,0.25)',
+  navy: '#6F8FE0',
+  charcoal: '#E6E9E7',
+
+  text: '#ECEFED',
+  textMuted: '#A3ADA8',
+  textDim: '#7B8580',
+
+  successSoft: 'rgba(0,161,58,0.18)',
+  warningSoft: 'rgba(217,119,6,0.2)',
+  dangerSoft: 'rgba(220,38,38,0.2)',
+  infoSoft: 'rgba(2,132,199,0.2)',
+
+  hero: '#25262A',
+  glowTop: '#141B25',
+  glowMid: '#111720',
+  overlay: 'rgba(0,0,0,0.72)',
+};
+
+export type ThemeMode = 'light' | 'dark';
+const THEME_KEY = 'optimas.theme';
+
+/** The look chosen on this phone (light unless Dark mode was switched on). Read once, before any screen draws. */
+export const themeMode: ThemeMode = (() => {
+  try {
+    return typeof localStorage !== 'undefined' && localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light';
+  } catch {
+    return 'light';
+  }
+})();
+export const isDark = themeMode === 'dark';
+
+/**
+ * Switches light/dark. Every style in the app is built from these colours when it loads, so the app
+ * reloads to redraw itself in the new look (the sign-in and lock are kept).
+ */
+export function setThemeMode(mode: ThemeMode) {
+  try {
+    localStorage.setItem(THEME_KEY, mode);
+  } catch {
+    /* private mode: stays as it is */
+  }
+  try {
+    // Already unlocked: the reload that follows should not ask for the fingerprint again
+    sessionStorage.setItem('optimas.themeReload', String(Date.now()));
+  } catch {
+    /* ignore */
+  }
+  if (typeof window !== 'undefined') window.location.reload();
+}
+
+export const colors = isDark ? dark : light;
 
 /** Bank-card themes, as on the Business-SME dashboard. */
 export const cardThemes = {

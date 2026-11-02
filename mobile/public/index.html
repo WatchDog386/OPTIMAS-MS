@@ -14,6 +14,7 @@
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <script src="/pwa-early.js"></script>
+    <script src="/theme-early.js"></script>
     <link rel="privacy-policy" href="/privacy" />
     <link rel="terms-of-service" href="/terms" />
     <style id="expo-reset">
@@ -56,6 +57,19 @@
         background: linear-gradient(#f3f3f3, #e9e9e9 55%, #dedede);
         font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
         color: #1c1d1f;
+      }
+      html.dark,
+      html.dark body {
+        background: #111214;
+      }
+      html.dark #boot-splash .logo {
+        background: #fff;
+        border-radius: 18px;
+        padding: 10px 16px;
+      }
+      html.dark #boot-splash {
+        background: linear-gradient(#17181b, #131416 55%, #0e0f11);
+        color: #eceffd;
       }
       #boot-splash .logo {
         width: 260px;

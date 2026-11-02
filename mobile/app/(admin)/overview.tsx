@@ -478,5 +478,5 @@ export default function Overview() {
   );
 }
 
-const deskChip = { flexDirection: 'row', alignItems: 'center', gap: 6, height: 32, paddingHorizontal: 12, borderRadius: 6, borderWidth: 1, borderColor: desk.border, backgroundColor: '#FFFFFF' } as const;
-const deskAction = { flexDirection: 'row', alignItems: 'center', gap: 10, width: '31.5%', minWidth: 170, height: 46, paddingHorizontal: 14, borderRadius: 8, borderWidth: 1, borderColor: desk.border, backgroundColor: '#FFFFFF' } as const;
+const deskChip = { flexDirection: 'row', alignItems: 'center', gap: 6, height: 32, paddingHorizontal: 12, borderRadius: 6, borderWidth: 1, borderColor: desk.border, backgroundColor: desk.panel } as const;
+const deskAction = { flexDirection: 'row', alignItems: 'center', gap: 10, width: '31.5%', minWidth: 170, height: 46, paddingHorizontal: 14, borderRadius: 8, borderWidth: 1, borderColor: desk.border, backgroundColor: desk.panel } as const;

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, gradients, radius, shadow, space, SurfaceContext } from '../theme';
+import { colors, gradients, isDark, radius, shadow, space, SurfaceContext } from '../theme';
 
 interface Props {
   children: ReactNode;
@@ -53,8 +53,8 @@ const styles = StyleSheet.create({
   base: { backgroundColor: colors.glass, borderRadius: radius.xl, overflow: 'hidden' },
   padded: { padding: space.lg + 2 },
   elevated: { borderWidth: 1, borderColor: colors.glassBorder },
-  outline: { borderWidth: 1, borderColor: colors.glassBorder, backgroundColor: 'rgba(255,255,255,0.35)' },
-  tonal: { backgroundColor: 'rgba(255,255,255,0.4)' },
+  outline: { borderWidth: 1, borderColor: colors.glassBorder, backgroundColor: isDark ? colors.glass : 'rgba(255,255,255,0.35)' },
+  tonal: { backgroundColor: isDark ? colors.glass : 'rgba(255,255,255,0.4)' },
   heroBorder: { borderWidth: 1, borderColor: colors.heroBorder },
   pressed: { opacity: 0.94, transform: [{ scale: 0.985 }] },
 });

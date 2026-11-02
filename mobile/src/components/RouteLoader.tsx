@@ -3,6 +3,7 @@ import { Animated, Easing, Platform, StyleSheet } from 'react-native';
 import { usePathname } from 'expo-router';
 import { usePageLoad } from '../store/pageLoad';
 import { BarsLoader } from './Loaders';
+import { isDark } from '../theme';
 
 const NATIVE = Platform.OS !== 'web';
 /** Shown at least this long, so a quick page change does not flicker. */
@@ -60,5 +61,5 @@ export function RouteLoader() {
 }
 
 const styles = StyleSheet.create({
-  root: { zIndex: 30, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(243,243,243,0.94)' },
+  root: { zIndex: 30, alignItems: 'center', justifyContent: 'center', backgroundColor: isDark ? 'rgba(17,18,20,0.94)' : 'rgba(243,243,243,0.94)' },
 });

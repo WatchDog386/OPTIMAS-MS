@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
   trackFill: { position: 'absolute', left: 0, height: 4, borderRadius: 2, backgroundColor: colors.highlight },
   nodes: { position: 'absolute', left: -NODE / 2, right: -NODE / 2, flexDirection: 'row', justifyContent: 'space-between' },
   nodeSlot: { width: NODE, height: NODE, alignItems: 'center', justifyContent: 'center' },
-  node: { width: NODE, height: NODE, borderRadius: NODE / 2, backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: 'rgba(28,29,31,0.15)', alignItems: 'center', justifyContent: 'center' },
+  node: { width: NODE, height: NODE, borderRadius: NODE / 2, backgroundColor: colors.surface, borderWidth: 2, borderColor: 'rgba(28,29,31,0.15)', alignItems: 'center', justifyContent: 'center' },
   nodeDone: { backgroundColor: colors.highlight, borderColor: colors.highlight },
   nodeActive: { width: NODE + 4, height: NODE + 4, borderRadius: (NODE + 4) / 2, backgroundColor: colors.highlight, alignItems: 'center', justifyContent: 'center' },
   labels: { flexDirection: 'row', justifyContent: 'space-between' },

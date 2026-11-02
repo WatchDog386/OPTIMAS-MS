@@ -1,7 +1,7 @@
 import { Children, isValidElement, useEffect, useRef, type ReactElement, type ReactNode } from 'react';
 import { Animated, Platform, RefreshControl, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
-import { colors, space } from '../theme';
+import { colors, isDark, space } from '../theme';
 import { GlassBackground } from './Glass';
 import { usePullToRefresh } from './PullToRefresh';
 import { NATIVE, prefersReducedMotion, spring } from '../utils/motion';
@@ -9,6 +9,7 @@ import { PageHeader } from './PageHeader';
 import { ScreenHeader } from './ScreenHeader';
 import { Text } from './Text';
 import { useDesktop } from '../theme/desktop';
+import { desk } from './desktop/DesktopShell';
 
 interface Props {
   children: ReactNode;
@@ -70,7 +71,7 @@ export function Screen({ children, scroll = true, refreshing, onRefresh, edges =
     Animated.spring(enter, { toValue: 1, ...spring.settle, useNativeDriver: NATIVE }).start();
   }, [enter]);
   return (
-    <View style={[styles.root, desktop && { backgroundColor: '#F7F8FA' }]}>
+    <View style={[styles.root, desktop && { backgroundColor: desk.page }]}>
       {glow && !desktop ? <GlassBackground /> : null}
       <Animated.View style={{ flex: 1, opacity: enter.interpolate({ inputRange: [0, 1], outputRange: [0, 1], extrapolate: 'clamp' }), transform: [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) }] }}>
       <SafeAreaView style={{ flex: 1 }} edges={edges}>
@@ -111,7 +112,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgBottom },
   // Desktop: the Business-SME page — light grey, roomier margins, nothing hidden behind a tab bar
   desktop: { paddingHorizontal: 32, paddingTop: 28, paddingBottom: 48, width: '100%', maxWidth: 1320, alignSelf: 'center' },
-  desktopFooter: { paddingHorizontal: 32, backgroundColor: '#FFFFFF', borderTopColor: '#E5E7EB' },
+  desktopFooter: { paddingHorizontal: 32, backgroundColor: desk.bar, borderTopColor: desk.border },
   content: {
     padding: space.lg,
     paddingBottom: TAB_BAR_CLEARANCE,
@@ -120,11 +121,11 @@ const styles = StyleSheet.create({
   // Full width (cancels the page's side padding) so the frosted layer reaches both edges; the small
   // vertical padding is given back as negative margin so spacing is unchanged while not scrolled
   sticky: { marginHorizontal: -space.lg, paddingHorizontal: space.lg, paddingBottom: 10, marginBottom: -10, zIndex: 10 },
-  frost: { backgroundColor: 'rgba(240,240,240,0.86)', borderBottomWidth: 1, borderBottomColor: 'rgba(28,29,31,0.06)', shadowColor: '#1C1D1F', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
+  frost: { backgroundColor: isDark ? 'rgba(17,18,20,0.88)' : 'rgba(240,240,240,0.86)', borderBottomWidth: 1, borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(28,29,31,0.06)', shadowColor: '#1C1D1F', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
   footer: {
     paddingHorizontal: space.lg,
     paddingVertical: space.md,
-    backgroundColor: 'rgba(255,255,255,0.72)',
+    backgroundColor: isDark ? 'rgba(26,27,30,0.92)' : 'rgba(255,255,255,0.72)',
     borderTopWidth: 1,
     borderTopColor: colors.glassBorder,
   },

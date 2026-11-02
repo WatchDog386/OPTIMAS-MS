@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Image, Platform, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, fonts } from '../theme';
+import { colors, fonts, isDark } from '../theme';
 import { DotsLoader } from './Loaders';
 import { Text } from './Text';
 
@@ -40,9 +40,11 @@ export function Splash({ fontsReady, ready, onDone }: { fontsReady: boolean; rea
 
   return (
     <Animated.View style={[StyleSheet.absoluteFill, styles.root, { opacity }]} accessibilityLabel="Optimas MS is loading">
-      <LinearGradient colors={[colors.bgTop, '#E9E9E9', colors.bgBottom]} locations={[0, 0.55, 1]} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={[colors.bgTop, isDark ? '#131416' : '#E9E9E9', colors.bgBottom]} locations={[0, 0.55, 1]} style={StyleSheet.absoluteFill} />
       <Animated.View style={[styles.center, { transform: [{ translateY: lift }] }]}>
-        <Image source={LOGO} style={styles.logo} resizeMode="contain" accessibilityLabel="Optimas Networks" />
+        <View style={isDark ? styles.logoPlate : undefined}>
+          <Image source={LOGO} style={styles.logo} resizeMode="contain" accessibilityLabel="Optimas Networks" />
+        </View>
         <Text variant="bodySm" color={colors.textMuted}>
           Field operations, accounted for
         </Text>
@@ -58,5 +60,7 @@ const styles = StyleSheet.create({
   root: { zIndex: 100, alignItems: 'center', justifyContent: 'center' },
   center: { alignItems: 'center', gap: 14 },
   logo: { width: 260, height: 99 },
+  // The navy logo needs a light backing in dark mode
+  logoPlate: { backgroundColor: '#FFFFFF', borderRadius: 18, paddingHorizontal: 16, paddingVertical: 10 },
   dots: { position: 'absolute', bottom: 56 },
 });

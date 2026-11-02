@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
   brandText: { fontFamily: fonts.bold, fontSize: 24, lineHeight: 29, letterSpacing: -0.3 },
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 46, zIndex: 20 },
   topRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  capsule: { flexDirection: 'row', alignItems: 'center', height: 36, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: 'rgba(28,29,31,0.08)', shadowColor: '#1C1D1F', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+  capsule: { flexDirection: 'row', alignItems: 'center', height: 36, borderRadius: 18, backgroundColor: colors.surface, borderWidth: 1, borderColor: 'rgba(28,29,31,0.08)', shadowColor: '#1C1D1F', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
   capsuleHalf: { width: 44, height: 36, alignItems: 'center', justifyContent: 'center' },
   capsuleLine: { width: StyleSheet.hairlineWidth, height: 18, backgroundColor: 'rgba(28,29,31,0.18)' },
   // Content sits in the lower part of the screen, within thumb reach
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
   heroCenter: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, alignItems: 'center', justifyContent: 'center' },
   card: { gap: 14 },
   // Soft, slightly rounded corners (not pills) with a fine edge so white fields read on the grey page
-  field: { backgroundColor: '#FFFFFF', minHeight: 56, borderRadius: CORNER, shadowColor: '#1C1D1F', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
+  field: { backgroundColor: colors.surface, minHeight: 56, borderRadius: CORNER, shadowColor: '#1C1D1F', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
   signIn: { borderRadius: CORNER, marginTop: 4 },
   eye: { position: 'absolute', right: space.lg, bottom: 18 },
   bioRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: 10 },

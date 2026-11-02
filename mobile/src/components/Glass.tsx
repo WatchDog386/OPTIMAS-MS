@@ -3,7 +3,7 @@ import { Platform, Pressable, StyleSheet, View, type StyleProp, type ViewStyle }
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Defs, Line, Pattern, RadialGradient, Rect, Stop } from 'react-native-svg';
-import { colors } from '../theme';
+import { colors, isDark } from '../theme';
 
 /* ─────────────────────────── Backdrop ─────────────────────────── */
 
@@ -11,19 +11,19 @@ import { colors } from '../theme';
 export function GlassBackground() {
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <LinearGradient colors={[colors.bgTop, '#E9E9E9', colors.bgBottom]} locations={[0, 0.55, 1]} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={[colors.bgTop, isDark ? '#131416' : '#E9E9E9', colors.bgBottom]} locations={[0, 0.55, 1]} style={StyleSheet.absoluteFill} />
       <Svg width="100%" height="100%" style={StyleSheet.absoluteFill} preserveAspectRatio="none">
         <Defs>
           <RadialGradient id="gb-white" cx="50%" cy="50%" r="50%">
-            <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.95} />
+            <Stop offset="0" stopColor="#FFFFFF" stopOpacity={isDark ? 0.06 : 0.95} />
             <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0} />
           </RadialGradient>
           <RadialGradient id="gb-yellow" cx="50%" cy="50%" r="50%">
-            <Stop offset="0" stopColor="#F1F27A" stopOpacity={0.55} />
+            <Stop offset="0" stopColor="#F1F27A" stopOpacity={isDark ? 0.1 : 0.55} />
             <Stop offset="1" stopColor="#F1F27A" stopOpacity={0} />
           </RadialGradient>
           <RadialGradient id="gb-grey" cx="50%" cy="50%" r="50%">
-            <Stop offset="0" stopColor="#CFCFCF" stopOpacity={0.55} />
+            <Stop offset="0" stopColor="#CFCFCF" stopOpacity={isDark ? 0.05 : 0.55} />
             <Stop offset="1" stopColor="#CFCFCF" stopOpacity={0} />
           </RadialGradient>
         </Defs>
@@ -32,7 +32,7 @@ export function GlassBackground() {
         <Circle cx="0%" cy="45%" r="220" fill="url(#gb-grey)" />
       </Svg>
       {/* The top edge is exactly the status-bar colour, so the bar and the page read as one surface */}
-      <LinearGradient colors={[colors.bgTop, 'rgba(243,243,243,0)']} style={styles.topBlend} pointerEvents="none" />
+      <LinearGradient colors={[colors.bgTop, isDark ? 'rgba(23,24,27,0)' : 'rgba(243,243,243,0)']} style={styles.topBlend} pointerEvents="none" />
     </View>
   );
 }

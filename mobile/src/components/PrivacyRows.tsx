@@ -6,7 +6,7 @@ import { api, ApiError, API_URL, authHeader } from '../api/client';
 import { useAuth } from '../store/auth';
 import { alertDialog, promptDialog, toast } from '../store/feedback';
 import { installSteps, useInstallPrompt } from '../utils/install';
-import { colors } from '../theme';
+import { colors, isDark, setThemeMode } from '../theme';
 import { useBiometricSetting } from './BiometricSetting';
 import { ListRow } from './ListRow';
 
@@ -102,6 +102,7 @@ export function usePrivacyItems(): PrivacyItem[] {
       },
     });
   }
+  items.push({ key: 'theme', icon: isDark ? 'moon' : 'moon-outline', title: 'Dark mode', sub: isDark ? 'On · tap for light mode' : 'Off · tap for dark mode', on: isDark, onPress: () => setThemeMode(isDark ? 'light' : 'dark') });
   if (lock) items.push({ key: 'lock', icon: 'finger-print', title: 'Fingerprint lock', sub: lock.busy ? 'Working…' : lock.on ? 'On · tap to turn off' : 'Off · tap to turn on', on: lock.on, onPress: () => void lock.toggle(!lock.on) });
   items.push(
     { key: 'data', icon: 'download-outline', title: 'Download my data', sub: busy === 'download' ? 'Preparing…' : 'Everything the app holds', onPress: download },
@@ -119,16 +120,16 @@ export function PrivacyRows() {
   return (
     <>
       {items.map((i) =>
-        i.key === 'lock' ? (
+        i.key === 'lock' || i.key === 'theme' ? (
           <ListRow
             key={i.key}
             icon={i.icon}
             iconTint={colors.brand}
             title={i.title}
-            subtitle={i.on ? 'On for this phone' : 'Unlock the app with your fingerprint'}
+            subtitle={i.key === 'theme' ? (i.on ? 'Dark colours on this phone' : 'Light colours on this phone') : i.on ? 'On for this phone' : 'Unlock the app with your fingerprint'}
             onPress={i.onPress}
             chevron={false}
-            right={<Switch value={!!i.on} onValueChange={i.onPress} trackColor={{ true: colors.brand, false: colors.border }} thumbColor={colors.white} accessibilityLabel="Fingerprint lock" />}
+            right={<Switch value={!!i.on} onValueChange={i.onPress} trackColor={{ true: colors.brand, false: colors.border }} thumbColor={colors.white} accessibilityLabel={i.title} />}
           />
         ) : (
           <ListRow key={i.key} icon={i.icon} iconTint={i.danger ? colors.danger : colors.text} title={i.title} subtitle={i.key === 'data' || i.key === 'install' || i.danger ? i.sub : undefined} onPress={i.onPress} />

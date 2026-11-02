@@ -51,7 +51,7 @@ export function SectionRow({
   onPress?: () => void;
 }) {
   return (
-    <Pressable onPress={onPress} disabled={!onPress} style={({ pressed }) => [styles.row, pressed && { backgroundColor: 'rgba(255,255,255,0.6)' }]}>
+    <Pressable onPress={onPress} disabled={!onPress} style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.glass }]}>
       <View style={[styles.icon, { backgroundColor: tintBg }]}>
         <Ionicons name={icon} size={20} color={tint} />
       </View>
@@ -73,7 +73,7 @@ export function SectionRow({
 
 /** Small soft pill, e.g. an amount owed. */
 export function Pill({ label, tone = 'danger' }: { label: string; tone?: 'danger' | 'success' | 'warning' | 'neutral' }) {
-  const t = { danger: [colors.dangerSoft, '#B91C1C'], success: [colors.successSoft, '#047857'], warning: [colors.warningSoft, '#B45309'], neutral: ['rgba(255,255,255,0.8)', colors.textMuted] }[tone];
+  const t = { danger: [colors.dangerSoft, '#B91C1C'], success: [colors.successSoft, '#047857'], warning: [colors.warningSoft, '#B45309'], neutral: [colors.glassStrong, colors.textMuted] }[tone];
   return (
     <View style={[styles.pill, { backgroundColor: t[0] }]}>
       <Text variant="label" color={t[1]} style={{ fontFamily: fonts.semibold, fontSize: 11 }}>

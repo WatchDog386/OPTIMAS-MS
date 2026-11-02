@@ -1,7 +1,7 @@
 import { useState, type ComponentRef, type Ref } from 'react';
 import { Platform, StyleSheet, TextInput, View, type StyleProp, type TextInputProps, type TextStyle, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fonts, radius, space } from '../theme';
+import { colors, fonts, isDark, radius, space } from '../theme';
 import { Text } from './Text';
 
 interface Props extends TextInputProps {
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingHorizontal: space.lg + 2,
     borderRadius: radius.pill,
-    backgroundColor: 'rgba(255,255,255,0.72)',
+    backgroundColor: isDark ? colors.surfaceAlt : 'rgba(255,255,255,0.72)',
   },
   single: { alignSelf: 'stretch' },
   multi: { alignItems: 'flex-start', paddingVertical: space.md, borderRadius: radius.lg },

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,7 +7,7 @@ import { api, ApiError } from '../api/client';
 import { useAuth } from '../store/auth';
 import { endExcuse, leavingExcused, useLock } from '../store/lock';
 import { promptDialog, toast } from '../store/feedback';
-import { fonts } from '../theme';
+import { fonts, isDark } from '../theme';
 import { biometricProblem, lockKeyOnThisDevice, prepareBiometric, rememberFingerprintAccount, unlockWithBiometric } from '../utils/biometric';
 import { firstName } from '../utils/format';
 import { setThemeColor, STATUS_BAR_COLOR } from '../utils/install';
@@ -31,7 +31,7 @@ export function LockHost() {
   useEffect(() => {
     if (!hydrated || checked.current) return;
     checked.current = true;
-    if (enabled) setLocked(true);
+    if (enabled && !justSwitchedTheme()) setLocked(true);
   }, [hydrated, enabled, setLocked]);
   useEffect(() => {
     if (!user) setLocked(false);
@@ -60,8 +60,22 @@ export function LockHost() {
   return <LockScreen name={firstName(user.name)} onUnlocked={() => setLocked(false)} />;
 }
 
+/** The app reloaded a moment ago because Light/Dark mode was switched while unlocked. */
+function justSwitchedTheme() {
+  try {
+    const at = Number(sessionStorage.getItem('optimas.themeReload') ?? 0);
+    sessionStorage.removeItem('optimas.themeReload');
+    return Date.now() - at < 15_000;
+  } catch {
+    return false;
+  }
+}
+
 /** Lock-screen colours (like WhatsApp's): near-black page, green lock and green "Unlock". */
-const LOCK = { bg: '#FFFFFF', icon: '#111111', green: '#1DAA61', text: '#111B21', line: '#D1D7DB', dim: '#667781' };
+const LOCK = isDark
+  ? { bg: '#111214', card: '#1A1B1E', icon: '#ECEFED', green: '#2DA043', text: '#ECEFED', line: '#2C2E33', dim: '#A3ADA8' }
+  : { bg: '#FFFFFF', card: '#FFFFFF', icon: '#111111', green: '#1DAA61', text: '#111B21', line: '#E3E7EA', dim: '#667781' };
+const LOGO = require('../../assets/logo.png');
 
 /**
  * The lock screen, as in WhatsApp: a green lock, "Optimas Locked" and one Unlock button. Tapping Unlock
@@ -124,8 +138,8 @@ function LockScreen({ onUnlocked }: { name: string; onUnlocked: () => void }) {
 }
 
 /**
- * The look of the lock (WhatsApp's): a green lock, "Optimas Locked" and one Unlock button, with optional
- * small links underneath. Used by the in-app lock and by the sign-in page when fingerprint is set up.
+ * The look of the lock: a card with the Optimas logo, "Unlock to use Optimas" and a small Unlock button,
+ * with optional small links underneath. Used by the in-app lock and by the sign-in page when fingerprint is set up.
  */
 export function LockedView({ busy, onUnlock, links }: { busy: boolean; onUnlock: () => void; links: { label: string; onPress: () => void; dim?: boolean }[] }) {
   const insets = useSafeAreaInsets();
@@ -155,15 +169,25 @@ export function LockedView({ busy, onUnlock, links }: { busy: boolean; onUnlock:
   return (
     <View style={[StyleSheet.absoluteFill, styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom + 24 }]} accessibilityViewIsModal>
       <View style={styles.middle}>
-        <Ionicons name="finger-print" size={76} color={LOCK.icon} accessibilityElementsHidden />
-        <Text variant="h2" color={LOCK.text} fixedColor align="center" style={styles.title}>
-          Optimas Locked
-        </Text>
-        <Pressable onPress={onUnlock} disabled={busy} accessibilityRole="button" accessibilityLabel="Unlock with fingerprint" style={({ pressed }) => [styles.unlock, pressed && { backgroundColor: 'rgba(37,211,102,0.08)' }]}>
-          <Text variant="body" color={LOCK.green} fixedColor style={{ fontFamily: fonts.medium, fontSize: 16 }}>
-            Unlock
+        <View style={styles.card}>
+          <View style={isDark ? styles.logoPlate : undefined}>
+            <Image source={LOGO} style={styles.logo} resizeMode="contain" accessibilityLabel="Optimas" />
+          </View>
+          <Text variant="title" color={LOCK.text} fixedColor align="center" style={styles.title}>
+            Unlock to use Optimas
           </Text>
-        </Pressable>
+          <View style={styles.hint}>
+            <Ionicons name="finger-print" size={18} color={LOCK.dim} accessibilityElementsHidden />
+            <Text variant="bodySm" color={LOCK.dim} fixedColor>
+              Touch the fingerprint sensor
+            </Text>
+          </View>
+          <Pressable onPress={onUnlock} disabled={busy} accessibilityRole="button" accessibilityLabel="Unlock with fingerprint" style={({ pressed }) => [styles.unlock, pressed && { backgroundColor: 'rgba(37,211,102,0.08)' }]}>
+            <Text variant="body" color={LOCK.green} fixedColor style={{ fontFamily: fonts.medium, fontSize: 14 }}>
+              Unlock
+            </Text>
+          </Pressable>
+        </View>
       </View>
       {links.length ? (
         <View style={styles.other}>
@@ -183,9 +207,32 @@ export function LockedView({ busy, onUnlock, links }: { busy: boolean; onUnlock:
 const styles = StyleSheet.create({
   // Above the app and its alert banners (60), below toasts (70) and dialogs (80) so the password prompt shows
   root: { zIndex: 65, backgroundColor: LOCK.bg, paddingHorizontal: 28 },
-  middle: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 22, paddingTop: 140 },
-  title: { fontFamily: fonts.regular, fontSize: 26 },
-  unlock: { alignSelf: 'stretch', height: 56, borderRadius: 28, borderWidth: 1.5, borderColor: LOCK.line, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  middle: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  // The pop-up card: logo, "Unlock to use Optimas" and a small Unlock button
+  card: {
+    width: '100%',
+    maxWidth: 320,
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 22,
+    paddingTop: 26,
+    paddingBottom: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: LOCK.line,
+    backgroundColor: LOCK.card,
+    shadowColor: '#000',
+    shadowOpacity: isDark ? 0.4 : 0.08,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
+  },
+  logo: { width: 150, height: 57 },
+  // The navy logo needs a light backing in dark mode
+  logoPlate: { backgroundColor: '#FFFFFF', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6 },
+  title: { fontFamily: fonts.medium, fontSize: 16, lineHeight: 21 },
+  hint: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  unlock: { alignSelf: 'stretch', height: 42, borderRadius: 21, borderWidth: 1.5, borderColor: LOCK.line, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
   other: { alignItems: 'center', gap: 14 },
   link: { fontFamily: fonts.semibold, paddingVertical: 4 },
 });

@@ -9,24 +9,17 @@ import { Avatar, HeaderButton, Loading, Text } from '../../src/components';
 import { Ticks, chatTime } from '../../src/components/ChatInbox';
 import { useAuth } from '../../src/store/auth';
 import { toast } from '../../src/store/feedback';
-import { colors, fonts, space } from '../../src/theme';
+import { colors, fonts, isDark, space } from '../../src/theme';
 import { call } from '../../src/utils/contact';
 import { haptic, NATIVE, prefersReducedMotion, spring } from '../../src/utils/motion';
 
 /** New messages are checked for this often while the conversation is open. */
 const POLL_MS = 3_000;
 
-/** WhatsApp's light-theme chat colours. */
-const WA = {
-  wallpaper: '#EFEAE2',
-  mine: '#D9FDD3',
-  theirs: '#FFFFFF',
-  ink: '#111B21',
-  meta: '#667781',
-  notice: '#FFEECD',
-  noticeInk: '#54656F',
-  quoteBar: '#06CF9C',
-};
+/** WhatsApp's chat colours, light and dark. */
+const WA = isDark
+  ? { wallpaper: '#0B141A', mine: '#005C4B', theirs: '#202C33', ink: '#E9EDEF', meta: '#8696A0', notice: '#182229', noticeInk: '#FFD279', quoteBar: '#06CF9C' }
+  : { wallpaper: '#EFEAE2', mine: '#D9FDD3', theirs: '#FFFFFF', ink: '#111B21', meta: '#667781', notice: '#FFEECD', noticeInk: '#54656F', quoteBar: '#06CF9C' };
 /** Sender names in groups get a steady colour each. */
 const NAME_COLOURS = ['#1FA855', '#A62C71', '#3762C9', '#C75F0E', '#7F66FF', '#0E8C8C', '#B5446E'];
 const nameColour = (id: string) => NAME_COLOURS[[...id].reduce((n, ch) => n + ch.charCodeAt(0), 0) % NAME_COLOURS.length];
