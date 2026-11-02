@@ -102,7 +102,7 @@ insightsRouter.get(
     res.json({
       generatedAt: new Date().toISOString(),
       staff: people,
-      jobs: open.map(({ assignee, ...t }) => ({ ...t, assigneeName: assignee.name })),
+      jobs: open.map(({ assignee, ...t }) => ({ ...t, assigneeName: assignee?.name ?? 'Not assigned' })),
       requests: requests.map(({ customer, ...r }) => ({ ...r, lat: r.lat ?? customer.lastLat, lng: r.lng ?? customer.lastLng, customerName: customer.name })),
     });
   }),
@@ -165,6 +165,7 @@ insightsRouter.get(
     const distribution = [1, 2, 3, 4, 5].map((stars) => ({ stars, count: rated.filter((t) => t.customerRating === stars).length }));
     const byTech = new Map<string, { user: { id: string; name: string; staffNo: string }; sum: number; count: number }>();
     for (const t of rated) {
+      if (!t.assignee) continue;
       const row = byTech.get(t.assignee.id) ?? { user: t.assignee, sum: 0, count: 0 };
       row.sum += t.customerRating ?? 0;
       row.count += 1;
@@ -186,7 +187,7 @@ insightsRouter.get(
         rating: t.customerRating,
         feedback: t.customerFeedback,
         ratedAt: t.ratedAt,
-        technician: t.assignee.name,
+        technician: t.assignee?.name ?? 'Not assigned',
       })),
     });
   }),

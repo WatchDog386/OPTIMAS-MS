@@ -15,7 +15,12 @@ export default function CareHome() {
   const requests = useApi<{ requests: ServiceRequest[] }>('/requests?status=OPEN', { poll: 30_000 });
   const jobs = useApi<{ tasks: Task[] }>('/tasks?status=ASSIGNED,IN_PROGRESS', { poll: 30_000 });
   const customers = useApi<{ users: User[] }>('/users?role=CUSTOMER');
-  const refresh = () => Promise.all([chats.refresh(), requests.refresh(), jobs.refresh(), customers.refresh()]);
+  const toAssign = useApi<{ tasks: Task[] }>('/tasks?status=OPEN', { poll: 30_000 });
+  const register = useApi<{ records: { checkOutAt: string | null; user?: { role: string } }[]; absent: { role: string }[] }>('/attendance', { poll: 60_000 });
+  const refresh = () => Promise.all([chats.refresh(), requests.refresh(), jobs.refresh(), customers.refresh(), toAssign.refresh(), register.refresh()]);
+  const waitingJobs = toAssign.data?.tasks.length ?? 0;
+  const techsIn = (register.data?.records ?? []).filter((r) => r.user?.role === 'TECHNICIAN' && !r.checkOutAt).length;
+  const techsOut = (register.data?.absent ?? []).filter((p) => p.role === 'TECHNICIAN').length;
 
   const unread = (chats.data?.conversations ?? []).filter((c) => c.unread > 0).length;
   const openRequests = requests.data?.requests.length ?? 0;
@@ -51,6 +56,8 @@ export default function CareHome() {
         items={[
           { key: 'chats', title: 'Support chats', status: unread ? `${unread} waiting for a reply` : 'All answered', icon: 'chatbubbles-outline', badge: unread, onPress: () => router.push('/support') },
           { key: 'req', title: 'Customer requests', status: openRequests ? `${openRequests} new` : 'None new', icon: 'megaphone-outline', badge: openRequests, onPress: () => router.push('/care-requests') },
+          { key: 'assign', title: 'Jobs to assign', status: waitingJobs ? `${waitingJobs} waiting for a technician` : 'Nothing waiting', icon: 'time-outline', badge: waitingJobs, onPress: () => router.push('/care-jobs') },
+          { key: 'in', title: 'Who is in', status: `${techsIn} technicians in · ${techsOut} not in`, icon: 'people-outline', onPress: () => router.push('/team-today') },
           { key: 'jobs', title: 'Jobs today', status: `${jobs.data?.tasks.length ?? 0} open · ${onRoad} in progress`, icon: 'navigate-outline', onPress: () => router.push('/care-jobs') },
           { key: 'new', title: 'New customer login', status: 'Make an account and send it', icon: 'person-add-outline', onPress: () => router.push('/admin/user-new?role=CUSTOMER') },
         ]}

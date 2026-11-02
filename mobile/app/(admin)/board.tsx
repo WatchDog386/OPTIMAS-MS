@@ -6,6 +6,7 @@ import { useAuth } from '../../src/store/auth';
 import { useApi } from '../../src/hooks/useApi';
 
 const FILTERS = [
+  { value: 'OPEN', label: 'To assign' },
   { value: 'ASSIGNED,IN_PROGRESS', label: 'Open' },
   { value: 'COMPLETED', label: 'To verify' },
   { value: 'VERIFIED', label: 'Verified' },
@@ -15,7 +16,7 @@ const FILTERS = [
 
 export default function AdminJobs() {
   const params = useLocalSearchParams<{ status?: string }>();
-  const [filter, setFilter] = useState(params.status ?? FILTERS[0].value);
+  const [filter, setFilter] = useState(params.status ?? 'ASSIGNED,IN_PROGRESS');
   const role = useAuth((s) => s.user?.role);
   const { data, refresh, refreshing, loading } = useApi<{ tasks: Task[] }>(`/tasks${filter ? `?status=${filter}` : ''}`);
   const canCreate = role === 'ADMIN' || role === 'SUPERVISOR';

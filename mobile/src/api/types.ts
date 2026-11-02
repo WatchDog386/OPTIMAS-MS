@@ -1,6 +1,6 @@
 export type Role = 'ADMIN' | 'SUPERVISOR' | 'STOREKEEPER' | 'TECHNICIAN' | 'CUSTOMER' | 'CUSTOMER_CARE';
 export type CapturePurpose = 'CHECK_IN' | 'CHECK_OUT' | 'TASK_START' | 'TASK_END';
-export type TaskStatus = 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'VERIFIED' | 'REJECTED' | 'CANCELLED';
+export type TaskStatus = 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'VERIFIED' | 'REJECTED' | 'CANCELLED';
 export type TaskType = 'INSTALLATION' | 'REPAIR' | 'MAINTENANCE' | 'RELOCATION' | 'SURVEY';
 export type TaskPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
 export type UnitStatus = 'IN_STORE' | 'IN_TRANSIT' | 'WITH_TECHNICIAN' | 'INSTALLED' | 'FAULTY' | 'LOST';
@@ -110,7 +110,8 @@ export interface Task {
   customerFeedback?: string | null;
   ratedAt?: string | null;
   createdAt: string;
-  assignee: Person;
+  /** Empty while the job is OPEN (saved to assign later). */
+  assignee: Person | null;
   createdBy?: Person;
   verifiedBy?: Person | null;
   startPhoto?: PhotoRef | null;

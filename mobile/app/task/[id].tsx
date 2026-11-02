@@ -11,7 +11,7 @@ import { isManager, useAuth } from '../../src/store/auth';
 import { requestCapture } from '../../src/store/bridge';
 import { submitWithPhoto } from '../../src/offline/queue';
 import { colors, radius, space } from '../../src/theme';
-import { dateTime, duration, firstName, flagLabel, humanize, kes, priorityTone, taskStatusTone, taskTypeIcon, time } from '../../src/utils/format';
+import { dateTime, duration, firstName, flagLabel, humanize, kes, statusLabel, priorityTone, taskStatusTone, taskTypeIcon, time } from '../../src/utils/format';
 import { celebrate, toast } from '../../src/store/feedback';
 import { openChatWith } from '../../src/utils/chat';
 import { collectDevice } from '../../src/utils/devices';
@@ -28,7 +28,9 @@ export default function TaskDetail() {
   const task = data?.task;
   if (!task) return <Loading />;
 
-  const mine = task.assignee.id === user.id;
+  const mine = !!task.assignee && task.assignee.id === user.id;
+  // Supervisors, admins and customer care give jobs out, assign saved jobs and transfer them
+  const assigner = dispatcher || user.role === 'CUSTOMER_CARE';
   // Team jobs: the whole team works it; the leader (the assignee) starts it and files the report
   const team = task.team && 'members' in task.team ? task.team : null;
   const helper = !mine && !!team?.members.some((m) => m.userId === user.id);
@@ -85,6 +87,14 @@ export default function TaskDetail() {
           <Button label="Verify" icon="shield-checkmark" loading={busy} onPress={() => verify('VERIFIED')} style={{ flex: 1.4 }} />
         </View>
       </View>
+    ) : assigner && task.status === 'OPEN' ? (
+      <View style={{ gap: space.sm }}>
+        <Button label="Assign now" icon="person-add-outline" size="lg" onPress={() => router.push(`/admin/task-edit?id=${task.id}`)} />
+        <View style={{ flexDirection: 'row', gap: space.sm }}>
+          {dispatcher ? <Button label="Cancel" variant="danger" icon="close-circle-outline" loading={busy} onPress={cancel} style={{ flex: 1 }} /> : null}
+          <Button label="Nearest technician" icon="git-branch-outline" variant="secondary" onPress={() => router.push(`/admin/forward/${task.id}`)} style={{ flex: 1.4 }} />
+        </View>
+      </View>
     ) : manager && task.status === 'ASSIGNED' ? (
       <View style={{ gap: space.sm }}>
         {dispatcher ? <Button label="Forward to nearest technician" icon="git-branch-outline" onPress={() => router.push(`/admin/forward/${task.id}`)} /> : null}
@@ -94,21 +104,24 @@ export default function TaskDetail() {
         </View>
       </View>
     ) : user.role === 'CUSTOMER_CARE' && task.status === 'ASSIGNED' ? (
-      <Button label="Edit / reassign" icon="create-outline" onPress={() => router.push(`/admin/task-edit?id=${task.id}`)} />
+      <View style={{ flexDirection: 'row', gap: space.sm }}>
+        <Button label="Transfer" icon="git-branch-outline" variant="secondary" onPress={() => router.push(`/admin/forward/${task.id}`)} style={{ flex: 1 }} />
+        <Button label="Edit / reassign" icon="create-outline" onPress={() => router.push(`/admin/task-edit?id=${task.id}`)} style={{ flex: 1.4 }} />
+      </View>
     ) : manager && task.status === 'IN_PROGRESS' ? (
       <Button label="Cancel job" variant="danger" icon="close-circle-outline" loading={busy} onPress={cancel} />
     ) : helper && open ? (
       <View style={styles.leadNote}>
         <Ionicons name="star" size={18} color={colors.brand} />
         <Text variant="bodySm" style={{ flex: 1 }}>
-          {firstName(task.assignee.name)} leads {team!.name} and files the report for everyone.
+          {firstName(task.assignee?.name ?? '')} leads {team!.name} and files the report for everyone.
         </Text>
       </View>
     ) : undefined;
 
   return (
     <Screen refreshing={refreshing} onRefresh={refresh} footer={footer}>
-      <ScreenHeader title={task.code} subtitle={humanize(task.type)} right={<Badge label={humanize(task.status)} tone={taskStatusTone[task.status]} />} />
+      <ScreenHeader title={task.code} subtitle={humanize(task.type)} right={<Badge label={statusLabel(task.status)} tone={taskStatusTone[task.status]} />} />
 
       <Card variant="hero" style={{ gap: space.md, padding: space.xl }}>
         <View style={styles.row}>
@@ -170,7 +183,7 @@ export default function TaskDetail() {
           <SectionHeader title={`Team · ${team.name}`} />
           <Card style={{ gap: space.md }}>
             {team.members.map((m) => {
-              const leads = m.userId === task.assignee.id;
+              const leads = m.userId === task.assignee?.id;
               return (
                 <View key={m.id} style={styles.row}>
                   <Avatar name={m.user.name} size={36} tint={leads ? colors.brand : colors.textMuted} />
@@ -194,7 +207,7 @@ export default function TaskDetail() {
         </>
       ) : null}
 
-      {manager && !team ? (
+      {(manager || assigner) && !team && task.assignee ? (
         <Card style={styles.row}>
           <Ionicons name="person-circle-outline" size={22} color={colors.primary} />
           <View style={{ flex: 1 }}>
@@ -205,7 +218,17 @@ export default function TaskDetail() {
               {task.assignee.name} · {task.assignee.staffNo}
             </Text>
           </View>
-          <Button label="Message" icon="chatbubble-ellipses-outline" variant="secondary" onPress={() => openChatWith({ userId: task.assignee.id })} />
+          <Button label="Message" icon="chatbubble-ellipses-outline" variant="secondary" onPress={() => openChatWith({ userId: task.assignee!.id })} />
+        </Card>
+      ) : !task.assignee && task.status === 'OPEN' ? (
+        <Card style={styles.row}>
+          <Ionicons name="time-outline" size={22} color={colors.warning} />
+          <View style={{ flex: 1 }}>
+            <Text variant="title">Not assigned yet</Text>
+            <Text variant="label" color={colors.textMuted}>
+              Saved to give to a technician or team later
+            </Text>
+          </View>
         </Card>
       ) : null}
 

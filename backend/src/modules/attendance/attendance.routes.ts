@@ -144,11 +144,15 @@ attendanceRouter.get(
   }),
 );
 
-/** Daily register for supervisors: everyone who checked in, plus who is absent. */
+/**
+ * Daily register: everyone who checked in, plus who is absent. Supervisors and admins; customer care sees
+ * who is present or absent (to know who can take a job) but not the check-in and check-out photos.
+ */
 attendanceRouter.get(
   '/',
-  requireRole(ROLES.MANAGERS),
+  requireRole(ROLES.CARE),
   ah(async (req, res) => {
+    const care = me(req).role === 'CUSTOMER_CARE';
     const date = typeof req.query.date === 'string' ? workDateOf(new Date(`${req.query.date}T12:00:00Z`)) : workDateOf();
     const [records, staff] = await Promise.all([
       prisma.attendance.findMany({
@@ -156,8 +160,7 @@ attendanceRouter.get(
         orderBy: { checkInAt: 'asc' },
         include: {
           user: { select: { id: true, name: true, staffNo: true, role: true } },
-          checkInPhoto: photoSelect,
-          checkOutPhoto: photoSelect,
+          ...(care ? {} : { checkInPhoto: photoSelect, checkOutPhoto: photoSelect }),
         },
       }),
       prisma.user.findMany({
@@ -166,7 +169,9 @@ attendanceRouter.get(
       }),
     ]);
     const present = new Set(records.map((r) => r.userId));
-    res.json({ workDate: date, records, absent: staff.filter((s) => !present.has(s.id)) });
+    // No photo links for customer care
+    const shown = care ? records.map(({ checkInPhotoId: _in, checkOutPhotoId: _out, ...r }) => r) : records;
+    res.json({ workDate: date, records: shown, absent: staff.filter((s) => !present.has(s.id)) });
   }),
 );
 

@@ -196,6 +196,8 @@ enum TaskPriority {
 }
 
 enum TaskStatus {
+  /// Created (e.g. by customer care in the evening) and not given to a technician yet
+  OPEN
   ASSIGNED
   IN_PROGRESS
   COMPLETED
@@ -220,7 +222,7 @@ model Task {
   lng             Float?
   dueAt           DateTime?
 
-  assigneeId  String
+  assigneeId  String? // empty while the job is OPEN (not assigned yet)
   createdById String
 
   startedAt         DateTime?
@@ -244,7 +246,7 @@ model Task {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  assignee   User            @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  assignee   User?           @relation("TaskAssignee", fields: [assigneeId], references: [id])
   createdBy  User            @relation("TaskCreator", fields: [createdById], references: [id])
   verifiedBy User?           @relation("TaskVerifier", fields: [verifiedById], references: [id])
   request    ServiceRequest? @relation(fields: [requestId], references: [id])

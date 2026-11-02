@@ -35,7 +35,11 @@ export const greeting = () => {
 
 export const humanize = (s: string) => s.charAt(0) + s.slice(1).toLowerCase().replace(/_/g, ' ');
 
+/** "Not assigned" for a job saved to assign later; otherwise the status in words. */
+export const statusLabel = (s: TaskStatus) => (s === 'OPEN' ? 'Not assigned' : humanize(s));
+
 export const taskStatusTone: Record<TaskStatus, Tone> = {
+  OPEN: 'warning',
   ASSIGNED: 'info',
   IN_PROGRESS: 'warning',
   COMPLETED: 'brand',

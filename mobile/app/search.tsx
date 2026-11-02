@@ -5,7 +5,7 @@ import { api, ApiError } from '../src/api/client';
 import { Badge, EmptyState, Input, Screen, ScreenHeader, Section, SectionRow, Text } from '../src/components';
 import { isManager, useAuth } from '../src/store/auth';
 import { colors } from '../src/theme';
-import { humanize, taskStatusTone, unitStatusTone } from '../src/utils/format';
+import { humanize, statusLabel, taskStatusTone, unitStatusTone } from '../src/utils/format';
 import type { TaskStatus, UnitStatus } from '../src/api/types';
 
 interface Results {
@@ -64,7 +64,7 @@ export default function Search() {
       {data?.tasks.length ? (
         <Section title="Jobs">
           {data.tasks.map((t) => (
-            <SectionRow key={t.id} icon="briefcase-outline" tint={colors.text} tintBg={colors.highlight} title={`${t.code} · ${t.title}`} subtitle={`${t.customerName} · ${t.assignee.name}`} right={<Badge label={humanize(t.status)} tone={taskStatusTone[t.status]} />} onPress={() => router.push(`/task/${t.id}`)} />
+            <SectionRow key={t.id} icon="briefcase-outline" tint={colors.text} tintBg={colors.highlight} title={`${t.code} · ${t.title}`} subtitle={`${t.customerName} · ${t.assignee?.name ?? 'Not assigned'}`} right={<Badge label={statusLabel(t.status)} tone={taskStatusTone[t.status]} />} onPress={() => router.push(`/task/${t.id}`)} />
           ))}
         </Section>
       ) : null}

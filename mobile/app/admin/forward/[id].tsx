@@ -48,7 +48,7 @@ export default function ForwardJob() {
 
   const forward = async () => {
     if (!chosen) return;
-    if (!(await confirmAction('Forward job', `${task.code} moves from ${task.assignee.name} to ${chosen.user.name}. Both are notified, and so is the customer.`, 'Forward'))) return;
+    if (!(await confirmAction('Forward job', `${task.code} moves from ${task.assignee?.name ?? 'nobody yet'} to ${chosen.user.name}. Both are notified, and so is the customer.`, 'Forward'))) return;
     setBusy(true);
     try {
       await api(`/tasks/${id}/forward`, { body: { technicianId: chosen.user.id, note: note.trim() || undefined } });
@@ -62,7 +62,7 @@ export default function ForwardJob() {
   };
 
   const footer =
-    task.status === 'ASSIGNED' ? (
+    task.status === 'ASSIGNED' || task.status === 'OPEN' ? (
       <Button label={chosen && !chosen.current ? `Forward to ${chosen.user.name.split(' ')[0]}` : 'Choose a technician'} icon="git-branch-outline" size="lg" disabled={!chosen || chosen.current} loading={busy} onPress={forward} />
     ) : undefined;
 
@@ -70,7 +70,7 @@ export default function ForwardJob() {
     <Screen refreshing={refreshing} onRefresh={refresh} footer={footer}>
       <ScreenHeader title="Forward to nearest" subtitle={`${task.code} · ${task.customerName}`} />
 
-      {task.status !== 'ASSIGNED' ? (
+      {task.status !== 'ASSIGNED' && task.status !== 'OPEN' ? (
         <Text variant="bodySm" color={colors.warning}>
           This job has already started, so it can no longer be forwarded.
         </Text>
@@ -119,7 +119,7 @@ export default function ForwardJob() {
         })}
       </View>
 
-      {task.status === 'ASSIGNED' ? <Input label="Note for the technician (optional)" placeholder="e.g. Customer is waiting at the gate" value={note} onChangeText={setNote} /> : null}
+      {task.status === 'ASSIGNED' || task.status === 'OPEN' ? <Input label="Note for the technician (optional)" placeholder="e.g. Customer is waiting at the gate" value={note} onChangeText={setNote} /> : null}
     </Screen>
   );
 }

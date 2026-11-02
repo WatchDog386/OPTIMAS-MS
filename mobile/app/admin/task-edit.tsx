@@ -30,14 +30,14 @@ export default function TaskEdit() {
   useEffect(() => {
     if (!data) return;
     const t = data.task;
-    setAssign(t.teamId ? { mode: 'team', teamId: t.teamId, newTeam: null } : { mode: 'individual', assigneeId: t.assignee.id });
+    setAssign(t.teamId ? { mode: 'team', teamId: t.teamId, newTeam: null } : { mode: 'individual', assigneeId: t.assignee?.id ?? null });
     setPriority(t.priority);
     setForm({ title: t.title, description: t.description ?? '', customerName: t.customerName, customerPhone: t.customerPhone ?? '', customerAccount: t.customerAccount ?? '', address: t.address });
   }, [data]);
 
   if (!data) return <Loading />;
   const t = data.task;
-  if (t.status !== 'ASSIGNED') {
+  if (t.status !== 'ASSIGNED' && t.status !== 'OPEN') {
     return (
       <Screen>
         <ScreenHeader title="Cannot edit" subtitle={`${t.code} has already started`} />
@@ -50,7 +50,7 @@ export default function TaskEdit() {
   const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   const moved =
-    assign.mode === 'individual' ? assign.assigneeId !== t.assignee.id || !!t.teamId : !!assign.newTeam || assign.teamId !== (t.teamId ?? null);
+    assign.mode === 'individual' ? assign.assigneeId !== (t.assignee?.id ?? null) || !!t.teamId : !!assign.newTeam || assign.teamId !== (t.teamId ?? null);
 
   const save = async () => {
     const missing = assignmentProblem(assign);
@@ -70,8 +70,8 @@ export default function TaskEdit() {
   };
 
   return (
-    <Screen footer={<Button label="Save job" icon="checkmark" size="lg" loading={busy} onPress={save} />}>
-      <ScreenHeader title={`Edit ${t.code}`} subtitle="Change details or reassign" />
+    <Screen footer={<Button label={t.status === 'OPEN' ? 'Assign job' : 'Save job'} icon={t.status === 'OPEN' ? 'send' : 'checkmark'} size="lg" loading={busy} onPress={save} />}>
+      <ScreenHeader title={t.status === 'OPEN' ? `Assign ${t.code}` : `Edit ${t.code}`} subtitle={t.status === 'OPEN' ? 'Choose who takes this job · they are notified' : 'Change details or reassign'} />
       <SectionHeader title="Assign to" />
       <AssignPicker value={assign} onChange={setAssign} allowNewTeam={!care} />
       <Text variant="label" color={colors.textMuted}>

@@ -167,7 +167,7 @@ exportsRouter.get(
         type: t.type,
         priority: t.priority,
         status: t.status,
-        tech: t.assignee.name,
+        tech: t.assignee?.name ?? 'Not assigned',
         team: t.team ? `${t.team.name} (${t.team.members.map((m) => m.user.name).join(', ')})` : '',
         customer: t.customerName,
         account: t.customerAccount ?? '',
@@ -183,7 +183,7 @@ exportsRouter.get(
       for (const m of t.materials) {
         lines.addRow({
           code: t.code,
-          tech: t.assignee.name,
+          tech: t.assignee?.name ?? 'Not assigned',
           item: m.item.name,
           serial: m.unit?.serialNumber ?? '',
           qty: m.quantity,

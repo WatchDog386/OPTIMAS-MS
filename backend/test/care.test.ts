@@ -85,3 +85,54 @@ describe('customer care opens jobs', () => {
     expect((await api().get('/api/v1/users').set(auth(care.token))).status).toBe(403);
   });
 });
+
+describe('customer care: create now, assign later', () => {
+  it('saves an unassigned job, assigns it in the morning, transfers it, and sees who is in without photos', async () => {
+    const admin = (await login('FBI-ADM-001')).token;
+    const care = await newCare(admin);
+    const tech = await newTechnician(admin);
+    const job = { type: 'REPAIR', title: 'Slow internet in the evening', customerName: 'Peter Otieno', customerPhone: '0733000222', address: 'Lavington, James Gichuru Rd', priority: 'HIGH' };
+
+    // Without a technician and without "assign later": refused
+    expect((await api().post('/api/v1/tasks').set(auth(care.token)).send(job)).status).toBe(400);
+    // Assign later: saved as OPEN with nobody on it
+    const open = await api().post('/api/v1/tasks').set(auth(care.token)).send({ ...job, assignLater: true });
+    expect(open.status).toBe(201);
+    expect(open.body.task).toMatchObject({ status: 'OPEN', assigneeId: null, teamId: null });
+    const id = open.body.task.id;
+    expect((await api().get('/api/v1/tasks?status=OPEN').set(auth(care.token))).body.tasks.some((t: { id: string }) => t.id === id)).toBe(true);
+    // Nobody can start it yet
+    expect((await api().post(`/api/v1/tasks/${id}/start`).set(auth(tech.token)).send({ photoId: 'x' })).status).toBe(403);
+    // Tracking an unassigned job shows the job, no technician
+    const track = await api().get(`/api/v1/tasks/${id}/track`).set(auth(care.token));
+    expect(track.status).toBe(200);
+    expect(track.body.tech).toBeNull();
+
+    // Morning: assign it
+    const assigned = await api().patch(`/api/v1/tasks/${id}`).set(auth(care.token)).send({ assigneeId: tech.user.id });
+    expect(assigned.status).toBe(200);
+    expect(assigned.body.task).toMatchObject({ status: 'ASSIGNED', assigneeId: tech.user.id });
+    const techJobs = await api().get('/api/v1/tasks').set(auth(tech.token));
+    expect(techJobs.body.tasks.some((t: { id: string }) => t.id === id)).toBe(true);
+
+    // Transfer to another technician
+    const other = await newTechnician(admin);
+    const fwd = await api().post(`/api/v1/tasks/${id}/forward`).set(auth(care.token)).send({ technicianId: other.user.id });
+    expect(fwd.status).toBe(200);
+    expect(fwd.body.task.assigneeId).toBe(other.user.id);
+    expect((await api().get(`/api/v1/tasks/${id}/nearby`).set(auth(care.token))).status).toBe(200);
+
+    // Who is present or absent, without check-in or check-out photos
+    const reg = await api().get('/api/v1/attendance').set(auth(care.token));
+    expect(reg.status).toBe(200);
+    expect(Array.isArray(reg.body.absent)).toBe(true);
+    for (const r of reg.body.records) {
+      expect(r.checkInPhoto).toBeUndefined();
+      expect(r.checkInPhotoId).toBeUndefined();
+      expect(r.checkOutPhotoId).toBeUndefined();
+    }
+    // Managers still get the photos
+    const regAdmin = await api().get('/api/v1/attendance').set(auth(admin));
+    for (const r of regAdmin.body.records) expect(r.checkInPhotoId).toBeTruthy();
+  });
+});

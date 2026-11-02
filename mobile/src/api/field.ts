@@ -35,7 +35,8 @@ export interface TrackedPosition {
 
 export interface JobTrack {
   job: { id: string; code: string; title: string; status: string; address: string; customerName: string; lat: number | null; lng: number | null; startedAt: string | null };
-  tech: { id?: string; name: string; phone: string | null; position: TrackedPosition | null };
+  /** Empty while the job is not assigned yet. */
+  tech: { id?: string; name: string; phone: string | null; position: TrackedPosition | null } | null;
   trail: LatLng[];
   route: Route | null;
 }

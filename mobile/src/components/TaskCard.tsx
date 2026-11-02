@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import type { Task } from '../api/types';
 import { colors, radius, space } from '../theme';
-import { humanize, priorityTone, taskStatusTone, taskTypeIcon, time } from '../utils/format';
+import { humanize, priorityTone, statusLabel, taskStatusTone, taskTypeIcon, time } from '../utils/format';
 import { Badge } from './Badge';
 import { Card } from './Card';
 import { Text } from './Text';
@@ -23,15 +23,15 @@ export function TaskCard({ task, showAssignee }: { task: Task; showAssignee?: bo
             {task.title}
           </Text>
         </View>
-        <Badge label={humanize(task.status)} tone={taskStatusTone[task.status]} />
+        <Badge label={statusLabel(task.status)} tone={taskStatusTone[task.status]} />
       </View>
       <View style={styles.meta}>
         <Meta icon="person-outline" text={task.customerName} />
         <Meta icon="location-outline" text={task.address} />
         {task.team ? (
-          <Meta icon="people-outline" text={`${task.team.name} · led by ${task.assignee.name}`} />
+          <Meta icon="people-outline" text={`${task.team.name} · led by ${task.assignee?.name ?? ''}`} />
         ) : showAssignee ? (
-          <Meta icon="construct-outline" text={task.assignee.name} />
+          <Meta icon="construct-outline" text={task.assignee?.name ?? 'Not assigned yet'} />
         ) : null}
       </View>
       <View style={styles.bottom}>

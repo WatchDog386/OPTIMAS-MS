@@ -159,7 +159,7 @@ chatRouter.get(
         orderBy: { createdAt: 'desc' },
       });
       const seen = new Set<string>();
-      for (const j of jobs) if (!seen.has(j.assignee.id)) (seen.add(j.assignee.id), contacts.push({ ...j.assignee, reason: `Your technician · ${j.title}` }));
+      for (const j of jobs) if (j.assignee && !seen.has(j.assignee.id)) (seen.add(j.assignee.id), contacts.push({ ...j.assignee, reason: `Your technician · ${j.title}` }));
       res.json({ support: true, contacts });
       return;
     }
@@ -196,7 +196,10 @@ const openSchema = z.union([
 async function personOnJob(taskId: string, side: 'customer' | 'technician') {
   const task = await prisma.task.findUnique({ where: { id: taskId }, select: { assigneeId: true, customerAccount: true, request: { select: { customerId: true } } } });
   if (!task) throw notFound('Job');
-  if (side === 'technician') return task.assigneeId;
+  if (side === 'technician') {
+    if (!task.assigneeId) throw notFound('A technician on this job');
+    return task.assigneeId;
+  }
   const customer = task.request
     ? { id: task.request.customerId }
     : task.customerAccount

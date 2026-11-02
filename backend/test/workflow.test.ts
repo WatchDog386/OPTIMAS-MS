@@ -28,6 +28,10 @@ describe('a technician’s day: check-in → job → completion → verification
   });
 
   it('runs a full installation with every control enforced', async () => {
+    // Customer care receives the job report like supervisors and admins
+    const careUser = await api().post('/api/v1/users').set(auth(admin)).send({ staffNo: `FBI-CC-W${Date.now().toString(36)}`.toUpperCase(), name: 'Report Reader', role: 'CUSTOMER_CARE', password: 'Care-pass-123' });
+    expect(careUser.status).toBe(201);
+    const careToken = (await login(careUser.body.user.staffNo, 'Care-pass-123')).token;
     await checkIn(tech.token);
     const task = await createTask(sup, tech.user.id);
     const start = await api().post(`/api/v1/tasks/${task.id}/start`).set(auth(tech.token)).send({ photoId: await photoId(tech.token, 'TASK_START', task.id) });
@@ -62,6 +66,10 @@ describe('a technician’s day: check-in → job → completion → verification
     expect(done.body.task.signedByName).toBe('Jane');
     expect(done.body.task.materials).toHaveLength(2);
     expect(done.body.task.durationMinutes).toBeGreaterThanOrEqual(0);
+    await new Promise((r) => setTimeout(r, 300));
+    const inbox = await api().get('/api/v1/notifications').set(auth(careToken));
+    expect(inbox.body.notifications.some((n: { type: string; title: string }) => n.type === 'TASK_COMPLETED' && n.title.includes(task.code))).toBe(true);
+
 
     // a failed completion attempt must not have consumed stock
     const my = await api().get('/api/v1/inventory/my').set(auth(tech.token));

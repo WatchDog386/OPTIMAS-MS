@@ -8,8 +8,10 @@ import { positionsOf, trailOf } from './location.service';
  * path they have driven), and the road route with distance and arrival time between the two.
  */
 export async function trackJob(task: Pick<Task, 'id' | 'code' | 'title' | 'status' | 'address' | 'lat' | 'lng' | 'assigneeId' | 'customerName' | 'startedAt'>) {
-  const assignee = await prisma.user.findUniqueOrThrow({ where: { id: task.assigneeId }, select: { id: true, name: true, phone: true } });
   const job = { id: task.id, code: task.code, title: task.title, status: task.status, address: task.address, customerName: task.customerName, lat: task.lat, lng: task.lng, startedAt: task.startedAt };
+  // Not given to a technician yet: only the job's place to show
+  if (!task.assigneeId) return { job, tech: null, trail: [], route: null };
+  const assignee = await prisma.user.findUniqueOrThrow({ where: { id: task.assigneeId }, select: { id: true, name: true, phone: true } });
   // Following only makes sense until the work starts
   const moving = task.status === 'ASSIGNED';
   const pos = (await positionsOf([assignee.id])).get(assignee.id) ?? null;

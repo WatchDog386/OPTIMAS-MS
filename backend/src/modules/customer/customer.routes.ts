@@ -153,7 +153,7 @@ customerRouter.get(
     if (!job) throw notFound('Visit');
     const t = await trackJob(job);
     // Customers see who is coming and where they are (the id lets them open a chat with them)
-    res.json({ ...t, tech: { id: t.tech.id, name: t.tech.name, phone: t.tech.phone, position: t.tech.position } });
+    res.json({ ...t, tech: t.tech ? { id: t.tech.id, name: t.tech.name, phone: t.tech.phone, position: t.tech.position } : null });
   }),
 );
 

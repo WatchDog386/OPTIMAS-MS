@@ -4,7 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { JobTrack } from '../../src/api/field';
-import { Avatar, HeaderButton, LiveBadge, Loading, MapCanvas, Text, type MapPin } from '../../src/components';
+import { Avatar, Button, EmptyState, HeaderButton, LiveBadge, Loading, MapCanvas, Screen, ScreenHeader, Text, type MapPin } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { useAuth } from '../../src/store/auth';
 import { colors, fonts, space } from '../../src/theme';
@@ -27,6 +27,7 @@ export default function TrackJob() {
   const role = useAuth((s) => s.user?.role);
   const customer = role === 'CUSTOMER';
   const managers = role === 'ADMIN' || role === 'SUPERVISOR';
+  const care = role === 'CUSTOMER_CARE';
   const { data, updatedAt } = useApi<JobTrack>(customer ? `/customer/jobs/${id}/track` : `/tasks/${id}/track`, { poll: 8_000 });
   const [recenter, setRecenter] = useState(0);
   const [panned, setPanned] = useState(false);
@@ -46,6 +47,16 @@ export default function TrackJob() {
   }, [shown, rise]);
 
   if (!data) return <Loading />;
+  // Saved to assign later: nobody to follow yet
+  if (!data.tech) {
+    return (
+      <Screen>
+        <ScreenHeader title={data.job.code} subtitle={data.job.customerName} />
+        <EmptyState icon="time-outline" title="Not assigned yet" message="Assign this job to a technician or team to follow them on the map." />
+        <Button label="Open the job" icon="briefcase-outline" onPress={() => router.replace(`/task/${data.job.id}`)} />
+      </Screen>
+    );
+  }
   const { job, tech, route, trail } = data;
   const pos = tech.position;
   const pins: MapPin[] = [];
@@ -198,7 +209,7 @@ export default function TrackJob() {
               </View>
             </View>
           </View>
-          {managers && job.status === 'ASSIGNED' ? (
+          {(managers || care) && job.status === 'ASSIGNED' ? (
             <Pressable onPress={() => router.push(`/admin/forward/${job.id}`)} style={({ pressed }) => [styles.forward, pressed && { opacity: 0.8 }]} accessibilityRole="button">
               <Ionicons name="git-branch-outline" size={18} color={colors.onPrimary} />
               <Text variant="title" color={colors.onPrimary} fixedColor>

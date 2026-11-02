@@ -104,7 +104,7 @@ approvalsRouter.post(
     const actor = me(req);
     const now = new Date();
     let approved = 0;
-    const verifiedJobs: { id: string; code: string; title: string; assigneeId: string; team: { members: { userId: string }[] } | null }[] = [];
+    const verifiedJobs: { id: string; code: string; title: string; assigneeId: string | null; team: { members: { userId: string }[] } | null }[] = [];
     for (const item of items) {
       if (item.kind === 'CHECK_IN') {
         const r = await prisma.attendance.updateMany({ where: { id: item.id, dressReview: 'PENDING' }, data: { dressReview: 'APPROVED', reviewedById: actor.id, reviewedAt: now } });

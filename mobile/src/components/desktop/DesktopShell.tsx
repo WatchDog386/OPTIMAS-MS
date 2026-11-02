@@ -41,7 +41,7 @@ function navFor(role: Role, open: { requests?: number; approvals?: number }): { 
       groups: [
         { items: [{ label: 'Home', icon: 'home-outline', href: '/care' }] },
         { title: 'Customers', items: [{ label: 'Support chats', icon: 'chatbubbles-outline', href: '/support' }, { label: 'Requests', icon: 'megaphone-outline', href: '/care-requests', badge: open.requests }, { label: 'New customer', icon: 'person-add-outline', href: '/admin/user-new?role=CUSTOMER' }] },
-        { title: 'Jobs', items: [{ label: 'New job', icon: 'add-circle-outline', href: '/admin/task-new' }, { label: 'All jobs', icon: 'briefcase-outline', href: '/care-jobs' }] },
+        { title: 'Jobs', items: [{ label: 'New job', icon: 'add-circle-outline', href: '/admin/task-new' }, { label: 'Jobs', icon: 'briefcase-outline', href: '/care-jobs' }, { label: 'Who is in', icon: 'people-outline', href: '/team-today' }] },
       ],
       bottom: [bell, { label: 'Profile', icon: 'person-circle-outline', href: '/care-profile' }],
     };
