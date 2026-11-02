@@ -11,6 +11,7 @@ import { Badge } from './Badge';
 import { Button } from './Button';
 import { Card } from './Card';
 import { Text } from './Text';
+import { ProfileInstallCard } from './InstallPrompt';
 
 /** Shared profile header + sign-out used by both technician and manager apps. */
 export function ProfileView({ children }: { children?: ReactNode }) {
@@ -37,6 +38,7 @@ export function ProfileView({ children }: { children?: ReactNode }) {
         </Text>
         <Badge label={humanize(user.role)} tone="brand" />
       </Card>
+      <ProfileInstallCard />
       {children}
       <Button label="Sign out" icon="log-out-outline" variant="danger" onPress={signOut} />
       <Text variant="label" color={colors.textDim} align="center">

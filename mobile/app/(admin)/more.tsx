@@ -6,6 +6,7 @@ import Svg, { Circle } from 'react-native-svg';
 import type { User } from '../../src/api/types';
 import { GlassBackground, ShiftCard, Text, usePrivacyItems } from '../../src/components';
 import { TAB_BAR_CLEARANCE } from '../../src/components/Screen';
+import { ProfileInstallCard } from '../../src/components/InstallPrompt';
 import { useApi } from '../../src/hooks/useApi';
 import { useAuth } from '../../src/store/auth';
 import { colors, fonts } from '../../src/theme';
@@ -89,7 +90,8 @@ export default function More() {
           </Text>
         </View>
 
-        <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
+        <View style={{ paddingHorizontal: 20, paddingTop: 20, gap: 14 }}>
+          <ProfileInstallCard />
           <ShiftCard />
         </View>
 

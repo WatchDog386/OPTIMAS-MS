@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Image, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, radius, space } from '../theme';
-import { installSteps, useInstallPrompt } from '../utils/install';
+import { installSteps, runningAsApp, useInstallPrompt } from '../utils/install';
 import { GlassCircle } from './Glass';
 import { Text } from './Text';
 
@@ -169,6 +169,9 @@ function InstallSheet({ visible, onClose }: { visible: boolean; onClose: () => v
 }
 
 const styles = StyleSheet.create({
+  profileCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 18, borderWidth: 1.5, borderColor: colors.brand, backgroundColor: colors.brandSoft },
+  profileIcon: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center' },
+  profileBtn: { height: 34, paddingHorizontal: 16, borderRadius: 17, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center' },
   installChip: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 36, paddingHorizontal: 14, borderRadius: 18, backgroundColor: colors.highlight },
   pill: { height: 48, borderRadius: radius.pill, backgroundColor: colors.highlight, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm },
   backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.25)' },
@@ -183,3 +186,35 @@ const styles = StyleSheet.create({
   btnGhost: { backgroundColor: 'rgba(255,255,255,0.1)' },
   btnMain: { backgroundColor: colors.highlight },
 });
+
+/**
+ * The Install card on every Profile page, shown until the app is installed on this phone: one tap where
+ * the browser allows it, otherwise the steps for this browser (iPhone: Share → Add to Home Screen).
+ */
+export function ProfileInstallCard() {
+  const installer = useInstallAction();
+  if (Platform.OS !== 'web' || runningAsApp()) return null;
+  return (
+    <>
+      <Pressable onPress={() => void installer.start()} style={({ pressed }) => [styles.profileCard, pressed && { opacity: 0.9 }]} accessibilityRole="button" accessibilityLabel="Install the Optimas MS app">
+        <View style={styles.profileIcon}>
+          <Ionicons name="download-outline" size={22} color="#FFFFFF" />
+        </View>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text variant="title" style={{ fontFamily: fonts.semibold }}>
+            Install the app
+          </Text>
+          <Text variant="bodySm" color={colors.textMuted}>
+            Add Optimas MS to your phone’s home screen
+          </Text>
+        </View>
+        <View style={styles.profileBtn}>
+          <Text variant="label" color="#FFFFFF" fixedColor style={{ fontFamily: fonts.semibold, fontSize: 13 }}>
+            Install
+          </Text>
+        </View>
+      </Pressable>
+      {installer.sheet}
+    </>
+  );
+}
