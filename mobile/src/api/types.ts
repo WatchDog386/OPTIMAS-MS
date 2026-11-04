@@ -149,6 +149,19 @@ export interface BulkHolding {
   item: Pick<Item, 'id' | 'name' | 'sku' | 'unit' | 'unitPrice' | 'category'>;
 }
 
+export interface Label {
+  serial: string;
+  item: string;
+  sku: string;
+  code: string;
+}
+
+export interface ItemWithLabelsResult {
+  item: Item;
+  labels: Label[];
+  count: number;
+}
+
 export interface StockCountResult {
   id: string;
   expected: string[];

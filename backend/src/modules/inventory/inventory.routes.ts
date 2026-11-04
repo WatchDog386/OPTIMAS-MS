@@ -67,6 +67,56 @@ inventoryRouter.post(
   }),
 );
 
+/** Add a catalogue item and generate that many barcode labels at once: name + quantity. */
+const itemWithLabelsSchema = z.object({
+  name: z.string().trim().min(2, 'Product name is required'),
+  quantity: z.number().int().min(1, 'Quantity must be at least 1').max(500, 'Maximum 500 labels at once'),
+  category: z.enum(ItemCategory).default('ROUTER'),
+  sku: z.string().trim().min(2).optional(),
+});
+
+inventoryRouter.post(
+  '/items/with-labels',
+  store,
+  ah(async (req, res) => {
+    const body = parse(itemWithLabelsSchema, req.body);
+    const sku = body.sku || `${body.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '-').replace(/-+/g, '-').slice(0, 20)}-${Date.now().toString().slice(-4)}`;
+    const actor = me(req).id;
+
+    const { item, units } = await prisma.$transaction(async (tx) => {
+      const it = await tx.inventoryItem.create({
+        data: {
+          sku,
+          name: body.name,
+          category: body.category,
+          tracking: 'SERIALIZED',
+          unit: 'pcs',
+          unitPrice: 0,
+          reorderLevel: 0,
+        },
+      });
+      const base = sku.toUpperCase().replace(/-+$/, '');
+      const taken = new Set((await tx.serialUnit.findMany({ where: { itemId: it.id }, select: { serialNumber: true } })).map((u) => u.serialNumber));
+      let next = 1;
+      const units: { serialNumber: string }[] = [];
+      for (let i = 0; i < body.quantity; i++) {
+        let sn = `${base}-${String(next).padStart(4, '0')}`;
+        while (taken.has(sn)) { next += 1; sn = `${base}-${String(next).padStart(4, '0')}`; }
+        taken.add(sn);
+        next += 1;
+        const unit = await tx.serialUnit.create({ data: { itemId: it.id, serialNumber: sn, status: 'IN_STORE' } });
+        await tx.stockMovement.create({ data: { type: 'RECEIVE', itemId: it.id, serialUnitId: unit.id, quantity: 1, actorId: actor, note: 'Catalogue entry with labels' } });
+        units.push(unit);
+      }
+      return { item: it, units };
+    });
+
+    const labels = units.map((u) => ({ serial: u.serialNumber, item: item.name, sku: item.sku, code: tagFor(u.serialNumber) }));
+    await audit(actor, 'ITEM_WITH_LABELS_CREATED', 'InventoryItem', item.id, `Added ${body.quantity} × ${item.name} with barcode labels`);
+    res.status(201).json({ item, labels, count: labels.length });
+  }),
+);
+
 const itemUpdateSchema = z.object({
   name: z.string().trim().min(2).optional(),
   unit: z.string().trim().min(1).optional(),
