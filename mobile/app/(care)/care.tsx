@@ -1,12 +1,13 @@
 import { router } from 'expo-router';
-import { View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import type { ConversationRow } from '../../src/api/field';
 import type { ServiceRequest, Task, User } from '../../src/api/types';
-import { Avatar, Badge, BellButton, Button, ListRow, Screen, ShiftCard, SectionHeader, Text, TileGrid } from '../../src/components';
+import { Avatar, Badge, BellButton, Button, ListRow, Screen, SectionHeader, Text, TileGrid } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { useAuth } from '../../src/store/auth';
-import { colors, fonts } from '../../src/theme';
-import { firstName } from '../../src/utils/format';
+import { colors, fonts, radius, space } from '../../src/theme';
+import { firstName, time } from '../../src/utils/format';
 
 /** Customer care home: what is waiting (chats, requests), jobs on the road, and customers to help sign in. */
 export default function CareHome() {
@@ -16,8 +17,9 @@ export default function CareHome() {
   const jobs = useApi<{ tasks: Task[] }>('/tasks?status=ASSIGNED,IN_PROGRESS', { poll: 30_000 });
   const customers = useApi<{ users: User[] }>('/users?role=CUSTOMER');
   const toAssign = useApi<{ tasks: Task[] }>('/tasks?status=OPEN', { poll: 30_000 });
+  const today = useApi<{ record: { checkInAt: string; checkOutAt: string | null; status: string; shiftStart: string } | null; shiftStart: string }>('/attendance/today', { poll: 60_000 });
   const register = useApi<{ records: { checkOutAt: string | null; user?: { role: string } }[]; absent: { role: string }[] }>('/attendance', { poll: 60_000 });
-  const refresh = () => Promise.all([chats.refresh(), requests.refresh(), jobs.refresh(), customers.refresh(), toAssign.refresh(), register.refresh()]);
+  const refresh = () => Promise.all([chats.refresh(), requests.refresh(), jobs.refresh(), customers.refresh(), toAssign.refresh(), register.refresh(), today.refresh()]);
   const waitingJobs = toAssign.data?.tasks.length ?? 0;
   const techsIn = (register.data?.records ?? []).filter((r) => r.user?.role === 'TECHNICIAN' && !r.checkOutAt).length;
   const techsOut = (register.data?.absent ?? []).filter((p) => p.role === 'TECHNICIAN').length;
@@ -26,6 +28,9 @@ export default function CareHome() {
   const openRequests = requests.data?.requests.length ?? 0;
   const onRoad = (jobs.data?.tasks ?? []).filter((t) => t.status === 'IN_PROGRESS').length;
   const waiting = (customers.data?.users ?? []).filter((u) => u.active && u.mustChangePassword);
+
+  const record = today.data?.record ?? null;
+  const state: 'OFF' | 'ON' | 'DONE' = !record ? 'OFF' : record.checkOutAt ? 'DONE' : 'ON';
 
   return (
     <Screen refreshing={chats.refreshing} onRefresh={refresh}>
@@ -44,7 +49,32 @@ export default function CareHome() {
         </Text>
       </View>
 
-      <ShiftCard />
+      {/* My shift — same prominent position as the technician dashboard */}
+      <View style={styles.shift}>
+        <View style={[styles.dot, { backgroundColor: state === 'ON' ? colors.success : state === 'DONE' ? colors.textDim : colors.warning }]} />
+        <View style={{ flex: 1 }}>
+          <Text variant="title" style={{ fontFamily: fonts.semibold }}>
+            My shift
+          </Text>
+          <Text variant="label" color={colors.textMuted}>
+            {state === 'OFF'
+              ? `Not checked in · shift starts ${time(today.data?.shiftStart ?? '')}`
+              : state === 'ON'
+                ? `On shift since ${time(record!.checkInAt)}${record!.status === 'LATE' ? ' · late' : ''}`
+                : `Shift complete · ${time(record!.checkInAt)} – ${time(record!.checkOutAt)}`}
+          </Text>
+        </View>
+        {state !== 'DONE' ? (
+          <Pressable onPress={() => router.push(state === 'OFF' ? '/check-in?mode=in' : '/check-in?mode=out')} style={styles.btn} accessibilityRole="button">
+            <Ionicons name={state === 'OFF' ? 'scan-outline' : 'log-out-outline'} size={18} color={colors.onPrimary} />
+            <Text variant="bodySm" color={colors.onPrimary} fixedColor style={{ fontFamily: fonts.semibold }}>
+              {state === 'OFF' ? 'Check in' : 'Check out'}
+            </Text>
+          </Pressable>
+        ) : (
+          <Ionicons name="checkmark-circle" size={26} color={colors.success} />
+        )}
+      </View>
 
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <Button label="New job" icon="add-circle-outline" style={{ flex: 1 }} onPress={() => router.push('/admin/task-new')} />
@@ -84,3 +114,9 @@ export default function CareHome() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  shift: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  dot: { width: 10, height: 10, borderRadius: 5 },
+  btn: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 42, paddingHorizontal: 16, borderRadius: 21, backgroundColor: colors.primary },
+});
