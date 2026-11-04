@@ -15,6 +15,12 @@ describe('who checks in', () => {
     await api().post('/api/v1/users').set(auth(admin)).send({ staffNo, name: 'Care Shift', role: 'CUSTOMER_CARE', password: 'Care-pass-123' });
     const care = (await login(staffNo, 'Care-pass-123')).token;
     expect((await checkIn(care)).status).toMatch(/PRESENT|LATE/);
+    const checkout = await api()
+      .post('/api/v1/attendance/check-out')
+      .set(auth(care))
+      .send({ photoId: await photoId(care, 'CHECK_OUT') });
+    expect(checkout.status).toBe(200);
+    expect(checkout.body.record.checkOutAt).toBeTruthy();
 
     // They show on the supervisors' register
     const register = await api().get('/api/v1/attendance').set(auth(sup));

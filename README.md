@@ -179,7 +179,7 @@ npx expo start                # scan the QR code with Expo Go
 | `LATE_GRACE_MINUTES` | `15` | Check-ins after start + grace are marked **late** |
 | `TZ_OFFSET_MINUTES` | `180` | Company time zone offset (Nairobi = UTC+3) |
 | `CAPTURE_TTL_SECONDS` | `90` | How long a photo challenge is valid |
-| `OFFICE_LAT` / `OFFICE_LNG` / `OFFICE_RADIUS_M` | Nairobi CBD / 300 | Check-in geofence (flags `OUTSIDE_GEOFENCE`) |
+| `OFFICE_LAT` / `OFFICE_LNG` / `OFFICE_RADIUS_M` | `-1.185254`, `36.903793` / 300 m | Office check-in geofence; off-site check-ins are flagged, not blocked |
 | `MAX_ROUTERS_IN_CUSTODY` | `5` | Max un-installed routers/ONTs a technician may hold |
 | `CUSTODY_AGE_ALERT_DAYS` | `3` | Devices held longer are flagged |
 

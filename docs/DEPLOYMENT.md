@@ -125,7 +125,7 @@ VM 100, or a nightly `rsync` of `deploy/backups/` to another machine. Also sched
 |---|---|
 | Certificate not issued | DNS A record must point to the public IP, and ports 80+443 must reach the VM (step 2). Check `logs web`. |
 | App says "Cannot reach the Optimas server" | Wrong `EXPO_PUBLIC_API_URL` in the build, or the domain does not resolve on mobile data. |
-| Everyone flagged `OUTSIDE_GEOFENCE` | Set `OFFICE_LAT` / `OFFICE_LNG` / `OFFICE_RADIUS_M` in `deploy/.env`, then redeploy. |
+| Someone at the office is flagged `OUTSIDE_GEOFENCE` | The default office is `OFFICE_LAT=-1.185254`, `OFFICE_LNG=36.903793`, with a 300 m radius. Update any existing `deploy/.env` values to these coordinates, then redeploy. Off-site check-ins are warned about, not blocked. |
 | Times are off by hours | `TZ_OFFSET_MINUTES` (Nairobi = 180). |
 | Push notifications not arriving | Run `eas init` before building, keep `PUSH_ENABLED=true`, make sure the VM can reach `exp.host` over HTTPS. |
 
@@ -244,4 +244,3 @@ The label key (`ASSET_TAG_SECRET`) is created once by `deploy.sh` and kept in `d
 
 - Everyone checks in and out except admins: technicians, supervisors, storekeepers and customer care. Supervisors and the store find **Check in** first in the dashboard's Quick Actions and as **My shift** on their Profile; customer care has it on their home page. All of them appear in the daily attendance register.
 - Scanning router/ONT stickers uses the **SN** barcode. The PROD ID and MAC barcodes are recognised and skipped. On Android, Chrome's own barcode reader (the same one the phone's scanner uses) is used at full camera resolution. **Use phone camera** takes a photo with the phone's camera app and reads the SN from it.
-

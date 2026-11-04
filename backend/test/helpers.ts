@@ -38,8 +38,8 @@ export async function capture(token: string, purpose: string, opts: { taskId?: s
     .set(auth(token))
     .field('challengeId', ch.body.challengeId)
     .field('nonce', ch.body.nonce)
-    .field('lat', String(opts.lat ?? -1.2921))
-    .field('lng', String(opts.lng ?? 36.8219))
+    .field('lat', String(opts.lat ?? -1.185254))
+    .field('lng', String(opts.lng ?? 36.903793))
     .attach('photo', opts.file ?? jpeg(), 'p.jpg');
   return res;
 }

@@ -11,8 +11,8 @@ async function offlinePhoto(token: string, purpose: string, takenAt: Date | null
     .set(auth(token))
     .field('challengeId', ch.body.challengeId)
     .field('nonce', ch.body.nonce)
-    .field('lat', '-1.2921')
-    .field('lng', '36.8219')
+    .field('lat', '-1.185254')
+    .field('lng', '36.903793')
     .field('offline', '1')
     .attach('photo', Buffer.concat([jpeg(), crypto.randomBytes(8)]), 'p.jpg');
   if (takenAt) req.field('deviceTime', takenAt.toISOString());

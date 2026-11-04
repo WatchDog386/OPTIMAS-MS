@@ -11,8 +11,24 @@ describe('camera-only photo integrity', () => {
     const ok = await capture(tech, 'CHECK_IN');
     expect(ok.status).toBe(201);
     expect(ok.body.flags).toEqual([]);
+    const officeCheckOut = await capture(tech, 'CHECK_OUT', { lat: -1.18525, lng: 36.90379 });
+    expect(officeCheckOut.status).toBe(201);
+    expect(officeCheckOut.body.flags).not.toContain('OUTSIDE_GEOFENCE');
     const far = await capture(tech, 'CHECK_IN', { lat: -1.1, lng: 36.9 });
     expect(far.body.flags).toContain('OUTSIDE_GEOFENCE');
+  });
+
+  it('records an off-site check-in with a warning instead of blocking it', async () => {
+    const admin = (await login('FBI-ADM-001')).token;
+    const offsiteTech = (await newTechnician(admin)).token;
+    const photo = await capture(offsiteTech, 'CHECK_IN', { lat: -1.1, lng: 36.9 });
+    const checkIn = await api()
+      .post('/api/v1/attendance/check-in')
+      .set(auth(offsiteTech))
+      .send({ photoId: photo.body.photoId, checklist: CHECKLIST });
+
+    expect(checkIn.status).toBe(201);
+    expect(checkIn.body.record.checkInPhoto.flags).toContain('OUTSIDE_GEOFENCE');
   });
 
   it('rejects non-JPEG uploads', async () => {
