@@ -1,15 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { api, ApiError } from '../../src/api/client';
 import type { Item } from '../../src/api/types';
-import { Button, Glass, Input, Screen, ScreenHeader, Segmented, Text } from '../../src/components';
-import { useApi } from '../../src/hooks/useApi';
-import { colors } from '../../src/theme';
-import { toast } from '../../src/store/feedback';
+import { Badge, Button, Input, Screen, ScreenHeader, SectionHeader, Text } from '../../src/components';
 import { requestScan } from '../../src/store/bridge';
+import { colors, radius, space } from '../../src/theme';
+import { toast } from '../../src/store/feedback';
 
 type Category = Item['category'];
-type Tracking = Item['tracking'];
 
 const CATEGORIES: { value: Category; label: string }[] = [
   { value: 'ROUTER', label: 'Router' },
@@ -20,100 +20,107 @@ const CATEGORIES: { value: Category; label: string }[] = [
   { value: 'TOOL', label: 'Tool' },
 ];
 
-const SKU_CODE: Record<Category, string> = { ROUTER: 'RTR', ONT: 'ONT', CABLE: 'CBL', CONNECTOR: 'CON', ACCESSORY: 'ACC', TOOL: 'TOL' };
-
-/** Add a catalogue item. Routers/ONTs are serial-tracked; cable and parts are counted in bulk. */
-export default function ItemNew() {
+/** Add a product and scan each unit's serial number. One save creates the item and every unit. */
+export default function CatalogEntry() {
   const [category, setCategory] = useState<Category>('ROUTER');
-  const [tracking, setTracking] = useState<Tracking>('SERIALIZED');
-  const [form, setForm] = useState({ sku: '', name: '', unit: 'pcs', unitPrice: '', reorderLevel: '' });
+  const [form, setForm] = useState({ name: '', reorderLevel: '' });
+  const [serials, setSerials] = useState<string[]>([]);
+  const [manual, setManual] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
-  const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
-  const catalogue = useApi<{ items: Item[] }>('/inventory/items');
 
-  const pickCategory = (c: Category) => {
-    setCategory(c);
-    const serial = c === 'ROUTER' || c === 'ONT';
-    setTracking(serial ? 'SERIALIZED' : 'BULK');
-    setForm((f) => ({ ...f, unit: serial ? 'pcs' : c === 'CABLE' ? 'm' : f.unit }));
+  const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  const addSerials = (more: string[]) => {
+    if (!more.length) return;
+    setSerials((s) => {
+      const known = new Set(s.map((x) => x.toUpperCase()));
+      const added = more.map((v) => v.trim().toUpperCase()).filter((v) => v && !known.has(v));
+      return [...s, ...added];
+    });
   };
 
-  // Suggest the next SKU of the category (RTR-001 …) whenever the code field is empty — editable after
-  useEffect(() => {
-    if (form.sku.trim()) return;
-    const n = (catalogue.data?.items.filter((i) => i.category === category).length ?? 0) + 1;
-    setForm((f) => (f.sku.trim() ? f : { ...f, sku: `${SKU_CODE[category]}-${String(n).padStart(3, '0')}` }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [category, catalogue.data]);
+  const removeSerial = (s: string) => setSerials((l) => l.filter((x) => x !== s));
+
+  const scan = async () => {
+    const r = await requestScan({ multiple: true, title: 'Scan serial numbers' });
+    if (r) addSerials(r);
+  };
 
   const submit = async () => {
-    setBusy(true);
     setErrors({});
+    if (!form.name.trim()) { setErrors({ name: 'Product name is required' }); return; }
+    if (!serials.length) { setErrors({ serials: 'Scan at least one serial number' }); return; }
+    const reorder = Number(form.reorderLevel);
+    if (!Number.isInteger(reorder) || reorder < 0) { setErrors({ reorderLevel: 'Enter a valid reorder level' }); return; }
+
+    setBusy(true);
     try {
-      const { item } = await api<{ item: Item }>('/inventory/items', {
-        body: {
-          sku: form.sku,
-          name: form.name,
-          category,
-          tracking,
-          unit: form.unit || 'pcs',
-          unitPrice: Number(form.unitPrice || 0),
-          reorderLevel: Number(form.reorderLevel || 0),
-        },
+      await api<{ item: Item; count: number }>('/inventory/items/catalog-entry', {
+        body: { name: form.name, category, reorderLevel: reorder, serials },
       });
-      toast.success('Item added', `${item.name} is now in the catalogue.`);
-      router.replace(`/admin/item/${item.id}`);
+      toast.success('Saved', `${serials.length} unit(s) of ${form.name} added to the store.`);
+      router.replace('/admin/items');
     } catch (e) {
       if (e instanceof ApiError && e.details) setErrors(Object.fromEntries(e.details.map((d) => [d.field, d.message])));
-      else setErrors({ _: e instanceof ApiError ? e.message : 'Could not add item' });
+      else setErrors({ _: e instanceof ApiError ? e.message : 'Could not save product' });
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Screen footer={<Button label="Add to catalogue" icon="add" size="lg" loading={busy} disabled={form.sku.trim().length < 2 || form.name.trim().length < 2} onPress={submit} />}>
-      <ScreenHeader title="New item" subtitle="Add something the store will stock" />
-      <Text variant="label" color={colors.textMuted}>
-        Category
-      </Text>
-      <Segmented options={CATEGORIES} value={category} onChange={pickCategory} />
-      <Text variant="label" color={colors.textMuted}>
-        Tracking
-      </Text>
-      <Segmented<Tracking>
-        options={[
-          { value: 'SERIALIZED', label: 'By serial number' },
-          { value: 'BULK', label: 'By quantity' },
-        ]}
-        value={tracking}
-        onChange={setTracking}
-      />
-      <Glass strong style={{ gap: 14 }}>
-        <Input label="SKU / code" icon="barcode-outline" autoCapitalize="characters" placeholder="RTR-HW-AX3" value={form.sku} onChangeText={set('sku')} error={errors.sku} />
-        <Button
-          label="Scan product barcode"
-          icon="scan-outline"
-          variant="secondary"
-          onPress={async () => {
-            const r = await requestScan({ title: 'Scan the product barcode' });
-            if (r?.[0]) set('sku')(r[0]);
-          }}
-        />
-        <Input label="Name" icon="pricetag-outline" placeholder="Huawei AX3 Wi-Fi 6 Router" value={form.name} onChangeText={set('name')} error={errors.name} />
-        <Input label="Unit" icon="cube-outline" placeholder="pcs, m, packs" value={form.unit} onChangeText={set('unit')} error={errors.unit} />
-        <Input label="Unit price (KES)" icon="cash-outline" keyboardType="number-pad" value={form.unitPrice} onChangeText={(v) => set('unitPrice')(v.replace(/\D/g, ''))} error={errors.unitPrice} />
-        <Input label="Reorder level" icon="trending-down-outline" keyboardType="decimal-pad" value={form.reorderLevel} onChangeText={(v) => set('reorderLevel')(v.replace(/[^0-9.]/g, ''))} error={errors.reorderLevel} />
-        {errors._ ? (
-          <Text variant="bodySm" color={colors.danger}>
-            {errors._}
+    <Screen footer={<Button label="Save product" icon="save" size="lg" loading={busy} disabled={!form.name.trim() || !serials.length || busy} onPress={submit} />}>
+      <ScreenHeader title="Add product" subtitle="Name it, scan each serial, then save" />
+
+      <SectionHeader title="Product" />
+      <View style={styles.card}>
+        <Input label="Product name" icon="pricetag-outline" placeholder="Huawei AX3 Router" value={form.name} onChangeText={set('name')} error={errors.name} />
+        <SectionHeader title="Category" />
+        <View style={styles.categoryRow}>
+          {CATEGORIES.map((c) => (
+            <Pressable key={c.value} style={[styles.chip, category === c.value && styles.chipOn]} onPress={() => setCategory(c.value)}>
+              <Text variant="label">{c.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+        <Input label="Reorder level" icon="trending-down-outline" keyboardType="number-pad" placeholder="Reorder when stock drops to" value={form.reorderLevel} onChangeText={(v) => set('reorderLevel')(v.replace(/\D/g, ''))} error={errors.reorderLevel} />
+        {errors._ ? <Text variant="bodySm" color={colors.danger}>{errors._}</Text> : null}
+      </View>
+
+      <SectionHeader title={`Serial numbers (${serials.length})`} />
+      <View style={styles.card}>
+        <View style={styles.scanRow}>
+          <Button label={serials.length ? `Scan more · ${serials.length}` : 'Scan serial'} icon="barcode-outline" variant="secondary" onPress={scan} />
+          <View style={{ flex: 1 }}>
+            <Input label="Or type a serial" icon="keypad-outline" autoCapitalize="characters" autoCorrect={false} value={manual} onChangeText={setManual} />
+          </View>
+          <Button label="Add" icon="add" disabled={!manual.trim()} onPress={() => { addSerials([manual]); setManual(''); }} />
+        </View>
+        {serials.length ? (
+          <View style={styles.chipList}>
+            {serials.map((s) => (
+              <Pressable key={s} style={styles.chip} onPress={() => removeSerial(s)} accessibilityLabel={`Remove ${s}`}>
+                <Text variant="label">{s}</Text>
+                <Ionicons name="close-circle" size={14} color={colors.textMuted} />
+              </Pressable>
+            ))}
+          </View>
+        ) : (
+          <Text variant="bodySm" color={colors.textMuted}>
+            Scan each device's serial number. Each unit gets its own entry.
           </Text>
-        ) : null}
-      </Glass>
-      <Text variant="bodySm" color={colors.textMuted}>
-        {tracking === 'SERIALIZED' ? 'Each unit gets its own serial number when received, so it can be traced to a technician and a customer.' : 'Stock is counted in units (e.g. metres of cable) and consumed on jobs.'}
-      </Text>
+        )}
+      </View>
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  card: { gap: 10, padding: space.md, borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  scanRow: { flexDirection: 'row', alignItems: 'flex-end', gap: space.md, flexWrap: 'wrap' },
+  categoryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.surfaceAlt, borderRadius: radius.pill, paddingHorizontal: space.md, paddingVertical: 6 },
+  chipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipList: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
+});

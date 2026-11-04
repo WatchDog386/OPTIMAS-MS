@@ -15,7 +15,7 @@ const ACTIONS = [
   { icon: 'shield-checkmark-outline', label: 'Check device', status: 'Is this the one we issued?', action: 'Scan', href: '/verify', color: '#0D5C3E' },
   { icon: 'search-outline', label: 'Find unit', status: 'Trace a serial number', action: 'Search', href: '/admin/unit', color: '#2E3A5C' },
   { icon: 'list-outline', label: 'Ledger', status: 'Every stock movement', action: 'Open', href: '/admin/movements', color: '#0D5C3E' },
-  { icon: 'barcode-outline', label: 'Product + labels', status: 'Name, quantity, print labels', action: 'Add', href: '/admin/item-with-labels', color: '#2E3A5C' },
+  { icon: 'barcode-outline', label: 'Product + labels', status: 'Name, scan serials, save', action: 'Add', href: '/admin/item-new', color: '#2E3A5C' },
 ] as const;
 
 const categoryIcon: Record<Item['category'], keyof typeof Ionicons.glyphMap> = {

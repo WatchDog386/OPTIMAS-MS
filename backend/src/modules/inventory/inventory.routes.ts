@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { ItemCategory, TrackingMode, UnitStatus } from '@prisma/client';
 import { env } from '../../config/env';
 import { prisma } from '../../lib/prisma';
-import { badRequest } from '../../lib/http-error';
+import { badRequest, conflict } from '../../lib/http-error';
 import { ah } from '../../middleware/async';
 import { ROLES, me, requireRole } from '../../middleware/auth';
 import { parse } from '../../middleware/validate';
@@ -67,23 +67,23 @@ inventoryRouter.post(
   }),
 );
 
-/** Add a catalogue item and generate that many barcode labels at once: name + quantity. */
-const itemWithLabelsSchema = z.object({
+/** One-screen catalogue entry: name + scan serials + reorder level, saved as one item with that many units. */
+const catalogEntrySchema = z.object({
   name: z.string().trim().min(2, 'Product name is required'),
-  quantity: z.number().int().min(1, 'Quantity must be at least 1').max(500, 'Maximum 500 labels at once'),
   category: z.enum(ItemCategory).default('ROUTER'),
-  sku: z.string().trim().min(2).optional(),
+  reorderLevel: z.number().min(0).default(0),
+  serials: z.array(z.string().trim().min(3, 'Serial number too short')).min(1, 'Scan at least one serial number'),
 });
 
 inventoryRouter.post(
-  '/items/with-labels',
+  '/items/catalog-entry',
   store,
   ah(async (req, res) => {
-    const body = parse(itemWithLabelsSchema, req.body);
-    const sku = body.sku || `${body.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '-').replace(/-+/g, '-').slice(0, 20)}-${Date.now().toString().slice(-4)}`;
+    const body = parse(catalogEntrySchema, req.body);
     const actor = me(req).id;
+    const sku = `${body.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '-').replace(/-+/g, '-').slice(0, 20)}-${Date.now().toString().slice(-4)}`;
 
-    const { item, units } = await prisma.$transaction(async (tx) => {
+    const { item, count } = await prisma.$transaction(async (tx) => {
       const it = await tx.inventoryItem.create({
         data: {
           sku,
@@ -92,28 +92,32 @@ inventoryRouter.post(
           tracking: 'SERIALIZED',
           unit: 'pcs',
           unitPrice: 0,
-          reorderLevel: 0,
+          reorderLevel: body.reorderLevel,
         },
       });
-      const base = sku.toUpperCase().replace(/-+$/, '');
-      const taken = new Set((await tx.serialUnit.findMany({ where: { itemId: it.id }, select: { serialNumber: true } })).map((u) => u.serialNumber));
-      let next = 1;
-      const units: { serialNumber: string }[] = [];
-      for (let i = 0; i < body.quantity; i++) {
-        let sn = `${base}-${String(next).padStart(4, '0')}`;
-        while (taken.has(sn)) { next += 1; sn = `${base}-${String(next).padStart(4, '0')}`; }
-        taken.add(sn);
-        next += 1;
-        const unit = await tx.serialUnit.create({ data: { itemId: it.id, serialNumber: sn, status: 'IN_STORE' } });
-        await tx.stockMovement.create({ data: { type: 'RECEIVE', itemId: it.id, serialUnitId: unit.id, quantity: 1, actorId: actor, note: 'Catalogue entry with labels' } });
-        units.push(unit);
+
+      const existing = await tx.serialUnit.findMany({
+        where: { serialNumber: { in: body.serials.map((s) => s.toUpperCase()) } },
+        select: { serialNumber: true },
+      });
+      if (existing.length) {
+        throw conflict(`Already registered: ${existing.map((e) => e.serialNumber).join(', ')}`, 'DUPLICATE_SERIAL');
       }
-      return { item: it, units };
+
+      for (const sn of body.serials) {
+        const unit = await tx.serialUnit.create({
+          data: { itemId: it.id, serialNumber: sn.toUpperCase(), status: 'IN_STORE' },
+        });
+        await tx.stockMovement.create({
+          data: { type: 'RECEIVE', itemId: it.id, serialUnitId: unit.id, quantity: 1, actorId: actor, note: 'Catalogue entry' },
+        });
+      }
+
+      return { item: it, count: body.serials.length };
     });
 
-    const labels = units.map((u) => ({ serial: u.serialNumber, item: item.name, sku: item.sku, code: tagFor(u.serialNumber) }));
-    await audit(actor, 'ITEM_WITH_LABELS_CREATED', 'InventoryItem', item.id, `Added ${body.quantity} × ${item.name} with barcode labels`);
-    res.status(201).json({ item, labels, count: labels.length });
+    await audit(actor, 'CATALOG_ENTRY', 'InventoryItem', item.id, `Added ${count} × ${item.name} by serial`);
+    res.status(201).json({ item, count });
   }),
 );
 
