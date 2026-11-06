@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fonts, radius, shadow, space, useInverse } from '../theme';
 import { Text } from './Text';
 import { NATIVE, haptic, prefersReducedMotion, spring } from '../utils/motion';

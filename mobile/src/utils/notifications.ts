@@ -1,4 +1,4 @@
-import type { Ionicons } from '@expo/vector-icons';
+import type Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { colors } from '../theme';
 import { useAuth } from '../store/auth';

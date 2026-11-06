@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { api, ApiError } from '../../src/api/client';
 import type { Movement, SerialUnit } from '../../src/api/types';
 import { Badge, Button, Card, Input, Screen, ScreenHeader, SectionHeader, Text } from '../../src/components';

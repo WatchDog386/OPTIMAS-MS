@@ -5,7 +5,7 @@ import { colors, fonts, isDark } from '../theme';
 import { DotsLoader } from './Loaders';
 import { Text } from './Text';
 
-const LOGO = require('../../assets/logo.png');
+const LOGO = require('../../assets/logo-app.webp');
 const MIN_VISIBLE_MS = 1400;
 /** The close, minimise and zoom buttons of a Mac window: red, yellow, green. */
 export const MAC_DOTS = ['#FF5F57', '#FEBC2E', '#28C840'];

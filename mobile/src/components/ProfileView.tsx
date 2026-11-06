@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { useAuth } from '../store/auth';

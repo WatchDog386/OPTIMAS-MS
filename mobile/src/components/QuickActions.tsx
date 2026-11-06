@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { colors, fonts, space } from '../theme';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { colors, fonts, isDark, space } from '../theme';
 import { Text } from './Text';
 
 export interface QuickAction {
@@ -22,7 +22,7 @@ export interface QuickActionsButton {
 /** Four-column grid of round grey icon buttons (Business-SME "Quick Actions"). */
 export function QuickActions({ items, title = 'Quick Actions', action }: { items: QuickAction[]; title?: string; action?: QuickActionsButton }) {
   return (
-    <View>
+    <View style={isDark ? styles.panel : undefined}>
       <View style={styles.head}>
         <Text variant="title" style={{ marginLeft: 4, fontFamily: fonts.semibold, fontSize: 17 }}>
           {title}
@@ -36,8 +36,8 @@ export function QuickActions({ items, title = 'Quick Actions', action }: { items
             accessibilityLabel={action.label}
             hitSlop={8}
           >
-            <Ionicons name={action.icon ?? (action.active ? 'chevron-up' : 'options-outline')} size={15} color={action.active ? colors.white : colors.text} />
-            <Text variant="bodySm" color={action.active ? colors.white : colors.text} fixedColor={action.active} style={{ fontFamily: fonts.semibold, fontSize: 13 }}>
+            {isDark ? null : <Ionicons name={action.icon ?? (action.active ? 'chevron-up' : 'options-outline')} size={15} color={action.active ? colors.white : colors.text} />}
+            <Text variant="bodySm" color={action.active ? colors.white : isDark ? colors.brand : colors.text} fixedColor={action.active || isDark} style={{ fontFamily: fonts.semibold, fontSize: 13 }}>
               {action.label}
             </Text>
           </Pressable>
@@ -67,11 +67,16 @@ export function QuickActions({ items, title = 'Quick Actions', action }: { items
 }
 
 const styles = StyleSheet.create({
+  // The Co-op "Quick Actions" panel: smoky glass over the photo
+  panel: { padding: 18, paddingBottom: 20, borderRadius: 22, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.lg },
-  manage: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 34, paddingHorizontal: 14, borderRadius: 17, backgroundColor: colors.glassStrong, borderWidth: 1, borderColor: colors.glassBorder },
-  manageOn: { backgroundColor: colors.text, borderColor: colors.text },
+  manage: isDark
+    ? { flexDirection: 'row', alignItems: 'center', gap: 6, height: 38, paddingHorizontal: 20, borderRadius: 19, backgroundColor: 'transparent', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.38)' }
+    : { flexDirection: 'row', alignItems: 'center', gap: 6, height: 34, paddingHorizontal: 14, borderRadius: 17, backgroundColor: colors.glassStrong, borderWidth: 1, borderColor: colors.glassBorder },
+  manageOn: isDark ? { backgroundColor: colors.highlight, borderColor: colors.highlight } : { backgroundColor: colors.text, borderColor: colors.text },
   grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: space.lg },
   item: { width: '25%', alignItems: 'center', gap: space.sm, paddingHorizontal: 2 },
-  circle: { width: 58, height: 58, borderRadius: 29, backgroundColor: colors.glassStrong, borderWidth: 1, borderColor: colors.glassBorder, alignItems: 'center', justifyContent: 'center' },
+  // Co-op icon circles: deep green with a lighter rim
+  circle: { width: 58, height: 58, borderRadius: 29, backgroundColor: isDark ? '#0F5A3C' : colors.glassStrong, borderWidth: 1, borderColor: isDark ? 'rgba(141,198,63,0.35)' : colors.glassBorder, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: -2, right: -2, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.white },
 });

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { api, ApiError } from '../src/api/client';
 import type { User } from '../src/api/types';
 import { Button, Glass, Input, Screen, ScreenHeader, Text } from '../src/components';

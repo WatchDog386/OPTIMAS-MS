@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from 'react';
-import { Platform, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Defs, Line, Pattern, RadialGradient, Rect, Stop } from 'react-native-svg';
@@ -7,8 +7,22 @@ import { colors, isDark } from '../theme';
 
 /* ─────────────────────────── Backdrop ─────────────────────────── */
 
-/** Soft grey "frosted glass" page backdrop with diffused light blobs (white top-right, yellow bottom-left). */
+const SAVANNAH = require('../../assets/bg/savannah.webp');
+
+/**
+ * Page backdrop. The Co-op look: a savannah photo under a dark veil (lighter in the middle, darker at the
+ * top and bottom so headers and the tab bar stay readable). Light mode: soft grey frosted glass with
+ * diffused light blobs (white top-right, yellow bottom-left).
+ */
 export function GlassBackground() {
+  if (isDark) {
+    return (
+      <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.bg }]}>
+        <Image source={SAVANNAH} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityElementsHidden importantForAccessibility="no" />
+        <LinearGradient colors={['rgba(8,12,10,0.78)', 'rgba(8,12,10,0.5)', 'rgba(8,12,10,0.62)', 'rgba(8,12,10,0.88)']} locations={[0, 0.3, 0.65, 1]} style={StyleSheet.absoluteFill} />
+      </View>
+    );
+  }
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <LinearGradient colors={[colors.bgTop, isDark ? '#131416' : '#E9E9E9', colors.bgBottom]} locations={[0, 0.55, 1]} style={StyleSheet.absoluteFill} />

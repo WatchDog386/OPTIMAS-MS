@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import { ActivityIndicator, Animated, Platform, StyleSheet, ScrollView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors } from '../theme';
 
 const THRESHOLD = 70; // px of (damped) pull needed to trigger

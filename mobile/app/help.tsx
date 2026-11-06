@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Glass, PageHeader, Reveal, Screen, Segmented, Text } from '../src/components';
 import { usePublicInfo } from '../src/hooks/usePublicInfo';
 import { colors, fonts, space } from '../src/theme';

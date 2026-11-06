@@ -80,46 +80,56 @@ const light = {
 };
 
 /** The same tokens at night: charcoal canvas, raised dark cards, light ink and green actions. */
+/**
+ * The Co-op Bank look: a savannah photo under a dark veil, smoky see-through panels, lime-green active
+ * tabs and links, and deep-green cards.
+ */
 const dark: typeof light = {
   ...light,
-  bg: '#111214',
-  surface: '#1A1B1E',
-  surfaceAlt: '#24262A',
-  surfaceHigh: '#2C2E33',
-  border: '#2C2E33',
-  borderStrong: '#3A3D42',
+  bg: '#0D1310',
+  surface: '#151C18',
+  surfaceAlt: '#1E2721',
+  surfaceHigh: '#26302A',
+  border: 'rgba(255,255,255,0.12)',
+  borderStrong: 'rgba(255,255,255,0.24)',
 
-  // Black buttons would vanish on a dark page: actions turn Safaricom green, as in the Business-SME dark mode
-  primary: '#2DA043',
-  primaryPressed: '#248A38',
+  // Actions are Co-op green with white lettering
+  primary: '#5E9F2A',
+  primaryPressed: '#4E8A22',
   onPrimary: '#FFFFFF',
   primarySoft: 'rgba(255,255,255,0.08)',
 
-  glass: 'rgba(30,31,34,0.72)',
-  glassStrong: 'rgba(32,33,36,0.94)',
-  glassBorder: 'rgba(255,255,255,0.08)',
-  hatch: 'rgba(255,255,255,0.12)',
-  bgTop: '#17181B',
-  bgBottom: '#0E0F11',
+  // Active tabs and chips: the lime "Accounts" pill
+  highlight: '#7CB83A',
+  onHighlight: '#FFFFFF',
 
-  brandSoft: 'rgba(45,160,67,0.18)',
+  glass: 'rgba(16,22,18,0.72)',
+  glassStrong: 'rgba(18,25,21,0.86)',
+  glassBorder: 'rgba(255,255,255,0.10)',
+  hatch: 'rgba(255,255,255,0.12)',
+  bgTop: '#0D1310',
+  bgBottom: '#070A08',
+
+  brand: '#8DC63F',
+  brandSoft: 'rgba(124,184,58,0.18)',
   accentSoft: 'rgba(58,143,145,0.2)',
   garnetSoft: 'rgba(155,43,61,0.25)',
-  navy: '#6F8FE0',
-  charcoal: '#E6E9E7',
+  navy: '#7FA2F0',
+  // Dark cards with white lettering (the attention banner): deep Co-op green
+  charcoal: '#0F3524',
 
-  text: '#ECEFED',
-  textMuted: '#A3ADA8',
-  textDim: '#7B8580',
+  text: '#FFFFFF',
+  textMuted: 'rgba(255,255,255,0.72)',
+  textDim: 'rgba(255,255,255,0.5)',
 
-  successSoft: 'rgba(0,161,58,0.18)',
-  warningSoft: 'rgba(217,119,6,0.2)',
-  dangerSoft: 'rgba(220,38,38,0.2)',
-  infoSoft: 'rgba(2,132,199,0.2)',
+  successSoft: 'rgba(0,161,58,0.2)',
+  warningSoft: 'rgba(217,119,6,0.22)',
+  dangerSoft: 'rgba(220,38,38,0.22)',
+  infoSoft: 'rgba(2,132,199,0.22)',
 
-  hero: '#25262A',
-  glowTop: '#141B25',
-  glowMid: '#111720',
+  hero: '#0E4A33',
+  glowTop: '#0D1310',
+  glowMid: '#0D1310',
   overlay: 'rgba(0,0,0,0.72)',
 };
 
@@ -129,9 +139,10 @@ const THEME_KEY = 'optimas.theme';
 /** The look chosen on this phone (light unless Dark mode was switched on). Read once, before any screen draws. */
 export const themeMode: ThemeMode = (() => {
   try {
-    return typeof localStorage !== 'undefined' && localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light';
+    // The Co-op look (dark, over the savannah photo) unless Light mode was chosen on this phone
+    return typeof localStorage !== 'undefined' && localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark';
   } catch {
-    return 'light';
+    return 'dark';
   }
 })();
 export const isDark = themeMode === 'dark';
@@ -167,7 +178,8 @@ export const cardThemes = {
 export type CardTheme = (typeof cardThemes)[keyof typeof cardThemes];
 
 export const gradients = {
-  hero: ['#2C2D30', '#17181A'] as const,
+  // Deep-green bank card in the Co-op look
+  hero: (isDark ? ['#11603F', '#0A3B27'] : ['#2C2D30', '#17181A']) as readonly [string, string],
   brand: ['#45B65C', '#2DA043'] as const,
   lime: ['#F2F65A', '#E2EA2C'] as const,
   glowTop: ['#D7E7FF', '#E8F1FF', 'rgba(255,255,255,0)'] as const,

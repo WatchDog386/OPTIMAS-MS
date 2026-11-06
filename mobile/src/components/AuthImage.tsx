@@ -1,5 +1,5 @@
 import { Image, Pressable, StyleSheet, View, type ImageStyle } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { openPhoto } from '../store/photoViewer';
 import { colors, radius } from '../theme';
 import { useAuthPhotoUri } from '../hooks/useAuthPhotoUri';

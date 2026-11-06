@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
 import { Animated, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, ApiError } from '../../src/api/client';
 import type { ChatMessage, ConversationDetail, Tick } from '../../src/api/field';

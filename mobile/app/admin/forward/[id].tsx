@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { api, ApiError } from '../../../src/api/client';
 import type { Nearby, NearbyTech } from '../../../src/api/field';
 import type { Task } from '../../../src/api/types';

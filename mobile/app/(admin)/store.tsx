@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import type { Item } from '../../src/api/types';
 import { ActionCardRow, Badge, HeaderButton, PageHeader, Reveal, Screen, SectionHeader, Text } from '../../src/components';
 import { requestScan } from '../../src/store/bridge';

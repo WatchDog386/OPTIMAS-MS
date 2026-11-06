@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import { Animated, Easing, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, ApiError } from '../../src/api/client';
 import type { User } from '../../src/api/types';
 import { Button, GlassBackground, Input, Reveal, SignInLoader, Text } from '../../src/components';
 import { afterLogin, useAuth } from '../../src/store/auth';
-import { colors, fonts, radius, space } from '../../src/theme';
+import { colors, fonts, isDark, radius, space } from '../../src/theme';
 import { biometricAvailable, biometricProblem, fingerprintAccount, loginWithBiometric } from '../../src/utils/biometric';
 import { LockedView } from '../../src/components/LockHost';
 import { useInstallAction } from '../../src/components/InstallPrompt';
@@ -163,7 +163,10 @@ export default function Login() {
             <View style={styles.heroArea} onLayout={(e) => setArea({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
               {area.h > 0 ? (
                 <Animated.View style={[styles.heroCenter, { opacity: heroIn, transform: [{ translateY: heroIn.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }]} pointerEvents="none">
-                  <Image source={HERO} style={{ width: heroW, height: heroH }} resizeMode="contain" accessibilityLabel="Fiber to the home" />
+                  {/* On the dark photo the black "Fiber" lettering sits on a white plate */}
+                  <View style={isDark ? styles.heroPlate : undefined}>
+                    <Image source={HERO} style={isDark ? { width: heroW * 0.72, height: heroH * 0.72 } : { width: heroW, height: heroH }} resizeMode="contain" accessibilityLabel="Fiber to the home" />
+                  </View>
                 </Animated.View>
               ) : null}
             </View>
@@ -280,6 +283,7 @@ export default function Login() {
 }
 
 const styles = StyleSheet.create({
+  heroPlate: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 14 },
   root: { flex: 1, backgroundColor: colors.bgBottom },
   scroll: { flexGrow: 1, alignItems: 'center' },
   column: { flex: 1, paddingHorizontal: space.lg },

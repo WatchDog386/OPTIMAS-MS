@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors } from '../theme';
 import { GlassCircle } from './Glass';
 import { NotificationBell } from './NotificationBell';

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Animated, Easing, Platform, Pressable, StyleSheet, View, type DimensionValue, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fonts } from '../theme';
 import { Text } from './Text';
 import { prefersReducedMotion } from '../utils/motion';

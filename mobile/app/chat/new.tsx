@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import type { Contact } from '../../src/api/field';
 import { Avatar, EmptyState, Input, PageHeader, Reveal, Screen, Text } from '../../src/components';

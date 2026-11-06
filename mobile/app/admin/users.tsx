@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import type { TeamMember } from '../../src/api/types';
 import { Badge, EmptyState, Input, ListRow, Screen, ScreenHeader, Segmented, Text } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';

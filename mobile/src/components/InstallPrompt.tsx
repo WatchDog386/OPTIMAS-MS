@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Image, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fonts, radius, space } from '../theme';
 import { installSteps, useInstallPrompt } from '../utils/install';
 import { GlassCircle } from './Glass';

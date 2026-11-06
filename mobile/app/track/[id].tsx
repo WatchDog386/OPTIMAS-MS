@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { JobTrack } from '../../src/api/field';
 import { Avatar, Button, EmptyState, HeaderButton, LiveBadge, Loading, MapCanvas, Screen, ScreenHeader, Text, type MapPin } from '../../src/components';

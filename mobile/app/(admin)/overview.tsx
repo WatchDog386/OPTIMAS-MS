@@ -33,7 +33,7 @@ import { useDesktop } from '../../src/theme/desktop';
 import { DeskButton, KpiCard, MiniStat, Panel, PanelRow } from '../../src/components/desktop/Kit';
 import { desk } from '../../src/components/desktop/DesktopShell';
 import { Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 export default function Overview() {
   const user = useAuth((s) => s.user)!;

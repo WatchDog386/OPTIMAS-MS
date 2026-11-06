@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Platform, Share, Switch } from 'react-native';
 import { router } from 'expo-router';
-import type { Ionicons } from '@expo/vector-icons';
+import type Ionicons from '@expo/vector-icons/Ionicons';
 import { api, ApiError, API_URL, authHeader } from '../api/client';
 import { useAuth } from '../store/auth';
 import { promptDialog, toast } from '../store/feedback';

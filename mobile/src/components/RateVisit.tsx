@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Animated, Platform, StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { api, ApiError } from '../api/client';
 import type { CustomerJob } from '../api/types';
 import { colors, fonts } from '../theme';

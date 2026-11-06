@@ -10,10 +10,10 @@ const dir = process.argv[2];
 if (!dir) throw new Error('usage: node scripts/precache.mjs <export dir>');
 
 const walk = (d) => readdirSync(d).flatMap((f) => (statSync(join(d, f)).isDirectory() ? walk(join(d, f)) : [join(d, f)]));
-const FONTS = /(Ionicons|Figtree_(400Regular|500Medium|600SemiBold|700Bold|800ExtraBold))\.[0-9a-f]+\.ttf$/;
+const FONTS = /(ionicons-app\.[0-9a-f]+\.woff2|open-sans-latin-[4-8]00-normal\.[0-9a-f]+\.woff2)$/;
 const files = walk(dir)
   .map((f) => '/' + relative(dir, f).split('\\').join('/'))
-  .filter((f) => f.startsWith('/_expo/') || FONTS.test(f) || /^\/assets\/assets\//.test(f) || ['/leaflet.css', '/logo.png', '/zxing_reader.wasm', '/favicon.png'].includes(f))
+  .filter((f) => f.startsWith('/_expo/') || FONTS.test(f) || /^\/assets\/assets\//.test(f) || ['/leaflet.css', '/logo-splash.webp', '/zxing_reader.wasm', '/favicon.png'].includes(f))
   .filter((f) => !f.endsWith('.map'))
   .sort();
 

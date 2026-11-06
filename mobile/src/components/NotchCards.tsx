@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Platform, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, isDark } from '../theme';
 
 /*
@@ -46,7 +46,7 @@ export function NotchCard({ children, style, onTab, tabLabel = 'Open' }: { child
     <View style={[styles.card, style]} onLayout={(e) => setBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
       {box.w > 0 ? (
         <Svg width={box.w} height={box.h} style={StyleSheet.absoluteFill}>
-          <Path d={notchedTopPath(box.w, box.h)} fill={colors.surface} stroke={isDark ? colors.border : "rgba(28,29,31,0.07)"} strokeWidth={1} />
+          <Path d={notchedTopPath(box.w, box.h)} fill={isDark ? colors.glass : colors.surface} stroke={isDark ? colors.border : "rgba(28,29,31,0.07)"} strokeWidth={1} />
         </Svg>
       ) : null}
       <Pressable onPress={onTab} disabled={!onTab} hitSlop={8} accessibilityRole="button" accessibilityLabel={tabLabel} style={styles.tab}>

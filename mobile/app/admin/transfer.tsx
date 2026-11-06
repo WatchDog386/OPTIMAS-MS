@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { goBack } from '../../src/utils/nav';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { api } from '../../src/api/client';
 import type { Item, SerialUnit } from '../../src/api/types';
 import { Button, Input, Screen, ScreenHeader, SectionHeader, Segmented, TechPicker, Text } from '../../src/components';

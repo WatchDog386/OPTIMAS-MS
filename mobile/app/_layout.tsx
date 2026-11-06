@@ -2,23 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import * as Notifications from 'expo-notifications';
 import { router, Stack } from 'expo-router';
 import { Platform, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Button } from '../src/components/Button';
 import { Text } from '../src/components/Text';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import {
-  Figtree_400Regular,
-  Figtree_500Medium,
-  Figtree_600SemiBold,
-  Figtree_700Bold,
-  Figtree_800ExtraBold,
-} from '@expo-google-fonts/figtree';
 import * as Font from 'expo-font';
-import { Asset } from 'expo-asset';
-import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from '@expo-google-fonts/inter';
-import { OPENED_ON_DESKTOP } from '../src/theme/desktop';
 import { DesktopShell } from '../src/components/desktop/DesktopShell';
 import { useAuth } from '../src/store/auth';
 import { registerForPush } from '../src/utils/push';
@@ -60,27 +50,22 @@ export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Pro
   );
 }
 
-const FIGTREE = { Figtree_400Regular, Figtree_500Medium, Figtree_600SemiBold, Figtree_700Bold, Figtree_800ExtraBold };
-// Inter under the same names, so every screen picks it up on a desktop browser (like the Business-SME app)
-const INTER = { Figtree_400Regular: Inter_400Regular, Figtree_500Medium: Inter_500Medium, Figtree_600SemiBold: Inter_600SemiBold, Figtree_700Bold: Inter_700Bold, Figtree_800ExtraBold: Inter_800ExtraBold };
+// Open Sans, as in the Co-op app: small web font files (about 18 KB each, Latin letters only)
+const OPEN_SANS = {
+  OpenSans_400Regular: require('@fontsource/open-sans/files/open-sans-latin-400-normal.woff2'),
+  OpenSans_500Medium: require('@fontsource/open-sans/files/open-sans-latin-500-normal.woff2'),
+  OpenSans_600SemiBold: require('@fontsource/open-sans/files/open-sans-latin-600-normal.woff2'),
+  OpenSans_700Bold: require('@fontsource/open-sans/files/open-sans-latin-700-normal.woff2'),
+  OpenSans_800ExtraBold: require('@fontsource/open-sans/files/open-sans-latin-800-normal.woff2'),
+  // Only the icons the app uses (48 KB instead of the full 390 KB set), under the name the icons look for,
+  // so the full set is never downloaded. Rebuild with scripts/icons-subset.py after using a new icon.
+  ionicons: require('../assets/fonts/ionicons-app.woff2'),
+};
 
 /**
- * Figtree on phones, Inter on a laptop or desktop. A font that fails to download (a damaged or cut-off
- * file) never keeps the app from opening: Inter falls back to Figtree, and after a few seconds the app
- * opens anyway with the browser's own font.
+ * Open Sans everywhere. A font that fails to download never keeps the app from opening: after a few
+ * seconds it opens anyway with the browser's own font.
  */
-/** Inter would not load: put Figtree under the same names (added last, so it is the face the page uses). */
-async function figtreeInstead() {
-  if (typeof document === 'undefined' || typeof FontFace === 'undefined') return;
-  await Promise.all(
-    Object.entries(FIGTREE).map(async ([name, mod]) => {
-      const face = new FontFace(name, `url(${Asset.fromModule(mod).uri})`);
-      await face.load();
-      (document.fonts as unknown as { add: (f: FontFace) => void }).add(face);
-    }),
-  );
-}
-
 function useAppFonts() {
   const [ready, setReady] = useState(false);
   useEffect(() => {
@@ -92,7 +77,7 @@ function useAppFonts() {
       }
     };
     const giveUp = setTimeout(finish, 6000);
-    (OPENED_ON_DESKTOP ? Font.loadAsync(INTER).catch(figtreeInstead) : Font.loadAsync(FIGTREE))
+    Font.loadAsync(OPEN_SANS)
       .catch(() => undefined)
       .finally(finish);
     return () => clearTimeout(giveUp);

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { PanResponder, Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, radius, space } from '../theme';
 import { Text } from './Text';
 

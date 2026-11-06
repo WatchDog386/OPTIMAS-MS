@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dismiss, retryFailed, syncNow, useSyncQueue } from '../offline/queue';
 import { useAuth } from '../store/auth';

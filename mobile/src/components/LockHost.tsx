@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Image, Platform, Pressable, StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, ApiError } from '../api/client';
 import { useAuth } from '../store/auth';
 import { endExcuse, leavingExcused, useLock } from '../store/lock';
 import { promptDialog, toast } from '../store/feedback';
-import { fonts, isDark } from '../theme';
+import { fonts } from '../theme';
 import { biometricProblem, lockKeyOnThisDevice, prepareBiometric, rememberFingerprintAccount, unlockWithBiometric } from '../utils/biometric';
 import { firstName } from '../utils/format';
 import { setThemeColor, STATUS_BAR_COLOR } from '../utils/install';
@@ -72,10 +72,9 @@ function justSwitchedTheme() {
 }
 
 /** Lock-screen colours (like WhatsApp's): near-black page, green lock and green "Unlock". */
-const LOCK = isDark
-  ? { bg: '#111214', card: '#1A1B1E', icon: '#ECEFED', green: '#2DA043', text: '#ECEFED', line: '#2C2E33', dim: '#A3ADA8' }
-  : { bg: '#FFFFFF', card: '#FFFFFF', icon: '#111111', green: '#1DAA61', text: '#111B21', line: '#E3E7EA', dim: '#667781' };
-const LOGO = require('../../assets/logo.png');
+// Always the white lock page (the navy logo shows as it is, with no box around it)
+const LOCK = { bg: '#FFFFFF', card: '#FFFFFF', icon: '#111111', green: '#1DAA61', text: '#111B21', line: '#E3E7EA', dim: '#667781' };
+const LOGO = require('../../assets/logo-app.webp');
 
 /**
  * The lock screen, as in WhatsApp: a green lock, "Optimas Locked" and one Unlock button. Tapping Unlock
@@ -170,7 +169,7 @@ export function LockedView({ busy, onUnlock, links }: { busy: boolean; onUnlock:
     <View style={[StyleSheet.absoluteFill, styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom + 24 }]} accessibilityViewIsModal>
       <View style={styles.middle}>
         <View style={styles.card}>
-          <View style={isDark ? styles.logoPlate : undefined}>
+          <View>
             <Image source={LOGO} style={styles.logo} resizeMode="contain" accessibilityLabel="Optimas" />
           </View>
           <Text variant="title" color={LOCK.text} fixedColor align="center" style={styles.title}>

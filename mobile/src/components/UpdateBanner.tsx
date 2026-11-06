@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fonts } from '../theme';
 import { useAppUpdate } from '../utils/updates';
 import { Text } from './Text';

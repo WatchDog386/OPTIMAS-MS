@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import type { Attendance, Person } from '../../src/api/types';
 import { Avatar, Badge, Button, Card, GlassCircle, ListRow, Screen, ScreenHeader, SectionHeader, Text } from '../../src/components';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useApi } from '../../src/hooks/useApi';
 import { colors, space } from '../../src/theme';
 import { date, duration, flagLabel, time } from '../../src/utils/format';

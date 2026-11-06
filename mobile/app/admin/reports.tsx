@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
-import type { Ionicons } from '@expo/vector-icons';
+import type Ionicons from '@expo/vector-icons/Ionicons';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { API_URL, authHeader } from '../../src/api/client';

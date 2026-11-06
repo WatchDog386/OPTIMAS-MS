@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { router, usePathname } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import type { Role } from '../../api/types';
 import { useApi } from '../../hooks/useApi';
 import { homeFor, useAuth } from '../../store/auth';

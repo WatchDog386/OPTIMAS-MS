@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import type { Activity, ActivityEvent } from '../../src/api/approvals';
 import type { TeamMember } from '../../src/api/types';
 import { AuthImage, Avatar, Badge, EmptyState, Glass, Reveal, Screen, ScreenHeader, Text } from '../../src/components';

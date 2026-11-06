@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { api, ApiError } from '../../src/api/client';
 import type { Role, User } from '../../src/api/types';

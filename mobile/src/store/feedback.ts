@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Ionicons } from '@expo/vector-icons';
+import type Ionicons from '@expo/vector-icons/Ionicons';
 
 /*
  * The app's own pop-ups: toasts for success / error / info, and confirm / alert dialogs. Replaces the

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Image, Linking, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../api/client';
 import type { PhotoInfo } from '../api/approvals';

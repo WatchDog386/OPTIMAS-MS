@@ -2,8 +2,8 @@ import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
-import { Ionicons } from '@expo/vector-icons';
-import { colors, fonts, space } from '../theme';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { colors, fonts, isDark, space } from '../theme';
 import { CountUp, LiveBadge, Reveal, Skeleton } from './Motion';
 import { Text } from './Text';
 import { router } from 'expo-router';
@@ -176,7 +176,8 @@ export function AdminHero(p: Props) {
 
 const CARD_W = 158;
 const CARD_H = 178;
-const FILLS = ['#C3A6FF', '#E6F45A', '#A8E6C4', '#FFD08A'];
+// Pastel cards with ink lettering; in the Co-op look, deep-coloured cards with white lettering
+const FILLS = isDark ? ['#11603F', '#1E5A86', '#4F3A8C', '#8A5A12'] : ['#C3A6FF', '#E6F45A', '#A8E6C4', '#FFD08A'];
 /** Brand green: the "New Job" link and the Quick Actions icons share it. */
 const LINK_GREEN = colors.brand;
 
@@ -221,7 +222,7 @@ function StatBlock({ stat: s, fill }: { stat: HeroStat; fill: string }) {
         {s.label}
       </Text>
       <View style={styles.blockFoot}>
-        <Text variant="label" color="rgba(28,29,31,0.68)" fixedColor numberOfLines={2} style={styles.blockSub}>
+        <Text variant="label" color={isDark ? 'rgba(255,255,255,0.72)' : 'rgba(28,29,31,0.68)'} fixedColor numberOfLines={2} style={styles.blockSub}>
           {s.sub ?? ''}
         </Text>
         <View style={[styles.blockIcon, s.alert && { backgroundColor: colors.danger }]}>

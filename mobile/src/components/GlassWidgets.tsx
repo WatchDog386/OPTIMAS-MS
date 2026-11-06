@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fonts } from '../theme';
 import { Glass, GlassCircle, Hatch } from './Glass';
 import { NotchCard } from './NotchCards';

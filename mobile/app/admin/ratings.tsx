@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import type { Ratings } from '../../src/api/insights';
 import { Avatar, Glass, Screen, ScreenHeader, Text } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import type { LiveMap, MapState } from '../../src/api/insights';
 import { Avatar, Badge, Button, Glass, LiveBadge, MapCanvas, Reveal, Screen, ScreenHeader, Segmented, Text, type MapPin } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';

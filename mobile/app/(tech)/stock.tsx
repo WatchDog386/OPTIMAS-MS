@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { api, ApiError } from '../../src/api/client';
 import type { BulkHolding, SerialUnit, StockCountResult } from '../../src/api/types';
 import { Badge, Button, Card, EmptyState, ListRow, PageHeader, Screen, SectionHeader, Text } from '../../src/components';
