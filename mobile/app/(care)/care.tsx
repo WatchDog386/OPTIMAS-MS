@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ConversationRow } from '../../src/api/field';
 import type { ServiceRequest, Task, User } from '../../src/api/types';
 import { Avatar, Badge, BellButton, Button, ListRow, Screen, SectionHeader, Text, TileGrid } from '../../src/components';

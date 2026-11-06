@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { api, ApiError } from '../../src/api/client';
 import type { Item, ItemWithLabelsResult, Label } from '../../src/api/types';
 import { Badge, Button, EmptyState, Input, PageHeader, QrCode, Screen, SectionHeader, Text } from '../../src/components';
