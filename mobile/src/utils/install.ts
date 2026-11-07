@@ -163,8 +163,7 @@ export function setupPwa() {
   add('meta', { name: 'apple-mobile-web-app-title', content: 'Optimas MS' });
   add('meta', { name: 'apple-mobile-web-app-status-bar-style', content: 'default' });
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    // For installing the app and push notifications only: it caches nothing (online only)
     navigator.serviceWorker.register('/sw.js').catch(() => undefined);
-    // Finish downloading every page in the background once the worker is running
-    void navigator.serviceWorker.ready.then((r) => r.active?.postMessage('precache')).catch(() => undefined);
   }
 }

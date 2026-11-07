@@ -10,6 +10,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Font from 'expo-font';
 import { DesktopShell } from '../src/components/desktop/DesktopShell';
+import { OfflineBar, clearOfflineLeftovers } from '../src/components/OfflineBar';
 import { useAuth } from '../src/store/auth';
 import { registerForPush } from '../src/utils/push';
 import { openNotificationTarget } from '../src/utils/notifications';
@@ -18,10 +19,7 @@ import { InstallPrompt } from '../src/components/InstallPrompt';
 import { Splash } from '../src/components/Splash';
 import { UpdateBanner } from '../src/components/UpdateBanner';
 import { NotificationWatcher } from '../src/components/NotificationWatcher';
-import { SyncStatus } from '../src/components/SyncStatus';
 import { PhotoViewerHost } from '../src/components/PhotoViewer';
-import { startSyncLoop } from '../src/offline/queue';
-import { prefetchWork } from '../src/offline/prefetch';
 import { FeedbackHost } from '../src/components/FeedbackHost';
 import { LocationHost } from '../src/components/LocationHost';
 import { LockHost } from '../src/components/LockHost';
@@ -93,8 +91,8 @@ export default function RootLayout() {
   const ready = fontsLoaded && hydrated;
   const userId = useAuth((s) => s.user?.id);
 
-  // Send anything saved offline whenever there is a signal
-  useEffect(() => startSyncLoop(), []);
+  // Online only: clear what older versions of the app kept on the phone for offline use
+  useEffect(() => clearOfflineLeftovers(), []);
 
   useEffect(() => {
     void useAuth.getState().hydrate();
@@ -107,10 +105,6 @@ export default function RootLayout() {
     if (userId) void registerForPush();
   }, [userId]);
 
-  // Keep a technician's jobs and stock on the phone as soon as they are known
-  useEffect(() => {
-    if (userId) void prefetchWork();
-  }, [userId]);
 
   // Tapping a push notification opens the related screen.
   useEffect(() => {
@@ -150,7 +144,7 @@ function AppStack() {
       <InstallPrompt />
       <UpdateBanner />
       <NotificationWatcher />
-      <SyncStatus />
+      <OfflineBar />
       <PhotoViewerHost />
       <LocationHost />
       <PageLoader />

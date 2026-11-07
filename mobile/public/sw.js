@@ -1,93 +1,16 @@
-/* Optimas MS service worker: makes the web console installable and caches the app shell.
-   API calls (/api/*) always go to the network — data is never served stale. */
-// Stamped with a hash of the file list at build time, so each release installs fresh
-const SHELL = 'optimas-shell-v9';
+/* Optimas MS service worker. The app works online only (the server is the one database), so nothing
+   is cached here: every page, file and API call comes straight from the server. The worker is kept for
+   installing the app on phones and for push notifications. */
 
-// Every page's code, the fonts and images, listed at build time (scripts/precache.mjs). They download in
-// the background AFTER the worker is running: the phone only offers "Install" once a worker is active, so
-// holding activation back for the whole download made the Install button wait (or fall back to steps).
-let precaching = null;
+self.addEventListener('install', () => self.skipWaiting());
 
-/**
- * Keeps a response only if it arrived whole. A file cut off on the way (a dropped connection on a phone or
- * laptop) would otherwise be served from the cache on every visit: a broken font kept the app from opening.
- */
-async function keepIfComplete(cache, req, res) {
-  if (!res || res.status !== 200 || res.type === 'opaque') return;
-  const body = await res.clone().arrayBuffer();
-  const length = Number(res.headers.get('content-length') || 0);
-  if (length && !res.headers.get('content-encoding') && body.byteLength !== length) return;
-  if (!body.byteLength) return;
-  await cache.put(req, new Response(body, { status: res.status, statusText: res.statusText, headers: res.headers }));
-}
-const precacheInBackground = () => (precaching = precaching || precache().finally(() => (precaching = null)));
-async function precache() {
-  const cache = await caches.open(SHELL);
-  let files = [];
-  try {
-    files = (await (await fetch('/precache.json', { cache: 'no-store' })).json()).files || [];
-  } catch {
-    return; // a dev build has no list: pages are cached as they are opened
-  }
-  // A few at a time, so a slow connection is not swamped; a file that fails is fetched when needed
-  for (let i = 0; i < files.length; i += 6) {
-    await Promise.all(files.slice(i, i + 6).map((f) => cache.match(f).then((hit) => hit || fetch(f).then((res) => keepIfComplete(cache, f, res))).catch(() => undefined)));
-  }
-}
-
-// Install at once with just the shell, so the app is installable straight away
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches
-      .open(SHELL)
-      .then((cache) => cache.addAll(['/', '/manifest.json', '/icons/icon-192.png']))
-      .catch(() => undefined)
-      .then(() => self.skipWaiting()),
-  );
-});
-
+// Remove what older versions cached for offline use
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== SHELL).map((k) => caches.delete(k)))).then(() => self.clients.claim()),
-  );
-  // Then the rest of the app, in the background
-  precacheInBackground();
-});
-
-// The open app asks for the background download too (a worker can be stopped while idle; this resumes it)
-self.addEventListener('message', (event) => {
-  if (event.data === 'precache') event.waitUntil(precacheInBackground());
-});
-
-self.addEventListener('fetch', (event) => {
-  const req = event.request;
-  const url = new URL(req.url);
-  if (req.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
-  // The release marker must always come from the server
-  if (url.pathname === '/version.json' || url.pathname === '/precache.json') return;
-  // Pages: network first, fall back to the cached shell when offline.
-  if (req.mode === 'navigate') {
-    event.respondWith(fetch(req).catch(() => caches.match('/')));
-    return;
-  }
-  // The manifest carries the theme colour and icons: always prefer the latest copy.
-  if (url.pathname === '/manifest.json') {
-    event.respondWith(fetch(req).catch(() => caches.match(req)));
-    return;
-  }
-  // Static assets (hashed bundles, fonts, icons): cache first.
-  event.respondWith(
-    caches.match(req).then(
-      (hit) =>
-        hit ||
-        fetch(req).then((res) => {
-          if (res.ok) {
-            const copy = res.clone();
-            caches.open(SHELL).then((c) => keepIfComplete(c, req, copy)).catch(() => undefined);
-          }
-          return res;
-        }),
-    ),
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+      .then(() => self.clients.claim()),
   );
 });
 

@@ -96,16 +96,10 @@ export default function Capture() {
     setError(null);
     setBusy(true);
     try {
-      // 1. Ask the server for a fresh single-use challenge. With no signal there is no challenge:
-      //    the photo is still taken live in this camera and kept on the phone to be sent later.
-      let challenge: { challengeId: string; nonce: string } | null = null;
-      try {
-        challenge = await api<{ challengeId: string; nonce: string }>('/capture/challenge', {
-          body: { purpose, taskId: params.taskId || undefined },
-        });
-      } catch (e) {
-        if (!(e instanceof ApiError && e.code === 'NETWORK')) throw e;
-      }
+      // 1. Ask the server for a fresh single-use challenge (the app works online only)
+      const challenge = await api<{ challengeId: string; nonce: string }>('/capture/challenge', {
+        body: { purpose, taskId: params.taskId || undefined },
+      });
       // 2. Take the photo live.
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
       // Web: the frame straight from the live picture as a JPEG file; phones: the camera's own photo
@@ -116,24 +110,6 @@ export default function Capture() {
       if (!location.current) setGpsWait(true);
       const loc = location.current ?? (await waitForFix());
       setGpsWait(false);
-      if (!challenge) {
-        done.current = true;
-        resolveCapture({
-          photoId: '',
-          // Kept on the phone until there is signal again, so it must be a lasting copy
-          uri: frame ? await frame.dataUri() : photo.uri,
-          flags: ['OFFLINE_CAPTURE'],
-          pending: {
-            capturedAt: new Date().toISOString(),
-            lat: loc?.lat,
-            lng: loc?.lng,
-            accuracyM: loc?.accuracy ?? undefined,
-            deviceId: await deviceId(),
-          },
-        } satisfies CaptureResult);
-        goBack();
-        return;
-      }
       const form = new FormData();
       if (frame) form.append('photo', frame.blob, 'capture.jpg');
       else await appendFile(form, 'photo', photo.uri, 'capture.jpg', 'image/jpeg');
