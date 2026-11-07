@@ -9,7 +9,8 @@ import { TAB_BAR_CLEARANCE } from '../../src/components/Screen';
 import { ProfileInstallCard } from '../../src/components/InstallPrompt';
 import { useApi } from '../../src/hooks/useApi';
 import { useAuth } from '../../src/store/auth';
-import { colors, fonts } from '../../src/theme';
+import { colors, fonts, isDark } from '../../src/theme';
+import { STATUS_BAR_COLOR } from '../../src/utils/install';
 import { confirmAction } from '../../src/utils/confirm';
 import { humanize } from '../../src/utils/format';
 import { unregisterPush } from '../../src/utils/push';
@@ -198,7 +199,8 @@ function BubbleIcon({ name, danger }: { name: IconName; danger?: boolean }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgBottom },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 14 },
+  // Co-op look: the same solid band as the status bar
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 14, backgroundColor: isDark ? STATUS_BAR_COLOR : 'transparent' },
   backSpacer: { width: 40, height: 40 },
   back: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.glassStrong, borderWidth: 1, borderColor: colors.glassBorder },
   headerTitle: { flex: 1, textAlign: 'center', fontFamily: fonts.semibold, fontSize: 18 },

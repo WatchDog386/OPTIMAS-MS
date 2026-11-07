@@ -126,7 +126,8 @@ export function installSteps(kind: BrowserKind = browserKind()): string[] {
 }
 
 /** Phone status bar / browser toolbar colour: the same light grey as the top of every screen. */
-export const STATUS_BAR_COLOR = isDark ? '#17181B' : '#F3F3F3';
+/** Phone status bar colour; in the Co-op look also the top bar's background, so the two are one band. */
+export const STATUS_BAR_COLOR = isDark ? '#1A1C1B' : '#F3F3F3';
 
 /** Sets (or replaces) the page's theme-color, which Android paints into the status bar. */
 export function setThemeColor(color: string) {

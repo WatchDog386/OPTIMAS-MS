@@ -33,7 +33,7 @@ export default function CareHome() {
   const state: 'OFF' | 'ON' | 'DONE' = !record ? 'OFF' : record.checkOutAt ? 'DONE' : 'ON';
 
   return (
-    <Screen refreshing={chats.refreshing} onRefresh={refresh}>
+    <Screen refreshing={chats.refreshing} onRefresh={refresh} stickyHeader>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <Text variant="title" style={{ fontFamily: fonts.semibold, fontSize: 18 }}>
           Customer care

@@ -4,7 +4,7 @@ try {
   if (localStorage.getItem('optimas.theme') !== 'light') {
     document.documentElement.classList.add('dark');
     var m = document.querySelector('meta[name="theme-color"]');
-    if (m) m.setAttribute('content', '#0D1310');
+    if (m) m.setAttribute('content', '#1A1C1B');
   }
 } catch (e) {
   document.documentElement.classList.add('dark');
