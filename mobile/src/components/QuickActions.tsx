@@ -47,7 +47,7 @@ export function QuickActions({ items, title = 'Quick Actions', action }: { items
         {items.map((a) => (
           <Pressable key={a.label} onPress={a.onPress} style={({ pressed }) => [styles.item, pressed && { transform: [{ scale: 0.94 }], opacity: 0.8 }]} accessibilityRole="button" accessibilityLabel={a.label}>
             <View style={styles.circle}>
-              <Ionicons name={a.icon} size={20} color={a.tint ?? colors.brand} />
+              <Ionicons name={a.icon} size={20} color={a.tint ?? (isDark ? colors.white : colors.brand)} />
               {a.badge ? (
                 <View style={styles.badge}>
                   <Text variant="label" color={colors.white} fixedColor style={{ fontSize: 10, lineHeight: 12, fontFamily: fonts.bold }}>
@@ -68,7 +68,7 @@ export function QuickActions({ items, title = 'Quick Actions', action }: { items
 
 const styles = StyleSheet.create({
   // The Co-op "Quick Actions" panel: smoky glass over the photo
-  panel: { padding: 18, paddingBottom: 20, borderRadius: 22, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder },
+  panel: { padding: 18, paddingBottom: 20, borderRadius: 12, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.lg },
   manage: isDark
     ? { flexDirection: 'row', alignItems: 'center', gap: 6, height: 38, paddingHorizontal: 20, borderRadius: 19, backgroundColor: 'transparent', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.38)' }

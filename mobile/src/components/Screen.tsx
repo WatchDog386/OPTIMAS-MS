@@ -43,7 +43,8 @@ const FROST = Platform.OS === 'web' ? ({ backdropFilter: 'saturate(160%) blur(14
  * content slides under it, a frosted layer and a hairline fade in so the two stay readable.
  */
 function StickyHead({ children, scrollY, top }: { children: ReactNode; scrollY: Animated.Value; top: number }) {
-  const show = scrollY.interpolate({ inputRange: [0, 14], outputRange: [0, 1], extrapolate: 'clamp' });
+  // Co-op look: the dark band is always there (as on the Co-op home); light mode: it fades in on scroll
+  const show = isDark ? 1 : scrollY.interpolate({ inputRange: [0, 14], outputRange: [0, 1], extrapolate: 'clamp' });
   return (
     // The page's top padding moves inside the header, so a pinned title keeps its breathing room
     <View style={[styles.sticky, { paddingTop: top }]}>
@@ -121,7 +122,7 @@ const styles = StyleSheet.create({
   // Full width (cancels the page's side padding) so the frosted layer reaches both edges; the small
   // vertical padding is given back as negative margin so spacing is unchanged while not scrolled
   sticky: { marginHorizontal: -space.lg, paddingHorizontal: space.lg, paddingBottom: 10, marginBottom: -10, zIndex: 10 },
-  frost: { backgroundColor: isDark ? 'rgba(17,18,20,0.88)' : 'rgba(240,240,240,0.86)', borderBottomWidth: 1, borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(28,29,31,0.06)', shadowColor: '#1C1D1F', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
+  frost: { backgroundColor: isDark ? 'rgba(24,26,25,0.78)' : 'rgba(240,240,240,0.86)', borderBottomWidth: 1, borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(28,29,31,0.06)', shadowColor: '#1C1D1F', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
   footer: {
     paddingHorizontal: space.lg,
     paddingVertical: space.md,
