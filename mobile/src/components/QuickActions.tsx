@@ -47,7 +47,7 @@ export function QuickActions({ items, title = 'Quick Actions', action }: { items
         {items.map((a) => (
           <Pressable key={a.label} onPress={a.onPress} style={({ pressed }) => [styles.item, pressed && { transform: [{ scale: 0.94 }], opacity: 0.8 }]} accessibilityRole="button" accessibilityLabel={a.label}>
             <View style={styles.circle}>
-              <Ionicons name={a.icon} size={24} color={a.tint ?? colors.brand} />
+              <Ionicons name={a.icon} size={20} color={a.tint ?? colors.brand} />
               {a.badge ? (
                 <View style={styles.badge}>
                   <Text variant="label" color={colors.white} fixedColor style={{ fontSize: 10, lineHeight: 12, fontFamily: fonts.bold }}>
@@ -77,6 +77,6 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: space.lg },
   item: { width: '25%', alignItems: 'center', gap: space.sm, paddingHorizontal: 2 },
   // Co-op icon circles: deep green with a lighter rim
-  circle: { width: 58, height: 58, borderRadius: 29, backgroundColor: isDark ? '#0F5A3C' : colors.glassStrong, borderWidth: 1, borderColor: isDark ? 'rgba(141,198,63,0.35)' : colors.glassBorder, alignItems: 'center', justifyContent: 'center' },
+  circle: { width: 46, height: 46, borderRadius: 23, backgroundColor: isDark ? '#0F5A3C' : colors.glassStrong, borderWidth: 1, borderColor: isDark ? 'rgba(141,198,63,0.35)' : colors.glassBorder, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: -2, right: -2, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.white },
 });

@@ -260,11 +260,12 @@ function IconBtn({ icon, label, onPress }: { icon: keyof typeof Ionicons.glyphMa
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  hello: { fontFamily: fonts.semibold, fontSize: 17, textAlign: 'center' },
+  // Regular weight, like Co-op's "Hello Felix"
+  hello: { fontFamily: fonts.regular, fontSize: 17, textAlign: 'center' },
   icons: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   iconBtn: {
-    width: 38,
-    height: 38,
+    width: 34,
+    height: 34,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -291,7 +292,7 @@ const styles = StyleSheet.create({
   },
   seg: {
     flex: 1,
-    height: 44,
+    height: 36,
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
@@ -323,9 +324,9 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.charcoal,
     alignItems: 'center',
     justifyContent: 'center',
