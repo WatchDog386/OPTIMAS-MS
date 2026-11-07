@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import type { Charts } from '../../src/api/insights';
 import { Glass, Screen, ScreenHeader, Segmented, Text } from '../../src/components';
-import { AreaChart, BarChart, Donut, StackedBars } from '../../src/components/Charts';
+import { AreaChart, BarChart, Donut } from '../../src/components/Charts';
+import { AttendanceChartCard, ChartCard } from '../../src/components/AttendanceChartCard';
 import { useApi } from '../../src/hooks/useApi';
 import { colors, fonts, space } from '../../src/theme';
 import { humanize } from '../../src/utils/format';
@@ -20,8 +21,6 @@ export default function ChartsScreen() {
   const sum = (f: (r: Charts['perDay'][number]) => number) => rows.reduce((n, r) => n + f(r), 0);
   const jobs = sum((r) => r.completed);
   const cash = sum((r) => r.collected);
-  const present = sum((r) => r.present);
-  const late = sum((r) => r.late);
   const typeTotal = (data?.byType ?? []).reduce((n, t) => n + t.count, 0);
 
   return (
@@ -45,10 +44,7 @@ export default function ChartsScreen() {
         <AreaChart data={rows.map((r) => ({ label: short(r.date), value: r.collected }))} format={kes} />
       </ChartCard>
 
-      <ChartCard title="Attendance" big={`${present - late} on time`} note={`${late} late arrivals`}>
-        <StackedBars data={rows.map((r) => ({ label: short(r.date), a: r.present - r.late, b: r.late }))} />
-        <Legend items={[{ label: 'On time', color: colors.charcoal }, { label: 'Late', color: colors.warning }]} />
-      </ChartCard>
+      <AttendanceChartCard rows={rows} />
 
       <Glass strong style={{ gap: space.lg }}>
         <Text variant="h2">Job mix</Text>
@@ -78,42 +74,6 @@ export default function ChartsScreen() {
         <AreaChart data={rows.map((r) => ({ label: short(r.date), value: r.consumed }))} color={colors.garnet} format={(n) => `${n}m`} />
       </ChartCard>
     </Screen>
-  );
-}
-
-function ChartCard({ title, big, note, children }: { title: string; big: string; note: string; children: React.ReactNode }) {
-  return (
-    <Glass strong style={{ gap: space.md }}>
-      <View>
-        <Text variant="label" color={colors.textMuted}>
-          {title}
-        </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-          <Text variant="h1" style={{ fontFamily: fonts.semibold, fontSize: 22 }}>
-            {big}
-          </Text>
-          <Text variant="label" color={colors.textMuted}>
-            {note}
-          </Text>
-        </View>
-      </View>
-      {children}
-    </Glass>
-  );
-}
-
-function Legend({ items }: { items: { label: string; color: string }[] }) {
-  return (
-    <View style={{ flexDirection: 'row', gap: space.lg }}>
-      {items.map((i) => (
-        <View key={i.label} style={styles.legendRow}>
-          <View style={[styles.swatch, { backgroundColor: i.color }]} />
-          <Text variant="label" color={colors.textMuted}>
-            {i.label}
-          </Text>
-        </View>
-      ))}
-    </View>
   );
 }
 

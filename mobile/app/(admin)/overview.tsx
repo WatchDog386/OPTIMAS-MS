@@ -8,7 +8,6 @@ import {
   BrandFooter,
   Glass,
   GlassLink,
-  GlassStatCard,
   NotchCard,
   lastDays,
   Pill,
@@ -30,6 +29,7 @@ import { requestScan } from '../../src/store/bridge';
 import { colors, fonts } from '../../src/theme';
 import { duration, firstName } from '../../src/utils/format';
 import { useDesktop } from '../../src/theme/desktop';
+import { AttendanceChartCard } from '../../src/components/AttendanceChartCard';
 import { DeskButton, KpiCard, MiniStat, Panel, PanelRow } from '../../src/components/desktop/Kit';
 import { desk } from '../../src/components/desktop/DesktopShell';
 import { Pressable } from 'react-native';
@@ -437,19 +437,8 @@ export default function Overview() {
       ) : null}
 
       {managers ? (
-        <GlassStatCard
-          notched
-          onTab={() => router.push('/admin/attendance')}
-          title="Attendance today"
-          value={`${d?.attendance.checkedIn ?? 0}/${techs}`}
-          progress={techs ? (d?.attendance.checkedIn ?? 0) / techs : 0}
-          caption="Late · absent · checked out"
-          footer={`${d?.attendance.late ?? 0} · ${d?.attendance.absent ?? 0} · ${d?.attendance.checkedOut ?? 0}`}
-          secondaryIcon="shirt-outline"
-          onSecondary={() => router.push('/admin/reviews')}
-          icon="calendar-outline"
-          onAction={() => router.push('/admin/attendance')}
-        />
+        // The Attendance chart from Reports & charts, as it is there
+        <AttendanceChartCard />
       ) : (
         <Section
           title="Router accountability"
