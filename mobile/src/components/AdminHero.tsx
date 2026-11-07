@@ -261,7 +261,7 @@ function IconBtn({ icon, label, onPress }: { icon: keyof typeof Ionicons.glyphMa
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   // Regular weight, like Co-op's "Hello Felix"
-  hello: { fontFamily: fonts.regular, fontSize: 17, textAlign: 'center' },
+  hello: { fontFamily: fonts.medium, fontSize: 16, letterSpacing: -0.2, textAlign: 'center' },
   icons: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   iconBtn: {
     width: 34,

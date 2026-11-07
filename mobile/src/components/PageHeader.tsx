@@ -65,7 +65,8 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   side: { flex: 1, flexBasis: 0, alignItems: 'flex-start' },
   middle: { flexShrink: 1, maxWidth: '64%', alignItems: 'center' },
-  title: { textAlign: 'center', fontFamily: fonts.semibold, fontSize: 18 },
+  // SME page title: 17, medium, a little tight
+  title: { textAlign: 'center', fontFamily: fonts.medium, fontSize: 17, letterSpacing: -0.2 },
   btn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.glassStrong, borderWidth: 1, borderColor: colors.glassBorder },
   primary: { backgroundColor: colors.primary, borderColor: colors.primary },
   badge: { position: 'absolute', top: -3, right: -3, minWidth: 17, height: 17, borderRadius: 9, paddingHorizontal: 3, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.white },

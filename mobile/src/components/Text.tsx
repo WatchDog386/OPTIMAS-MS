@@ -1,5 +1,6 @@
 import { StyleSheet, Text as RNText, type TextProps, type TextStyle } from 'react-native';
 import { colors, fonts, type, useInverse, type TypeVariant } from '../theme';
+import { OPENED_ON_DESKTOP } from '../theme/desktop';
 
 interface Props extends TextProps {
   variant?: TypeVariant;
@@ -18,22 +19,37 @@ const inverseMap: Record<string, string> = {
 };
 
 /**
- * Co-op lettering, measured against the Co-op app: every size 20% smaller than the sizes written in the
- * screens, and one weight lighter for small text (headings of 15 and up keep SemiBold; Bold becomes
- * SemiBold). Applied here, once, so every screen follows.
+ * The Business-SME (sme.optimas) text sizes. Phones use SME's own table (its text is about 15% smaller
+ * than the sizes written in the screens: 14 → 12, 16 → 13.5, 17 → 14.5, 20 → 17 …); on a laptop the
+ * sizes stay as written and only the smallest text is raised, as SME does. Bold becomes SemiBold and
+ * small SemiBold becomes Medium, like SME's medium titles. Applied here, once, so every screen follows.
  */
-/** Headings (17 and up in the screens) shrink by 20%; card titles, body text and labels by 26%. */
-const scaleFor = (size: number) => (size >= 17 ? 0.8 : 0.74);
+const PHONE: [number, number][] = [
+  [9, 9], [10, 9], [11, 10], [12, 10.5], [13, 11], [14, 12], [15, 13], [16, 13.5], [17, 14.5], [18, 15.5],
+  [20, 17], [22, 19], [24, 20.5], [26, 22], [28, 24], [30, 25.5], [32, 27], [34, 29], [44, 37],
+];
+function smeSize(n: number) {
+  if (OPENED_ON_DESKTOP) return n < 11 ? 11 : n < 12 ? 12 : n < 13 ? 13 : n;
+  if (n <= PHONE[0][0]) return n;
+  for (let i = 1; i < PHONE.length; i++) {
+    const [x1, y1] = PHONE[i];
+    const [x0, y0] = PHONE[i - 1];
+    if (n <= x1) return Math.round((y0 + ((n - x0) * (y1 - y0)) / (x1 - x0)) * 2) / 2;
+  }
+  return Math.round(n * 0.84 * 2) / 2;
+}
 const LIGHTER: Record<string, string> = { [fonts.extrabold]: fonts.bold, [fonts.bold]: fonts.semibold };
 
-function coopStyle(style: TextStyle): TextStyle {
+function smeStyle(style: TextStyle): TextStyle {
   const out = { ...style };
-  const k = scaleFor(typeof out.fontSize === 'number' ? out.fontSize : 14);
-  if (typeof out.fontSize === 'number') out.fontSize = Math.round(out.fontSize * k * 2) / 2;
-  if (typeof out.lineHeight === 'number') out.lineHeight = Math.round(out.lineHeight * k * 2) / 2;
-  if (typeof out.letterSpacing === 'number') out.letterSpacing = out.letterSpacing * k;
+  if (typeof out.fontSize === 'number') {
+    const k = smeSize(out.fontSize) / out.fontSize;
+    out.fontSize = smeSize(out.fontSize);
+    if (typeof out.lineHeight === 'number') out.lineHeight = Math.round(out.lineHeight * k * 2) / 2;
+    if (typeof out.letterSpacing === 'number') out.letterSpacing = out.letterSpacing * k;
+  }
   if (out.fontFamily && LIGHTER[out.fontFamily]) out.fontFamily = LIGHTER[out.fontFamily];
-  else if (out.fontFamily === fonts.semibold && (out.fontSize ?? 14) < 12.5) out.fontFamily = fonts.medium;
+  else if (out.fontFamily === fonts.semibold && (out.fontSize ?? 14) < 14) out.fontFamily = fonts.medium;
   return out;
 }
 
@@ -41,5 +57,5 @@ export function Text({ variant = 'body', color = colors.text, align, fixedColor,
   const inverse = useInverse();
   const resolved = inverse && !fixedColor ? (inverseMap[color] ?? color) : color;
   const flat = StyleSheet.flatten([type[variant], { color: resolved, textAlign: align }, style]) as TextStyle;
-  return <RNText {...rest} style={coopStyle(flat)} />;
+  return <RNText {...rest} style={smeStyle(flat)} />;
 }

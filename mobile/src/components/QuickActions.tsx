@@ -37,7 +37,7 @@ export function QuickActions({ items, title = 'Quick Actions', action }: { items
             hitSlop={8}
           >
             {isDark ? null : <Ionicons name={action.icon ?? (action.active ? 'chevron-up' : 'options-outline')} size={15} color={action.active ? colors.white : colors.text} />}
-            <Text variant="bodySm" color={action.active ? colors.white : isDark ? colors.brand : colors.text} fixedColor={action.active || isDark} style={{ fontFamily: fonts.semibold, fontSize: 13 }}>
+            <Text variant="bodySm" color={action.active ? colors.white : isDark ? colors.brand : colors.text} fixedColor={action.active || isDark} style={{ fontFamily: fonts.semibold, fontSize: 15 }}>
               {action.label}
             </Text>
           </Pressable>
@@ -56,7 +56,7 @@ export function QuickActions({ items, title = 'Quick Actions', action }: { items
                 </View>
               ) : null}
             </View>
-            <Text variant="bodySm" align="center" numberOfLines={2} style={{ fontSize: 12, lineHeight: 15 }}>
+            <Text variant="bodySm" align="center" numberOfLines={2} style={{ fontSize: 13, lineHeight: 17 }}>
               {a.label}
             </Text>
           </Pressable>

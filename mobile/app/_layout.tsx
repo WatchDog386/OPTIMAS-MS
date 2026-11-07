@@ -9,6 +9,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Font from 'expo-font';
+import { OPENED_ON_DESKTOP } from '../src/theme/desktop';
 import { DesktopShell } from '../src/components/desktop/DesktopShell';
 import { OfflineBar, clearOfflineLeftovers } from '../src/components/OfflineBar';
 import { useAuth } from '../src/store/auth';
@@ -48,20 +49,31 @@ export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Pro
   );
 }
 
-// Open Sans, as in the Co-op app: small web font files (about 18 KB each, Latin letters only)
-const OPEN_SANS = {
-  OpenSans_400Regular: require('@fontsource/open-sans/files/open-sans-latin-400-normal.woff2'),
-  OpenSans_500Medium: require('@fontsource/open-sans/files/open-sans-latin-500-normal.woff2'),
-  OpenSans_600SemiBold: require('@fontsource/open-sans/files/open-sans-latin-600-normal.woff2'),
-  OpenSans_700Bold: require('@fontsource/open-sans/files/open-sans-latin-700-normal.woff2'),
-  OpenSans_800ExtraBold: require('@fontsource/open-sans/files/open-sans-latin-800-normal.woff2'),
+// The Business-SME lettering: Figtree on phones, Inter on a laptop or desktop (small web fonts, Latin only)
+const SANS = OPENED_ON_DESKTOP
+  ? {
+      AppSans_400Regular: require('@fontsource/inter/files/inter-latin-400-normal.woff2'),
+      AppSans_500Medium: require('@fontsource/inter/files/inter-latin-500-normal.woff2'),
+      AppSans_600SemiBold: require('@fontsource/inter/files/inter-latin-600-normal.woff2'),
+      AppSans_700Bold: require('@fontsource/inter/files/inter-latin-700-normal.woff2'),
+      AppSans_800ExtraBold: require('@fontsource/inter/files/inter-latin-800-normal.woff2'),
+    }
+  : {
+      AppSans_400Regular: require('@fontsource/figtree/files/figtree-latin-400-normal.woff2'),
+      AppSans_500Medium: require('@fontsource/figtree/files/figtree-latin-500-normal.woff2'),
+      AppSans_600SemiBold: require('@fontsource/figtree/files/figtree-latin-600-normal.woff2'),
+      AppSans_700Bold: require('@fontsource/figtree/files/figtree-latin-700-normal.woff2'),
+      AppSans_800ExtraBold: require('@fontsource/figtree/files/figtree-latin-800-normal.woff2'),
+    };
+const APP_FONTS = {
+  ...SANS,
   // Only the icons the app uses (48 KB instead of the full 390 KB set), under the name the icons look for,
   // so the full set is never downloaded. Rebuild with scripts/icons-subset.py after using a new icon.
   ionicons: require('../assets/fonts/ionicons-app.woff2'),
 };
 
 /**
- * Open Sans everywhere. A font that fails to download never keeps the app from opening: after a few
+ * The app's fonts. A font that fails to download never keeps the app from opening: after a few
  * seconds it opens anyway with the browser's own font.
  */
 function useAppFonts() {
@@ -75,7 +87,7 @@ function useAppFonts() {
       }
     };
     const giveUp = setTimeout(finish, 6000);
-    Font.loadAsync(OPEN_SANS)
+    Font.loadAsync(APP_FONTS)
       .catch(() => undefined)
       .finally(finish);
     return () => clearTimeout(giveUp);

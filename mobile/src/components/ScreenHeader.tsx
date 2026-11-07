@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { colors, radius, space } from '../theme';
+import { colors, fonts, radius, space } from '../theme';
 import { Text } from './Text';
 
 /** Top bar for pushed (stack) screens: back button, title, optional right action. */
@@ -15,11 +15,11 @@ export function ScreenHeader({ title, subtitle, right, back = true }: { title: s
         </Pressable>
       ) : null}
       <View style={{ flex: 1 }}>
-        <Text variant="h2" numberOfLines={1}>
+        <Text variant="h2" numberOfLines={1} style={{ fontFamily: fonts.medium, fontSize: 17, letterSpacing: -0.2 }}>
           {title}
         </Text>
         {subtitle ? (
-          <Text variant="bodySm" color={colors.textMuted} numberOfLines={1}>
+          <Text variant="body" color={colors.textMuted} numberOfLines={1}>
             {subtitle}
           </Text>
         ) : null}
