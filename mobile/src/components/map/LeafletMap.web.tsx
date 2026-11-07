@@ -15,7 +15,9 @@ import type { MapCanvasProps, MapPin } from './types';
 
 const TILE_URL = process.env.EXPO_PUBLIC_MAP_TILE_URL || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const TILE_ATTRIBUTION = process.env.EXPO_PUBLIC_MAP_TILE_ATTRIBUTION || '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
-const NAIROBI: LatLng = [-1.2864, 36.8172];
+// Where Optimas works: Nairobi, centred on Kahawa West. The map cannot be dragged or zoomed out beyond it.
+const KAHAWA_WEST: LatLng = [-1.1863, 36.9035];
+const SERVICE_AREA = L.latLngBounds([-1.45, 36.6], [-1.05, 37.15]);
 const GLIDE_MS = 1100;
 
 const DEFAULT_COLOR: Record<MapPin['kind'], string> = {
@@ -108,10 +110,21 @@ export default function LeafletMap({ pins, route, trail, fitKey, follow, recente
     if (!el) return;
     ensureStyles();
     el.classList.add('om-map');
-    const m = L.map(el, { zoomControl: false, attributionControl: true, center: NAIROBI, zoom: 12, zoomSnap: 0.25, fadeAnimation: true });
-    L.tileLayer(TILE_URL, { maxZoom: 19, attribution: TILE_ATTRIBUTION }).addTo(m);
+    const m = L.map(el, {
+      zoomControl: false,
+      attributionControl: true,
+      center: KAHAWA_WEST,
+      zoom: 14,
+      minZoom: 11,
+      maxBounds: SERVICE_AREA,
+      maxBoundsViscosity: 1,
+      zoomSnap: 0.25,
+      fadeAnimation: true,
+    });
+    // Only Nairobi's map tiles are fetched
+    L.tileLayer(TILE_URL, { maxZoom: 19, minZoom: 11, bounds: SERVICE_AREA, attribution: TILE_ATTRIBUTION }).addTo(m);
     m.attributionControl.setPrefix(false);
-    m.on('click', () => cb.current.onMapPress?.());
+    m.on('click', (e: L.LeafletMouseEvent) => cb.current.onMapPress?.({ lat: e.latlng.lat, lng: e.latlng.lng }));
     m.on('dragstart', () => {
       userPanned.current = true;
       cb.current.onUserPan?.();

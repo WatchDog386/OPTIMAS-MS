@@ -26,7 +26,7 @@ const schema = z.object({
   OFFICE_LNG: optionalNumber.default(36.903793),
   OFFICE_RADIUS_M: z.coerce.number().default(300),
   /** Where staff check in, by address: looked up on the map when no coordinates are set. */
-  OFFICE_ADDRESS: z.string().default('Barber & Spa, Kahawa Station Road, Githurai, Kenya'),
+  OFFICE_ADDRESS: z.string().default('Barber & Spa, Kahawa Station Road, Kahawa West, Nairobi'),
   MAX_ROUTERS_IN_CUSTODY: z.coerce.number().default(5),
   CUSTODY_AGE_ALERT_DAYS: z.coerce.number().default(3),
   PUSH_ENABLED: z

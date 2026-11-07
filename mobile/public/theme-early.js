@@ -9,3 +9,10 @@ try {
 } catch (e) {
   document.documentElement.classList.add('dark');
 }
+
+// The page itself never scrolls (the app scrolls inside its own lists): put it back if anything moves it
+window.addEventListener('scroll', function () {
+  if (window.scrollX || window.scrollY) window.scrollTo(0, 0);
+  var r = document.documentElement;
+  if (r.scrollTop || r.scrollLeft) { r.scrollTop = 0; r.scrollLeft = 0; }
+});

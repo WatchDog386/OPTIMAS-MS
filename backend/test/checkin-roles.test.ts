@@ -40,5 +40,15 @@ describe('office location', () => {
     expect(set.status).toBe(200);
     const got = await api().get('/api/v1/attendance/office').set(auth(tech.token));
     expect(got.body.office).toMatchObject({ ...spot, source: 'app' });
+
+    // A spot outside Nairobi (e.g. GPS gone wrong) is refused
+    const far = await api().put('/api/v1/attendance/office').set(auth(sup)).send({ ...spot, lat: -4.04, lng: 39.66 });
+    expect(far.status).toBe(400);
+    expect(far.body.error.code).toBe('OUTSIDE_SERVICE_AREA');
+    // Undo: back to the office from the settings, and only managers may do it
+    expect((await api().delete('/api/v1/attendance/office').set(auth(tech.token))).status).toBe(403);
+    const reset = await api().delete('/api/v1/attendance/office').set(auth(sup));
+    expect(reset.status).toBe(200);
+    expect(reset.body.office.source).toBe('settings');
   });
 });

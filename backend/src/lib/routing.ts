@@ -125,11 +125,20 @@ export async function drivingRoute(from: [number, number], to: [number, number])
   }
 }
 
-/** Coordinates for a typed Kenyan address, or null. Never throws. */
+/**
+ * Where Optimas works: Nairobi and its edges, centred on Kahawa West (west, south, east, north). Address
+ * look-ups stay inside it, so "Kahawa Station Road" is never matched to a road of the same name elsewhere.
+ */
+export const SERVICE_AREA = { west: 36.6, south: -1.45, east: 37.15, north: -1.05 };
+export const inServiceArea = (lat: number, lng: number) =>
+  lat >= SERVICE_AREA.south && lat <= SERVICE_AREA.north && lng >= SERVICE_AREA.west && lng <= SERVICE_AREA.east;
+
+/** Coordinates for a typed address in the service area (Nairobi), or null. Never throws. */
 export async function geocode(address: string): Promise<{ lat: number; lng: number } | null> {
   if (!env.GEOCODING_URL || env.NODE_ENV === 'test' || address.trim().length < 3) return null;
   try {
-    const url = `${env.GEOCODING_URL.replace(/\/$/, '')}/search?format=json&limit=1&countrycodes=ke&q=${encodeURIComponent(address)}`;
+    const box = `${SERVICE_AREA.west},${SERVICE_AREA.north},${SERVICE_AREA.east},${SERVICE_AREA.south}`;
+    const url = `${env.GEOCODING_URL.replace(/\/$/, '')}/search?format=json&limit=1&countrycodes=ke&viewbox=${box}&bounded=1&q=${encodeURIComponent(address)}`;
     const res = await fetch(url, { signal: AbortSignal.timeout(4000), headers: { 'User-Agent': 'OptimasMS/1.0 (field service app)' } });
     if (!res.ok) return null;
     const [hit] = (await res.json()) as { lat: string; lon: string }[];

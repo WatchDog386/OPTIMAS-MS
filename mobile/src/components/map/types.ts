@@ -38,7 +38,8 @@ export interface MapCanvasProps {
   padBottom?: number;
   padTop?: number;
   onPinPress?: (id: string) => void;
-  onMapPress?: () => void;
+  /** A tap on the map (not on a pin), with where it landed. */
+  onMapPress?: (at?: { lat: number; lng: number }) => void;
   /** Called when the person drags the map (e.g. to show a "recentre" button). */
   onUserPan?: () => void;
   style?: StyleProp<ViewStyle>;

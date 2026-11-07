@@ -21,9 +21,10 @@ export async function getOffice(): Promise<Office | null> {
   } else if (env.OFFICE_LAT !== undefined && env.OFFICE_LNG !== undefined) {
     office = { lat: env.OFFICE_LAT, lng: env.OFFICE_LNG, radiusM: env.OFFICE_RADIUS_M, name: env.OFFICE_ADDRESS, source: 'settings' };
   } else {
-    // The address, then just the road and area if the shop itself is not on the map
-    const road = env.OFFICE_ADDRESS.split(',').slice(1).join(',').trim();
-    const hit = (await geocode(env.OFFICE_ADDRESS)) ?? (road ? await geocode(road) : null);
+    // The address, then the road and area, then just the area, if the shop itself is not on the map
+    const parts = env.OFFICE_ADDRESS.split(',').map((p) => p.trim());
+    let hit = null;
+    for (let i = 0; i < parts.length - 1 && !hit; i++) hit = await geocode(parts.slice(i).join(', '));
     if (hit) {
       office = { ...hit, radiusM: env.OFFICE_RADIUS_M, name: env.OFFICE_ADDRESS, source: 'address' };
       await prisma.setting.upsert({ where: { key: KEY }, create: { key: KEY, value: office }, update: {} }).catch(() => undefined);
@@ -39,4 +40,11 @@ export async function setOffice(office: Omit<Office, 'source'>, userId: string) 
   await prisma.setting.upsert({ where: { key: KEY }, create: { key: KEY, value, updatedById: userId }, update: { value, updatedById: userId } });
   cached = { at: Date.now(), office: value };
   return value;
+}
+
+/** Forgets the spot set from a phone: the office goes back to the settings or the office address. */
+export async function resetOffice() {
+  await prisma.setting.deleteMany({ where: { key: KEY } });
+  cached = null;
+  return getOffice();
 }

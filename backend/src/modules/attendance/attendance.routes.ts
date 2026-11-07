@@ -12,7 +12,8 @@ import { parse } from '../../middleware/validate';
 import { consumePhoto, eventTime } from '../capture/capture.service';
 import { notify, notifyRoles } from '../notifications/notifications.service';
 import { time as fmtTime } from '../../lib/time';
-import { getOffice, setOffice } from '../../lib/office';
+import { getOffice, resetOffice, setOffice } from '../../lib/office';
+import { inServiceArea } from '../../lib/routing';
 
 export const attendanceRouter = Router();
 
@@ -163,8 +164,20 @@ attendanceRouter.put(
       z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180), radiusM: z.number().int().min(50).max(2000).default(300), name: z.string().trim().min(2).max(120).default('Office') }),
       req.body,
     );
+    if (!inServiceArea(body.lat, body.lng)) throw badRequest('That spot is outside Nairobi. Stand at the office, or tap the office on the map.', 'OUTSIDE_SERVICE_AREA');
     const office = await setOffice(body, me(req).id);
     await audit(me(req).id, 'OFFICE_SET', 'Setting', 'office', `Office set to ${body.name} (${body.lat.toFixed(5)}, ${body.lng.toFixed(5)}, ${body.radiusM} m)`);
+    res.json({ office });
+  }),
+);
+
+/** Undo a spot set from a phone by mistake: back to the office address (Kahawa West) or the settings. */
+attendanceRouter.delete(
+  '/office',
+  requireRole(ROLES.MANAGERS),
+  ah(async (req, res) => {
+    const office = await resetOffice();
+    await audit(me(req).id, 'OFFICE_RESET', 'Setting', 'office', office ? `Office reset to ${office.name} (${office.lat.toFixed(5)}, ${office.lng.toFixed(5)})` : 'Office reset; the address could not be found on the map');
     res.json({ office });
   }),
 );

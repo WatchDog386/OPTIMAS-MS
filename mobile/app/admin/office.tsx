@@ -4,6 +4,7 @@ import { api, ApiError } from '../../src/api/client';
 import { Button, Glass, Input, Loading, MapCanvas, Screen, ScreenHeader, Segmented, Text, type MapPin } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { toast } from '../../src/store/feedback';
+import { confirmAction } from '../../src/utils/confirm';
 import { colors, radius, space } from '../../src/theme';
 import { distanceLabel, metres, watchFix, type Fix } from '../../src/utils/location';
 
@@ -14,7 +15,7 @@ const RADII = [
   { value: '500', label: '500 m' },
   { value: '1000', label: '1 km' },
 ];
-const SOURCE: Record<Office['source'], string> = { app: 'Set from a phone at the office', settings: 'From the server settings', address: 'Found from the address on the map' };
+const SOURCE: Record<Office['source'], string> = { app: 'Set in the app (map or phone location)', settings: 'From the server settings', address: 'Found from the address on the map' };
 
 /**
  * The office where staff check in and out. Stand at the office and tap "Use my current location": the
@@ -27,6 +28,8 @@ export default function OfficeLocation() {
   const [radiusM, setRadiusM] = useState('300');
   const [name, setName] = useState('Barber & Spa, Kahawa Station Rd, Githurai');
   const [busy, setBusy] = useState(false);
+  // A spot tapped on the map, waiting to be saved
+  const [picked, setPicked] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => watchFix(setFix, () => setGpsOff(true)), []);
   useEffect(() => {
@@ -40,15 +43,23 @@ export default function OfficeLocation() {
   const pins: MapPin[] = [];
   if (office) pins.push({ id: 'office', kind: 'site', lat: office.lat, lng: office.lng, label: 'Office' });
   if (fix) pins.push({ id: 'me', kind: 'me', lat: fix.lat, lng: fix.lng, live: true });
+  if (picked) pins.push({ id: 'picked', kind: 'job', lat: picked.lat, lng: picked.lng, label: 'New', selected: true });
   const away = office && fix ? metres([fix.lat, fix.lng], [office.lat, office.lng]) : null;
 
-  const save = async () => {
-    if (!fix) return toast.warning('Waiting for GPS', 'Stand outside or near a window for a moment, then try again.');
-    if ((fix.accuracy ?? 999) > 100) return toast.warning('GPS not accurate enough yet', `It is ±${Math.round(fix.accuracy ?? 0)} m. Wait a few seconds near a window and try again.`);
+  /** Saves a spot as the office, after saying how far that moves it. */
+  const saveSpot = async (spot: { lat: number; lng: number }, how: string) => {
+    const moves = office ? metres([spot.lat, spot.lng], [office.lat, office.lng]) : null;
+    const ok = await confirmAction(
+      'Move the office here?',
+      `${how}${moves != null ? ` This moves the office ${distanceLabel(moves)} from where it is now.` : ''} Check-ins further than ${distanceLabel(Number(radiusM))} from this spot will be flagged.`,
+      'Save office',
+    );
+    if (!ok) return;
     setBusy(true);
     try {
-      await api('/attendance/office', { method: 'PUT', body: { lat: fix.lat, lng: fix.lng, radiusM: Number(radiusM), name: name.trim() || 'Office' } });
+      await api('/attendance/office', { method: 'PUT', body: { lat: spot.lat, lng: spot.lng, radiusM: Number(radiusM), name: name.trim() || 'Office' } });
       toast.success('Office location saved', 'Check-ins and check-outs are now measured from here.');
+      setPicked(null);
       refresh();
     } catch (e) {
       toast.error('Not saved', e instanceof ApiError ? e.message : 'Try again');
@@ -57,11 +68,44 @@ export default function OfficeLocation() {
     }
   };
 
+  const useMyLocation = async () => {
+    if (!fix) return toast.warning('Waiting for GPS', 'Stand outside or near a window for a moment, then try again.');
+    if ((fix.accuracy ?? 999) > 100) return toast.warning('GPS not accurate enough yet', `It is ±${Math.round(fix.accuracy ?? 0)} m. Wait a few seconds near a window and try again.`);
+    await saveSpot(fix, 'Only do this while you are standing inside the office.');
+  };
+
+  /** Undo a wrong spot: back to the office address (Barber & Spa, Kahawa Station Rd, Kahawa West). */
+  const reset = async () => {
+    if (!(await confirmAction('Reset the office?', 'The office goes back to its address, Barber & Spa, Kahawa Station Road, Kahawa West.', 'Reset'))) return;
+    setBusy(true);
+    try {
+      const r = await api<{ office: Office | null }>('/attendance/office', { method: 'DELETE' });
+      toast.success('Office reset', r.office ? `${r.office.name}` : 'The address could not be found on the map. Tap the office on the map instead.');
+      setPicked(null);
+      refresh();
+    } catch (e) {
+      toast.error('Not reset', e instanceof ApiError ? e.message : 'Try again');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
-    <Screen footer={<Button label="Use my current location" icon="locate" size="lg" loading={busy} disabled={!fix} onPress={save} />}>
+    <Screen
+      footer={
+        picked ? (
+          <View style={{ flexDirection: 'row', gap: space.sm }}>
+            <Button label="Cancel" variant="secondary" onPress={() => setPicked(null)} style={{ flex: 1 }} />
+            <Button label="Save this spot" icon="checkmark" loading={busy} onPress={() => void saveSpot(picked, 'You tapped this spot on the map.')} style={{ flex: 1.5 }} />
+          </View>
+        ) : (
+          <Button label="Use my current location" icon="locate" size="lg" variant="outline" loading={busy} disabled={!fix} onPress={() => void useMyLocation()} />
+        )
+      }
+    >
       <ScreenHeader title="Office location" subtitle="Where staff check in and out" />
       <View style={styles.map}>
-        {pins.length ? <MapCanvas pins={pins} fitKey={`${pins.length}`} style={{ flex: 1 }} /> : null}
+        <MapCanvas pins={pins} fitKey={`${office?.lat ?? ''}${office?.lng ?? ''}`} onMapPress={(at) => at && setPicked(at)} style={{ flex: 1 }} />
       </View>
       <Glass strong style={{ gap: 6 }}>
         {office ? (
@@ -89,8 +133,9 @@ export default function OfficeLocation() {
       </Text>
       <Segmented options={RADII} value={radiusM} onChange={setRadiusM} />
       <Text variant="bodySm" color={colors.textMuted}>
-        Stand inside the office and tap “Use my current location”. Your phone’s GPS becomes the office.
+        Tap the office on the map to place it exactly, then Save this spot. Or stand inside the office and use your location.
       </Text>
+      {office?.source === 'app' ? <Button label="Reset to the office address" icon="refresh" variant="secondary" loading={busy} onPress={() => void reset()} /> : null}
     </Screen>
   );
 }
