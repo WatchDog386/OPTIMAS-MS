@@ -28,7 +28,7 @@ describe('device labels: is this the one we issued?', () => {
     // The label's QR is a link (so any phone's own scanner opens the app): the code inside is read and checked
     const link = `https://ms.optimaswifi.co.ke/verify?c=${encodeURIComponent(a.code)}`;
     expect((await verify(tech.token, link)).body).toMatchObject({ label: 'genuine', verdict: { tone: 'success' } });
-    expect((await verify(tech.token, link.slice(0, -2) + '00')).body.label).toBe('fake');
+    expect((await verify(tech.token, link.slice(0, -1) + (link.endsWith('0') ? '1' : '0'))).body.label).toBe('fake');
 
     // A copied label on another serial, an edited signature, and an unknown device
     const forged = `OPTIMAS:${b.serial}:${a.code.split(':')[2]}`;

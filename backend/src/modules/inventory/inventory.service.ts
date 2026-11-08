@@ -140,10 +140,18 @@ export async function issueBulk(tx: Tx, actorId: string, toUserId: string, itemI
 export async function acceptUnits(tx: Tx, userId: string, unitIds?: string[], scanned?: string[]) {
   // Accepting by scanning: every scanned device must be one issued to this person and not yet accepted
   if (scanned?.length) {
-    const found = await unitsBySerial(tx, scanned);
-    const wrong = found.filter((u) => u.holderId !== userId || u.status !== 'IN_TRANSIT');
-    if (wrong.length) throw conflict(`Not waiting for you: ${wrong.map((u) => u.serialNumber).join(', ')}. Only accept the devices issued to you.`, 'NOT_ISSUED_TO_YOU');
-    unitIds = found.map((u) => u.id);
+    // Any form of the device's code matches (SN as text or hex, MAC, with "SN:" in front)
+    const waiting = await tx.serialUnit.findMany({ where: { holderId: userId, status: 'IN_TRANSIT' } });
+    const ids = new Set<string>();
+    const wrong: string[] = [];
+    for (const raw of normalise(scanned)) {
+      const unit = matchUnit(waiting, raw);
+      if (unit) ids.add(unit.id);
+      else wrong.push(readCode(raw).serial);
+    }
+    if (wrong.length) throw conflict(`Not waiting for you: ${wrong.join(', ')}. Only accept the devices issued to you.`, 'NOT_ISSUED_TO_YOU');
+    if (!ids.size) return { accepted: 0 };
+    unitIds = [...ids];
   }
   const units = await tx.serialUnit.findMany({
     where: { holderId: userId, status: 'IN_TRANSIT', ...(unitIds?.length ? { id: { in: unitIds } } : {}) },
@@ -235,13 +243,22 @@ export function codeVariants(raw: string): string[] {
  * part of the scan, as when a label adds a prefix). Null when none of their devices fits.
  */
 export async function findHeldUnit(tx: Tx, userId: string, raw: string) {
-  const variants = codeVariants(raw);
   const held = await tx.serialUnit.findMany({ where: { holderId: userId, status: { in: [...CUSTODY] } }, include: { item: true } });
+  return matchUnit(held, raw);
+}
+
+/**
+ * Which of these devices a scanned code means: the exact serial, its other GPON form, its MAC address,
+ * or — when only one of them fits — a serial the scan is part of (or that is part of the scan, as when a
+ * label adds a prefix). Null when none fits.
+ */
+export function matchUnit<U extends { serialNumber: string; macAddress: string | null }>(units: U[], raw: string): U | null {
+  const variants = codeVariants(raw);
   const mac = (m: string | null) => (m ?? '').toUpperCase().replace(/[\s:.-]/g, '');
-  const exact = held.find((u) => variants.includes(u.serialNumber) || (u.macAddress && variants.includes(mac(u.macAddress))));
+  const exact = units.find((u) => variants.includes(u.serialNumber) || (u.macAddress && variants.includes(mac(u.macAddress))));
   if (exact) return exact;
   const long = variants.filter((v) => v.length >= 6);
-  const partial = held.filter((u) => long.some((v) => u.serialNumber.includes(v) || v.includes(u.serialNumber)));
+  const partial = units.filter((u) => long.some((v) => u.serialNumber.includes(v) || v.includes(u.serialNumber)));
   return partial.length === 1 ? partial[0] : null;
 }
 
@@ -294,19 +311,29 @@ export async function consumeBulk(tx: Tx, userId: string, itemId: string, quanti
 
 /** Technician scans every unit physically in hand; we compare against the ledger. */
 export async function stockCount(tx: Tx, userId: string, scannedSerials: string[]) {
-  const scanned = normalise(scannedSerials);
   const held = await tx.serialUnit.findMany({ where: { holderId: userId, status: { in: [...CUSTODY] } } });
+  const found = new Set<string>();
+  const unexpected = new Set<string>();
+  for (const raw of normalise(scannedSerials)) {
+    // Any form of a device's code counts (SN as text or hex, MAC, with "SN:" in front)
+    const unit = matchUnit(held, raw);
+    if (unit) {
+      found.add(unit.serialNumber);
+      continue;
+    }
+    const known = await tx.serialUnit.findFirst({ where: { serialNumber: { in: codeVariants(raw) } }, select: { serialNumber: true, status: true } });
+    // A device already installed at a customer is not something they should be holding: not a mismatch
+    if (known?.status === 'INSTALLED') continue;
+    unexpected.add(known?.serialNumber ?? readCode(raw).serial);
+  }
   const expected = held.map((u) => u.serialNumber);
-  const expectedSet = new Set(expected);
-  const scannedSet = new Set(scanned);
-  const count = await tx.stockCount.create({
+  return tx.stockCount.create({
     data: {
       userId,
       expected,
-      scanned,
-      missing: expected.filter((s) => !scannedSet.has(s)),
-      unexpected: scanned.filter((s) => !expectedSet.has(s)),
+      scanned: [...found, ...unexpected],
+      missing: expected.filter((s) => !found.has(s)),
+      unexpected: [...unexpected],
     },
   });
-  return count;
 }

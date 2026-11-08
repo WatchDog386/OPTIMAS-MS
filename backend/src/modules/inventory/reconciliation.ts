@@ -1,5 +1,6 @@
 import { env } from '../../config/env';
 import { prisma } from '../../lib/prisma';
+import { codeVariants, matchUnit } from './inventory.service';
 
 const DAY_MS = 86_400_000;
 
@@ -18,11 +19,17 @@ export async function buildReconciliation() {
     }),
     prisma.serialUnit.findMany({
       where: { status: { in: ['IN_TRANSIT', 'WITH_TECHNICIAN'] } },
-      select: { holderId: true, serialNumber: true, status: true, heldSince: true, item: { select: { name: true } } },
+      select: { holderId: true, serialNumber: true, macAddress: true, status: true, heldSince: true, item: { select: { name: true } } },
     }),
     prisma.bulkHolding.findMany({ where: { quantity: { gt: 0 } }, include: { item: { select: { name: true, unit: true } } } }),
     prisma.stockCount.findMany({ orderBy: { createdAt: 'desc' }, distinct: ['userId'] }),
   ]);
+
+  // Devices a past count flagged as "not on record" that are installed at a customer now
+  const flagged = [...new Set(counts.flatMap((c) => c.unexpected.flatMap((u) => codeVariants(u))))];
+  const installedNow = new Set(
+    flagged.length ? (await prisma.serialUnit.findMany({ where: { serialNumber: { in: flagged }, status: 'INSTALLED' }, select: { serialNumber: true } })).map((u) => u.serialNumber) : [],
+  );
 
   const alertBefore = Date.now() - env.CUSTODY_AGE_ALERT_DAYS * DAY_MS;
   const report = techs.map((t) => {
@@ -30,7 +37,17 @@ export async function buildReconciliation() {
       moves.filter((m) => m.type === type && (dir === 'to' ? m.toUserId : m.fromUserId) === t.id).length;
     const inHand = held.filter((h) => h.holderId === t.id);
     const overdue = inHand.filter((h) => h.heldSince && h.heldSince.getTime() < alertBefore);
-    const lastCount = counts.find((c) => c.userId === t.id);
+    const raw = counts.find((c) => c.userId === t.id);
+    // The last count as it stands today: a device it found missing that has since been installed,
+    // returned or marked lost is no longer missing; a code it did not recognise that is one of their
+    // devices (written another way) or is installed at a customer is not a mismatch
+    const lastCount = raw
+      ? {
+          ...raw,
+          missing: raw.missing.filter((s) => inHand.some((h) => h.serialNumber === s)),
+          unexpected: raw.unexpected.filter((u) => !matchUnit(inHand, u) && !codeVariants(u).some((v) => installedNow.has(v))),
+        }
+      : null;
     return {
       technician: { id: t.id, name: t.name, staffNo: t.staffNo },
       serialised: {

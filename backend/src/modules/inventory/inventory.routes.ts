@@ -350,7 +350,12 @@ inventoryRouter.get(
         .filter((u) => u.status === 'WITH_TECHNICIAN')
         .map((u) => ({ ...u, daysHeld: u.heldSince ? Math.floor((now - u.heldSince.getTime()) / DAY_MS) : 0 })),
       bulk,
-      lastCount,
+      // As it stands today: devices since installed, returned or lost are no longer missing
+      lastCount: lastCount && {
+        ...lastCount,
+        missing: lastCount.missing.filter((s) => units.some((u) => u.serialNumber === s)),
+        unexpected: lastCount.unexpected.filter((c) => !svc.matchUnit(units, c)),
+      },
       ageAlertDays: env.CUSTODY_AGE_ALERT_DAYS,
     });
   }),
@@ -428,7 +433,10 @@ inventoryRouter.post(
       void notifyRoles(['STOREKEEPER', 'SUPERVISOR', 'ADMIN'], {
         type: 'STOCK_COUNT_MISMATCH',
         title: `Stock count mismatch — ${me(req).name}`,
-        body: [count.missing.length && `Missing: ${count.missing.join(', ')}`, count.unexpected.length && `Unexpected: ${count.unexpected.join(', ')}`]
+        body: [
+          count.missing.length && `Not scanned: ${count.missing.join(', ')} (if installed, mark it installed in My stock or Trace a device)`,
+          count.unexpected.length && `Not on their record: ${count.unexpected.join(', ')}`,
+        ]
           .filter(Boolean)
           .join(' · '),
         data: { userId: me(req).id },

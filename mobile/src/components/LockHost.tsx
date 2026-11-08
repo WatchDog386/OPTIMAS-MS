@@ -72,8 +72,8 @@ function justSwitchedTheme() {
 }
 
 /** Lock-screen colours (like WhatsApp's): near-black page, green lock and green "Unlock". */
-// Always the dark lock page, in light and dark mode alike
-const LOCK = { bg: '#0B1014', icon: '#25D366', green: '#21C063', text: '#E9EDEF', line: '#3B4A54', dim: '#8696A0' };
+// Always the white lock page, in light and dark mode alike
+const LOCK = { bg: '#FFFFFF', icon: '#25D366', green: '#1DAA61', text: '#111B21', line: '#D1D7DB', dim: '#667781' };
 
 /**
  * The lock screen, as in WhatsApp: a green lock, "Optimas Locked" and one Unlock button. Tapping Unlock
@@ -136,7 +136,7 @@ function LockScreen({ onUnlocked }: { name: string; onUnlocked: () => void }) {
 }
 
 /**
- * The look of the lock: a green lock, "Optimas Locked" and an outlined Unlock button on a dark page,
+ * The look of the lock: a green lock, "Optimas Locked" and an outlined Unlock button on a white page,
  * with optional small links underneath. Used by the in-app lock and by the sign-in page when fingerprint is set up.
  */
 export function LockedView({ busy, onUnlock, links }: { busy: boolean; onUnlock: () => void; links: { label: string; onPress: () => void; dim?: boolean }[] }) {

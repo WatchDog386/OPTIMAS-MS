@@ -70,3 +70,40 @@ describe('scanning the device installed: it leaves "in hand" and shows as instal
     expect(row.serialised).toMatchObject({ inHand: 0, installed: 1 });
   });
 });
+
+describe('stock counts and reconciliation do not raise false alarms', () => {
+  it('matches any form of a code, ignores installed devices, and re-checks old counts', async () => {
+    const admin = (await login('FBI-ADM-001')).token;
+    const store = (await login('FBI-STR-001')).token;
+    const tech = await newTechnician(admin);
+    const a = hex8();
+    const b = `MRB${hex8()}`;
+    await issueRouter(store, tech.user.id, `48575443${a}`);
+    await issueRouter(store, tech.user.id, b, `A4:${hex8().match(/../g)!.join(':')}:0C`);
+    // Confirming receipt by scanning the other form of the serial works
+    expect((await api().post('/api/v1/inventory/accept').set(auth(tech.token)).send({ serials: [`SN: HWTC${a}`] })).body.accepted).toBe(1);
+    await api().post('/api/v1/inventory/accept').set(auth(tech.token)).send({});
+
+    // Scanned by the text form and by the MAC: nothing missing, nothing unexpected
+    const mac = (await api().get(`/api/v1/inventory/units/${b}/history`).set(auth(store))).body.unit.macAddress;
+    const ok = await api().post('/api/v1/inventory/stock-count').set(auth(tech.token)).send({ serials: [`HWTC${a}`, mac] });
+    expect(ok.body.count).toMatchObject({ missing: [], unexpected: [] });
+
+    // One router installed but never recorded: the count says it is missing...
+    const miss = await api().post('/api/v1/inventory/stock-count').set(auth(tech.token)).send({ serials: [`HWTC${a}`] });
+    expect(miss.body.count.missing).toEqual([b]);
+    let row = (await api().get('/api/v1/inventory/reconciliation').set(auth(store))).body.technicians.find((t: { technician: { id: string } }) => t.technician.id === tech.user.id);
+    expect(row.lastCount.missing).toEqual([b]);
+    expect(row.risk).toBe('HIGH');
+    // ...until it is recorded as installed; then reconciliation no longer counts it
+    expect((await api().post('/api/v1/inventory/install').set(auth(tech.token)).send({ serial: b, customerAccount: 'FBI-CUS-90001' })).status).toBe(200);
+    row = (await api().get('/api/v1/inventory/reconciliation').set(auth(store))).body.technicians.find((t: { technician: { id: string } }) => t.technician.id === tech.user.id);
+    expect(row.lastCount.missing).toEqual([]);
+    expect(row.risk).toBe('NORMAL');
+    expect((await api().get('/api/v1/inventory/my').set(auth(tech.token))).body.lastCount.missing).toEqual([]);
+
+    // Scanning a router already installed at a customer is not "unexpected"
+    const again = await api().post('/api/v1/inventory/stock-count').set(auth(tech.token)).send({ serials: [`HWTC${a}`, b] });
+    expect(again.body.count).toMatchObject({ missing: [], unexpected: [] });
+  });
+});
