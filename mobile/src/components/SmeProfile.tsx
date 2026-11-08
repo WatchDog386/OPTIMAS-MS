@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
+import { Pressable } from 'react-native';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -11,6 +12,7 @@ import { fonts } from '../theme';
 import { confirmAction } from '../utils/confirm';
 import { humanize } from '../utils/format';
 import { unregisterPush } from '../utils/push';
+import { changeAvatar, removeAvatar } from '../utils/avatar';
 import { ProfileInstallCard } from './InstallPrompt';
 import { useLocationSetting } from './LocationSetting';
 import { usePrivacyItems } from './PrivacyRows';
@@ -54,7 +56,14 @@ export function SmeProfilePage({ tools = [], children, tabs = true }: { tools?: 
   const others = privacy.filter((p) => p.key !== 'lock' && p.key !== 'theme');
   useEffect(() => usePageLoad.getState().shown(), []);
 
-  const edit = () => router.push((managers ? `/admin/user-edit?id=${user.id}` : '/change-password') as never);
+  // The pencil changes the photo; the new account comes back from the server
+  const photo = async (fn: () => Promise<User | null>) => {
+    const updated = await fn();
+    if (updated) me.setData({ user: updated });
+  };
+  const allTools: ProfileTool[] = managers
+    ? [...tools, { key: 'edit', icon: 'create-outline', title: 'Edit my details', sub: 'Name, phone, e-mail and region', onPress: () => router.push(`/admin/user-edit?id=${user.id}` as never) }]
+    : tools;
   const signOut = async () => {
     if (!(await confirmAction('Log out', 'Are you sure you want to log out?', 'Log out'))) return;
     await unregisterPush();
@@ -67,7 +76,7 @@ export function SmeProfilePage({ tools = [], children, tabs = true }: { tools?: 
       <SmeAppBar title="My Profile" />
       <ScrollView contentContainerStyle={[styles.body, { paddingBottom: (tabs ? TAB_BAR_CLEARANCE : 32) + insets.bottom }]} showsVerticalScrollIndicator={false}>
         <View style={styles.head}>
-          <ProfileRing percent={completion(user)} initial={user.name?.charAt(0).toUpperCase()} onEdit={edit} />
+          <ProfileRing percent={completion(user)} initial={user.name?.charAt(0).toUpperCase()} photo={user.avatarUrl} onEdit={() => void photo(changeAvatar)} />
           <Text variant="title" color={SME.fg} fixedColor style={styles.name}>
             {user.name}
           </Text>
@@ -76,14 +85,26 @@ export function SmeProfilePage({ tools = [], children, tabs = true }: { tools?: 
             {user.phone ? <Line icon="call-outline" text={user.phone} /> : null}
             {user.email ? <Line icon="mail-outline" text={user.email} /> : null}
           </View>
+          {user.avatarUrl ? (
+            <Pressable onPress={() => void photo(removeAvatar)} hitSlop={8} accessibilityRole="button" style={styles.remove}>
+              <Ionicons name="trash-outline" size={13} color="#DC2626" />
+              <Text variant="label" color="#DC2626" fixedColor style={{ fontFamily: fonts.medium, fontSize: 12 }}>
+                Remove photo
+              </Text>
+            </Pressable>
+          ) : (
+            <Text variant="label" color={SME.fg5} fixedColor style={{ fontSize: 10, marginTop: 8 }}>
+              Tap the pencil to add a photo
+            </Text>
+          )}
         </View>
 
         <ProfileInstallCard />
         <ShiftCard />
 
-        {tools.length ? (
+        {allTools.length ? (
           <SmeSection title="Tools">
-            {tools.map((t) => (
+            {allTools.map((t) => (
               <SmeRow key={t.key} icon={t.icon} title={t.title} sub={t.sub} onPress={t.onPress} count={t.count} />
             ))}
           </SmeSection>
@@ -135,4 +156,5 @@ const styles = StyleSheet.create({
   head: { alignItems: 'center', paddingTop: 16 },
   name: { fontFamily: fonts.medium, fontSize: 16, marginTop: 28, marginBottom: 6 },
   line: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  remove: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 10, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
 });

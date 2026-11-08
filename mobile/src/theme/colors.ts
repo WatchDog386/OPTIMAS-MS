@@ -25,12 +25,14 @@ const light = {
   onHighlight: '#1C1D1F',
 
   // Glass
-  glass: 'rgba(255,255,255,0.58)',
-  glassStrong: 'rgba(255,255,255,0.86)',
-  glassBorder: 'rgba(255,255,255,0.9)',
+  // Cards: solid white on the plain page (as on Profile)
+  glass: '#FFFFFF',
+  glassStrong: '#FFFFFF',
+  glassBorder: 'rgba(15,23,42,0.06)',
   hatch: 'rgba(28,29,31,0.13)',
-  bgTop: '#F3F3F3',
-  bgBottom: '#DEDEDE',
+  // The page: Optimas-SME's plain light grey, everywhere
+  bgTop: '#F8FAFC',
+  bgBottom: '#F8FAFC',
 
   // Brand accents
   brand: '#2DA043',
@@ -86,10 +88,11 @@ const light = {
  */
 const dark: typeof light = {
   ...light,
-  bg: '#0D1310',
-  surface: '#151C18',
-  surfaceAlt: '#1E2721',
-  surfaceHigh: '#26302A',
+  // Optimas-SME's dark page and cards, everywhere (as on Profile)
+  bg: '#121212',
+  surface: '#1E1E1E',
+  surfaceAlt: '#303538',
+  surfaceHigh: '#3A3F42',
   border: 'rgba(255,255,255,0.12)',
   borderStrong: 'rgba(255,255,255,0.24)',
 
@@ -103,12 +106,12 @@ const dark: typeof light = {
   highlight: '#7CB83A',
   onHighlight: '#FFFFFF',
 
-  glass: 'rgba(16,22,18,0.72)',
-  glassStrong: 'rgba(18,25,21,0.86)',
-  glassBorder: 'rgba(255,255,255,0.10)',
+  glass: '#1E1E1E',
+  glassStrong: '#1E1E1E',
+  glassBorder: 'rgba(255,255,255,0.06)',
   hatch: 'rgba(255,255,255,0.12)',
-  bgTop: '#0D1310',
-  bgBottom: '#070A08',
+  bgTop: '#121212',
+  bgBottom: '#121212',
 
   brand: '#8DC63F',
   brandSoft: 'rgba(124,184,58,0.18)',
@@ -128,8 +131,8 @@ const dark: typeof light = {
   infoSoft: 'rgba(2,132,199,0.22)',
 
   hero: '#0E4A33',
-  glowTop: '#0D1310',
-  glowMid: '#0D1310',
+  glowTop: '#121212',
+  glowMid: '#121212',
   overlay: 'rgba(0,0,0,0.72)',
 };
 

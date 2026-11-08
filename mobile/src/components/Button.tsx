@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fonts, radius, shadow, space, useInverse } from '../theme';
+import { colors, fonts, isDark, radius, space, useInverse } from '../theme';
 import { Text } from './Text';
 import { NATIVE, haptic, prefersReducedMotion, spring } from '../utils/motion';
 
@@ -24,15 +24,27 @@ interface Props {
   style?: StyleProp<ViewStyle>;
 }
 
-/** Material 3 buttons: filled (primary), outlined (secondary), text (ghost), tonal danger, and the green outline pill. */
-const light: Record<Variant, { bg: string; fg: string; border?: string }> = {
-  primary: { bg: colors.primary, fg: colors.onPrimary },
-  secondary: { bg: colors.glassStrong, fg: colors.text, border: colors.glassBorder },
-  ghost: { bg: 'transparent', fg: colors.primary },
-  danger: { bg: colors.dangerSoft, fg: colors.danger },
-  // The Business-SME pill: green outline and green label ("Manage", "See all")
-  outline: { bg: 'transparent', fg: colors.brand, border: colors.brand },
-};
+/**
+ * The overview page's buttons everywhere: the main action is the "Manage" pill (dark with a lime label in
+ * light mode, outlined with a lime label in dark mode); the second action is the same pill in neutral
+ * colours; text links and danger stay as they were.
+ */
+const PILL_LIME = '#8DC63F';
+const light: Record<Variant, { bg: string; fg: string; border?: string }> = isDark
+  ? {
+      primary: { bg: 'transparent', fg: PILL_LIME, border: 'rgba(255,255,255,0.38)' },
+      secondary: { bg: '#1E1E1E', fg: '#FFFFFF', border: 'rgba(255,255,255,0.16)' },
+      ghost: { bg: 'transparent', fg: PILL_LIME },
+      danger: { bg: colors.dangerSoft, fg: colors.danger },
+      outline: { bg: 'transparent', fg: PILL_LIME, border: 'rgba(255,255,255,0.38)' },
+    }
+  : {
+      primary: { bg: '#1A1C1B', fg: PILL_LIME, border: '#1A1C1B' },
+      secondary: { bg: '#FFFFFF', fg: colors.text, border: '#CBD5D0' },
+      ghost: { bg: 'transparent', fg: colors.primary },
+      danger: { bg: colors.dangerSoft, fg: colors.danger },
+      outline: { bg: '#1A1C1B', fg: PILL_LIME, border: '#1A1C1B' },
+    };
 
 /** On navy hero cards the primary action becomes the lime brand button. */
 const inverse: Record<Variant, { bg: string; fg: string; border?: string }> = {
@@ -74,7 +86,6 @@ export function Button({ label, onPress, variant = 'primary', icon, trailingIcon
         styles.base,
         size === 'lg' && styles.lg,
         { backgroundColor: p.bg, borderColor: p.border ?? 'transparent' },
-        variant === 'primary' && !inactive && shadow.glow,
         down && { opacity: 0.88 },
         inactive && { opacity: 0.45 },
         style,
@@ -89,7 +100,8 @@ export function Button({ label, onPress, variant = 'primary', icon, trailingIcon
           <Text
             variant="title"
             color={p.fg}
-            style={[{ fontSize: size === 'lg' ? 16 : 15 }, caps && { fontFamily: fonts.bold }]}
+            fixedColor
+            style={[{ fontFamily: fonts.semibold, fontSize: size === 'lg' ? 16 : 15 }, caps && { fontFamily: fonts.bold }]}
           >
             {label}
           </Text>
@@ -107,7 +119,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: space.xl,
-    borderWidth: 1,
+    borderWidth: 1.5,
     overflow: 'hidden',
   },
   lg: { height: 52 },

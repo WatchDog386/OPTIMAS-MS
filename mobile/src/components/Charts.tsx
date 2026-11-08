@@ -71,7 +71,7 @@ export function BarChart({ data, height = 150, color = colors.charcoal, highligh
 }
 
 /** Two stacked values per day (e.g. on time + late). */
-export function StackedBars({ data, height = 150, a = colors.charcoal, b = colors.warning }: { data: { label: string; a: number; b: number }[]; height?: number; a?: string; b?: string }) {
+export function StackedBars({ data, height = 150, a = colors.charcoal, b = colors.warning, grid = true }: { data: { label: string; a: number; b: number }[]; height?: number; a?: string; b?: string; grid?: boolean }) {
   const { w, onLayout } = useWidth();
   const max = niceMax(Math.max(1, ...data.map((d) => d.a + d.b)));
   const top = 8;
@@ -84,9 +84,9 @@ export function StackedBars({ data, height = 150, a = colors.charcoal, b = color
     <View onLayout={onLayout} style={{ height }}>
       {w > 0 ? (
         <Svg width={w} height={height}>
-          {[0.5, 1].map((f) => (
-            <Line key={f} x1={0} x2={w} y1={top + plotH * (1 - f)} y2={top + plotH * (1 - f)} stroke={GRID} strokeWidth={1} />
-          ))}
+          {grid
+            ? [0.5, 1].map((f) => <Line key={f} x1={0} x2={w} y1={top + plotH * (1 - f)} y2={top + plotH * (1 - f)} stroke={GRID} strokeWidth={1} />)
+            : null}
           {data.map((d, i) => {
             const ha = (d.a / max) * plotH;
             const hb = (d.b / max) * plotH;

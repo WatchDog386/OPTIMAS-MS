@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -56,7 +56,7 @@ export function SmeAppBar({ title, right, onBack = goHome }: { title: string; ri
 }
 
 /** Avatar in a ring whose lime arc shows how complete the profile is, with a % pill and a pencil. */
-export function ProfileRing({ percent, initial, onEdit, size = 148 }: { percent: number; initial?: string; onEdit?: () => void; size?: number }) {
+export function ProfileRing({ percent, initial, photo, onEdit, size = 148 }: { percent: number; initial?: string; photo?: string | null; onEdit?: () => void; size?: number }) {
   const stroke = 8;
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
@@ -78,7 +78,9 @@ export function ProfileRing({ percent, initial, onEdit, size = 148 }: { percent:
         />
       </Svg>
       <View style={[styles.avatar, { top: stroke + 4, left: stroke + 4, right: stroke + 4, bottom: stroke + 4 }]}>
-        {initial ? (
+        {photo ? (
+          <Image source={{ uri: photo }} style={{ width: '100%', height: '100%' }} resizeMode="cover" accessibilityLabel="Profile photo" />
+        ) : initial ? (
           <Text variant="display" color={isDark ? '#CBD5E1' : '#94A3B8'} fixedColor style={{ fontFamily: fonts.semibold, fontSize: 48, lineHeight: 56 }}>
             {initial}
           </Text>
@@ -92,7 +94,7 @@ export function ProfileRing({ percent, initial, onEdit, size = 148 }: { percent:
         </Text>
       </View>
       {onEdit ? (
-        <Pressable onPress={onEdit} accessibilityRole="button" accessibilityLabel="Edit profile" hitSlop={6} style={({ pressed }) => [styles.pencil, pressed && { transform: [{ scale: 0.9 }] }]}>
+        <Pressable onPress={onEdit} accessibilityRole="button" accessibilityLabel="Change profile photo" hitSlop={6} style={({ pressed }) => [styles.pencil, pressed && { transform: [{ scale: 0.9 }] }]}>
           <Ionicons name="pencil" size={18} color={SME_LIME} />
         </Pressable>
       ) : null}

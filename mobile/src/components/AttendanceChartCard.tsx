@@ -58,7 +58,7 @@ export function AttendanceChartCard({ rows: given, days = 14 }: { rows?: Charts[
   const late = rows.reduce((n, r) => n + r.late, 0);
   return (
     <ChartCard compact title="Attendance" big={`${present - late} on time`} note={`${late} late arrivals`}>
-      <StackedBars height={104} data={rows.map((r) => ({ label: shortDate(r.date), a: r.present - r.late, b: r.late }))} a={ON_TIME} b={LATE} />
+      <StackedBars grid={false} height={104} data={rows.map((r) => ({ label: shortDate(r.date), a: r.present - r.late, b: r.late }))} a={ON_TIME} b={LATE} />
       <Legend items={[{ label: 'On time', color: ON_TIME }, { label: 'Late', color: LATE }]} />
     </ChartCard>
   );

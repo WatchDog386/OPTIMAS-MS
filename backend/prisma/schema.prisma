@@ -49,6 +49,8 @@ model User {
   lastHeading        Float?
   lastSpeed          Float?
   lastLocationAt     DateTime?
+  /// Profile photo the person chose: a small JPEG (or PNG/WebP) as a data URL, resized on their phone.
+  avatarUrl          String?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 

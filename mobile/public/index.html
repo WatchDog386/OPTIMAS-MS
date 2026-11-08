@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
     <!-- viewport-fit=cover lets the app run edge to edge (behind notches / rounded corners) when installed -->
+    <!-- The phone status bar is the opening splash's blue until the app has opened -->
+    <meta name="theme-color" content="#16307A" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -21,7 +23,7 @@
       html,
       body {
         height: 100%;
-        background: #f3f3f3;
+        background: #f8fafc;
         /* The app has its own pull-to-refresh; stop the browser's bounce / reload from fighting it */
         overscroll-behavior-y: none;
       }
@@ -68,7 +70,7 @@
       }
       html.dark,
       html.dark body {
-        background: #111214;
+        background: #121212;
       }
       #boot-splash .logo {
         background: #fff;

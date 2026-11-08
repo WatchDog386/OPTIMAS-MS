@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -8,6 +8,7 @@ import { CountUp, Reveal, Skeleton } from './Motion';
 import { Text } from './Text';
 import { PILL, PILL_GREEN } from './QuickActions';
 import { router } from 'expo-router';
+import { useAuth } from '../store/auth';
 import { useApi } from '../hooks/useApi';
 
 export interface HeroStat {
@@ -59,33 +60,34 @@ interface Props {
 type BarProps = Pick<Props, 'firstName' | 'unread' | 'onSearch' | 'onScan' | 'extra' | 'updatedAt'> & Required<Pick<Props, 'onAvatar' | 'onBell'>>;
 
 function HeroBar(p: BarProps) {
+  const photo = useAuth((s) => s.user?.avatarUrl);
   return (
-      <View style={styles.header}>
-        <Pressable onPress={p.onAvatar} accessibilityLabel="My account" style={({ pressed }) => [styles.avatar, pressed && { transform: [{ scale: 0.94 }] }]}>
-          <Ionicons name="person" size={22} color={colors.white} />
-        </Pressable>
-        <View style={{ flex: 1, alignItems: 'center' }}>
-          <Text variant="title" numberOfLines={1} style={styles.hello}>
-            Hello {p.firstName} 👋
-          </Text>
-        </View>
-        <View style={styles.icons}>
-          {p.onSearch ? <IconBtn icon="search" label="Search" onPress={p.onSearch} /> : null}
-          {p.onScan ? <IconBtn icon="qr-code-outline" label="Scan a device" onPress={p.onScan} /> : null}
-          {p.extra ? <IconBtn icon={p.extra.icon} label={p.extra.label} onPress={p.extra.onPress} /> : null}
-          <ChatBtn />
-          <View>
-            <IconBtn icon="notifications-outline" label="Notifications" onPress={p.onBell} />
-            {p.unread ? (
-              <View style={styles.badge} pointerEvents="none">
-                <Text variant="label" color="#FFFFFF" fixedColor style={styles.badgeText}>
-                  {p.unread > 99 ? '99+' : p.unread}
-                </Text>
-              </View>
-            ) : null}
-          </View>
+    <View style={styles.header}>
+      <Pressable onPress={p.onAvatar} accessibilityLabel="My account" style={({ pressed }) => [styles.avatar, pressed && { transform: [{ scale: 0.94 }] }]}>
+        {photo ? <Image source={{ uri: photo }} style={styles.avatarPhoto} accessibilityLabel="My photo" /> : <Ionicons name="person" size={22} color={colors.white} />}
+      </Pressable>
+      <View style={{ flex: 1, alignItems: 'center' }}>
+        <Text variant="title" numberOfLines={1} style={styles.hello}>
+          Hello {p.firstName} 👋
+        </Text>
+      </View>
+      <View style={styles.icons}>
+        {p.onSearch ? <IconBtn icon="search" label="Search" onPress={p.onSearch} /> : null}
+        {p.onScan ? <IconBtn icon="qr-code-outline" label="Scan a device" onPress={p.onScan} /> : null}
+        {p.extra ? <IconBtn icon={p.extra.icon} label={p.extra.label} onPress={p.extra.onPress} /> : null}
+        <ChatBtn />
+        <View>
+          <IconBtn icon="notifications-outline" label="Notifications" onPress={p.onBell} />
+          {p.unread ? (
+            <View style={styles.badge} pointerEvents="none">
+              <Text variant="label" color="#FFFFFF" fixedColor style={styles.badgeText}>
+                {p.unread > 99 ? '99+' : p.unread}
+              </Text>
+            </View>
+          ) : null}
         </View>
       </View>
+    </View>
   );
 }
 
@@ -149,20 +151,12 @@ export function AdminHero(p: Props) {
           </Text>
         </Pressable>
         {p.onViewAll ? (
-          isDark ? (
-            <Pressable onPress={p.onViewAll} hitSlop={8}>
-              <Text variant="label" color={colors.textMuted} style={{ fontFamily: fonts.medium }}>
-                {p.viewAllLabel ?? 'View All'}
-              </Text>
-            </Pressable>
-          ) : (
-            // Light mode: the dark-mode "Manage" pill
-            <Pressable onPress={p.onViewAll} hitSlop={8} accessibilityRole="button" style={({ pressed }) => [PILL, { height: 34, paddingHorizontal: 16 }, pressed && { opacity: 0.85 }]}>
-              <Text variant="bodySm" color={PILL_GREEN} fixedColor style={{ fontFamily: fonts.semibold, fontSize: 14 }}>
-                {p.viewAllLabel ?? 'View All'}
-              </Text>
-            </Pressable>
-          )
+          // The "Manage" pill, in light and dark mode
+          <Pressable onPress={p.onViewAll} hitSlop={8} accessibilityRole="button" style={({ pressed }) => [PILL, { height: 34, paddingHorizontal: 16 }, pressed && { opacity: 0.85 }]}>
+            <Text variant="bodySm" color={PILL_GREEN} fixedColor style={{ fontFamily: fonts.semibold, fontSize: 14 }}>
+              {p.viewAllLabel ?? 'View All'}
+            </Text>
+          </Pressable>
         ) : null}
       </View>
 
@@ -332,10 +326,12 @@ const styles = StyleSheet.create({
     paddingTop: 2,
     paddingBottom: 8,
   },
+  avatarPhoto: { width: '100%', height: '100%', borderRadius: 999 },
   avatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
+    overflow: 'hidden',
     backgroundColor: colors.charcoal,
     alignItems: 'center',
     justifyContent: 'center',

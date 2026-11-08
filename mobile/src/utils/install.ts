@@ -125,13 +125,25 @@ export function installSteps(kind: BrowserKind = browserKind()): string[] {
   }
 }
 
-/** Phone status bar / browser toolbar colour: the same light grey as the top of every screen. */
-/** Phone status bar colour; in the Co-op look also the top bar's background, so the two are one band. */
-export const STATUS_BAR_COLOR = isDark ? '#1A1C1B' : '#F3F3F3';
+/** Phone status bar colour; in dark mode also the top bar's background, so the two are one band. */
+export const STATUS_BAR_COLOR = isDark ? '#1A1C1B' : '#F8FAFC';
+/** The opening splash's blue: the status bar matches it until the splash has gone. */
+export const SPLASH_BAR_COLOR = '#16307A';
+
+// While the splash shows, the bar stays blue; the colour pages ask for is applied when it goes
+let splashUp = true;
+let wanted = STATUS_BAR_COLOR;
+/** The opening splash has gone: paint the status bar for the page underneath. */
+export function splashDone() {
+  splashUp = false;
+  setThemeColor(wanted);
+}
 
 /** Sets (or replaces) the page's theme-color, which Android paints into the status bar. */
 export function setThemeColor(color: string) {
   if (!isWeb || typeof document === 'undefined') return;
+  wanted = color;
+  if (splashUp) color = SPLASH_BAR_COLOR;
   const tags = document.head.querySelectorAll('meta[name="theme-color"]');
   tags.forEach((t, i) => (i === 0 ? t.setAttribute('content', color) : t.remove()));
   if (!tags.length) {

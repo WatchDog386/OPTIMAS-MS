@@ -22,6 +22,8 @@ export interface User {
   locationConsent?: boolean | null;
   lastLoginAt?: string | null;
   createdAt?: string;
+  /** The person's own profile photo (data URL); only on their own account, not in lists. */
+  avatarUrl?: string | null;
 }
 
 export interface PhotoRef {

@@ -10,45 +10,11 @@ import { colors, isDark } from '../theme';
 const SAVANNAH = require('../../assets/bg/savannah.webp');
 
 /**
- * Page backdrop. The Co-op look: a savannah photo under a dark veil (lighter in the middle, darker at the
- * top and bottom so headers and the tab bar stay readable). Light mode: soft grey frosted glass with
- * diffused light blobs (white top-right, yellow bottom-left).
+ * Page backdrop: the plain Optimas-SME page colour, the same on every page as on Profile (no photo, no
+ * light blobs), so cards, bars and buttons sit on one even background.
  */
 export function GlassBackground() {
-  if (isDark) {
-    return (
-      <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.bg }]}>
-        <Image source={SAVANNAH} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityElementsHidden importantForAccessibility="no" />
-        <LinearGradient colors={['rgba(8,12,10,0.78)', 'rgba(8,12,10,0.5)', 'rgba(8,12,10,0.62)', 'rgba(8,12,10,0.88)']} locations={[0, 0.3, 0.65, 1]} style={StyleSheet.absoluteFill} />
-      </View>
-    );
-  }
-  return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <LinearGradient colors={[colors.bgTop, isDark ? '#131416' : '#E9E9E9', colors.bgBottom]} locations={[0, 0.55, 1]} style={StyleSheet.absoluteFill} />
-      <Svg width="100%" height="100%" style={StyleSheet.absoluteFill} preserveAspectRatio="none">
-        <Defs>
-          <RadialGradient id="gb-white" cx="50%" cy="50%" r="50%">
-            <Stop offset="0" stopColor="#FFFFFF" stopOpacity={isDark ? 0.06 : 0.95} />
-            <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0} />
-          </RadialGradient>
-          <RadialGradient id="gb-yellow" cx="50%" cy="50%" r="50%">
-            <Stop offset="0" stopColor="#F1F27A" stopOpacity={isDark ? 0.1 : 0.55} />
-            <Stop offset="1" stopColor="#F1F27A" stopOpacity={0} />
-          </RadialGradient>
-          <RadialGradient id="gb-grey" cx="50%" cy="50%" r="50%">
-            <Stop offset="0" stopColor="#CFCFCF" stopOpacity={isDark ? 0.05 : 0.55} />
-            <Stop offset="1" stopColor="#CFCFCF" stopOpacity={0} />
-          </RadialGradient>
-        </Defs>
-        <Circle cx="88%" cy="10%" r="300" fill="url(#gb-white)" />
-        <Circle cx="5%" cy="95%" r="340" fill="url(#gb-yellow)" />
-        <Circle cx="0%" cy="45%" r="220" fill="url(#gb-grey)" />
-      </Svg>
-      {/* The top edge is exactly the status-bar colour, so the bar and the page read as one surface */}
-      <LinearGradient colors={[colors.bgTop, isDark ? 'rgba(23,24,27,0)' : 'rgba(243,243,243,0)']} style={styles.topBlend} pointerEvents="none" />
-    </View>
-  );
+  return <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.bgTop }]} />;
 }
 
 /* ─────────────────────────── Surfaces ─────────────────────────── */

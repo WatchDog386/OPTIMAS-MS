@@ -3,6 +3,7 @@ import { Animated, Easing, Image, Platform, StyleSheet, View } from 'react-nativ
 import { LinearGradient } from 'expo-linear-gradient';
 import { DotsLoader } from './Loaders';
 import { Text } from './Text';
+import { splashDone } from '../utils/install';
 
 const LOGO = require('../../assets/logo-app.webp');
 const MIN_VISIBLE_MS = 1400;
@@ -36,7 +37,10 @@ export function Splash({ fontsReady, ready, onDone }: { fontsReady: boolean; rea
     Animated.parallel([
       Animated.timing(opacity, { toValue: 0, duration: 380, easing: Easing.out(Easing.cubic), useNativeDriver: native }),
       Animated.timing(lift, { toValue: -16, duration: 380, easing: Easing.out(Easing.cubic), useNativeDriver: native }),
-    ]).start(() => onDone());
+    ]).start(() => {
+      splashDone();
+      onDone();
+    });
   }, [ready, minElapsed, opacity, lift, onDone]);
 
   return (

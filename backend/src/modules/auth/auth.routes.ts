@@ -59,7 +59,7 @@ authRouter.post(
     if (!user.active) throw unauthorized('This account has been deactivated. Contact your administrator.');
     await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
     const token = signToken({ sub: user.id, role: user.role, name: user.name, sv: user.sessionVersion });
-    res.json({ token, user: publicUser(user) });
+    res.json({ token, user: { ...publicUser(user), avatarUrl: user.avatarUrl } });
   }),
 );
 
@@ -69,7 +69,25 @@ authRouter.get(
   ah(async (req, res) => {
     const user = await prisma.user.findUniqueOrThrow({ where: { id: me(req).id } });
     if (!user.active) throw unauthorized('This account has been deactivated');
-    res.json({ user: publicUser(user) });
+    res.json({ user: { ...publicUser(user), avatarUrl: user.avatarUrl } });
+  }),
+);
+
+/** The person's own profile photo: a small image (resized on the phone) as a data URL, or null to remove it. */
+const avatarSchema = z.object({
+  image: z
+    .string()
+    .max(400_000, 'That photo is too large. Choose a smaller one.')
+    .regex(/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/, 'Choose a JPG, PNG or WebP photo')
+    .nullable(),
+});
+authRouter.put(
+  '/me/avatar',
+  requireAuth,
+  ah(async (req, res) => {
+    const { image } = parse(avatarSchema, req.body);
+    const user = await prisma.user.update({ where: { id: me(req).id }, data: { avatarUrl: image } });
+    res.json({ user: { ...publicUser(user), avatarUrl: user.avatarUrl } });
   }),
 );
 
@@ -167,6 +185,7 @@ authRouter.post(
           name: 'Deleted customer',
           email: null,
           phone: null,
+          avatarUrl: null,
           address: null,
           region: null,
           active: false,
