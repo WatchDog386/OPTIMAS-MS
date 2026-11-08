@@ -44,7 +44,8 @@ export default function Overview() {
   const unread = useApi<{ unread: number }>('/notifications/unread-count', { poll: 30_000 });
   // Everything technicians sent that is waiting for a supervisor (photos, check-outs, finished jobs)
   const approvals = useApi<ApprovalSummary>(managers ? '/approvals/summary' : null, { poll: 30_000 });
-  const [tab, setTab] = useState<0 | 1>(managers ? 0 : 1);
+  // Managers see operations, the store sees inventory (there is no switch between them)
+  const tab: 0 | 1 = managers ? 0 : 1;
   // Insights shortcuts stay tucked away until the manager taps Manage
   const [manage, setManage] = useState(false);
 
@@ -369,9 +370,6 @@ export default function Overview() {
         <AdminHero
           bar={false}
           firstName={firstName(user.name)}
-          tabs={['Operations', 'Inventory']}
-          tab={tab}
-          onTab={setTab}
           link={
             tab === 0
               ? managers
