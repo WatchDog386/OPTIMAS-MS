@@ -1,42 +1,64 @@
-import type { Attendance } from '../../src/api/types';
+import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
-import { Badge, ListRow, LocationSetting, PrivacyRows, ProfileView, Screen, SectionHeader, StatGrid, StatTile } from '../../src/components';
+import type { Attendance } from '../../src/api/types';
+import { SmeProfilePage } from '../../src/components/SmeProfile';
+import { SME, SmeRow, SmeSection } from '../../src/components/SmeKit';
+import { Text } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
-import { colors } from '../../src/theme';
+import { fonts } from '../../src/theme';
 import { date, duration, time } from '../../src/utils/format';
 
+/** The technician's profile: the Optimas-SME profile page, with this month's figures and attendance. */
 export default function Profile() {
   const stats = useApi<{ daysPresent: number; lateDays: number; completedThisMonth: number; hoursWorked: number }>('/reports/me');
   const history = useApi<{ records: Attendance[] }>('/attendance/history');
+  const unread = useApi<{ unread: number }>('/notifications/unread-count');
+  const s = stats.data;
   return (
-    <Screen refreshing={history.refreshing} onRefresh={history.refresh}>
-      <ProfileView>
-        <StatGrid>
-          <StatTile icon="calendar" label="Days present" value={stats.data?.daysPresent ?? '–'} tint={colors.info} />
-          <StatTile icon="alarm-outline" label="Late arrivals" value={stats.data?.lateDays ?? '–'} tint={colors.warning} />
-        </StatGrid>
-        <LocationSetting />
-        <ListRow icon="key-outline" iconTint={colors.text} title="Change password" onPress={() => router.push('/change-password')} />
-        <ListRow icon="search" iconTint={colors.text} title="Search my jobs and devices" onPress={() => router.push('/search')} />
-        <PrivacyRows />
-        <SectionHeader title="Attendance history" />
-        {history.data?.records.slice(0, 20).map((r) => (
-          <ListRow
-            key={r.id}
-            icon={r.status === 'LATE' ? 'alarm-outline' : 'checkmark-circle-outline'}
-            iconTint={r.status === 'LATE' ? colors.warning : colors.success}
-            title={date(r.workDate)}
-            subtitle={`In ${time(r.checkInAt)} · Out ${time(r.checkOutAt)} · ${duration(r.workedMinutes)}`}
-            right={
-              r.dressReview === 'REJECTED' ? (
-                <Badge label="Dress code" tone="danger" />
-              ) : r.dressReview === 'APPROVED' ? (
-                <Badge label="Approved" tone="success" />
-              ) : undefined
-            }
-          />
-        ))}
-      </ProfileView>
-    </Screen>
+    <SmeProfilePage
+      tools={[
+        { key: 'alerts', icon: 'notifications-outline', title: 'Notifications', sub: 'Jobs, stock and approvals', onPress: () => router.push('/notifications'), count: unread.data?.unread },
+        { key: 'search', icon: 'search', title: 'Search', sub: 'My jobs and devices', onPress: () => router.push('/search') },
+      ]}
+    >
+      <SmeSection title="This month">
+        <View style={styles.stats}>
+          <Stat value={s?.daysPresent} label="Days present" />
+          <Stat value={s?.lateDays} label="Late arrivals" />
+          <Stat value={s?.completedThisMonth} label="Jobs done" />
+        </View>
+      </SmeSection>
+      {history.data?.records.length ? (
+        <SmeSection title="Attendance history">
+          {history.data.records.slice(0, 20).map((r) => (
+            <SmeRow
+              key={r.id}
+              icon={r.status === 'LATE' ? 'alarm-outline' : 'checkmark-circle-outline'}
+              iconColor={r.status === 'LATE' ? '#D97706' : '#2DA043'}
+              title={`${date(r.workDate)}${r.dressReview === 'REJECTED' ? ' · dress code' : ''}`}
+              sub={`In ${time(r.checkInAt)} · Out ${time(r.checkOutAt)} · ${duration(r.workedMinutes)}`}
+            />
+          ))}
+        </SmeSection>
+      ) : null}
+    </SmeProfilePage>
   );
 }
+
+function Stat({ value, label }: { value?: number; label: string }) {
+  return (
+    <View style={styles.stat}>
+      <Text variant="h1" color={SME.fg} fixedColor style={{ fontFamily: fonts.semibold, fontSize: 20 }}>
+        {value ?? '–'}
+      </Text>
+      <Text variant="label" color={SME.fg3} fixedColor style={{ fontSize: 12 }}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  stats: { flexDirection: 'row', gap: 8 },
+  stat: { flex: 1, alignItems: 'center', gap: 2, paddingVertical: 14, borderRadius: 16, backgroundColor: SME.surface },
+});

@@ -6,8 +6,8 @@ import { colors } from '../theme';
 import { disableLocationSharing, enableLocationSharing } from './LocationHost';
 import { ListRow } from './ListRow';
 
-/** "Share my location" switch for the Profile / Account page. */
-export function LocationSetting() {
+/** The "Share my location" setting (technicians and customers): whether it is on, and turning it on or off. */
+export function useLocationSetting() {
   const user = useAuth((s) => s.user);
   const [busy, setBusy] = useState(false);
   if (!user || (user.role !== 'TECHNICIAN' && user.role !== 'CUSTOMER')) return null;
@@ -25,6 +25,20 @@ export function LocationSetting() {
       setBusy(false);
     }
   };
+  return {
+    on,
+    busy,
+    toggle,
+    sub: user.role === 'TECHNICIAN' ? 'For directions, tracking and the nearest jobs (only while the app is open)' : 'So technicians can find your premises',
+  };
+}
+
+/** "Share my location" switch for the Profile / Account page. */
+export function LocationSetting() {
+  const user = useAuth((s) => s.user);
+  const setting = useLocationSetting();
+  if (!user || !setting) return null;
+  const { on, busy, toggle } = setting;
   return (
     <ListRow
       icon="location-outline"

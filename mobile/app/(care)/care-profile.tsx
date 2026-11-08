@@ -1,16 +1,16 @@
 import { router } from 'expo-router';
-import { ListRow, PrivacyRows, ProfileView, Screen } from '../../src/components';
-import { colors } from '../../src/theme';
+import { SmeProfilePage } from '../../src/components/SmeProfile';
+import { useApi } from '../../src/hooks/useApi';
 
-/** Customer care's profile: password, privacy and sign-out (sign-out is part of the profile view). */
+/** Customer care's profile: the Optimas-SME profile page. */
 export default function CareProfile() {
+  const unread = useApi<{ unread: number }>('/notifications/unread-count');
   return (
-    <Screen>
-      <ProfileView>
-        <ListRow icon="key-outline" iconTint={colors.text} title="Change password" onPress={() => router.push('/change-password')} />
-        <ListRow icon="search" iconTint={colors.text} title="Search jobs and customers" onPress={() => router.push('/search')} />
-        <PrivacyRows />
-      </ProfileView>
-    </Screen>
+    <SmeProfilePage
+      tools={[
+        { key: 'alerts', icon: 'notifications-outline', title: 'Notifications', sub: 'Alerts and activity', onPress: () => router.push('/notifications'), count: unread.data?.unread },
+        { key: 'search', icon: 'search', title: 'Search', sub: 'Jobs and customers', onPress: () => router.push('/search') },
+      ]}
+    />
   );
 }

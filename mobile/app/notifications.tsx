@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../src/api/client';
-import { Button, EmptyState, Glass, PageHeader, Reveal, Screen, Text } from '../src/components';
+import { Button, Reveal, Text } from '../src/components';
+import { SME, SmeAppBar, SmeChips } from '../src/components/SmeKit';
 import { enableWebPush, webPushState, type WebPushState } from '../src/utils/webpush';
 import { toast } from '../src/store/feedback';
 import { useApi } from '../src/hooks/useApi';
-import { colors, fonts, space } from '../src/theme';
+import { fonts, isDark, space } from '../src/theme';
 import { notificationStyle, openNotificationTarget, type AppNotification } from '../src/utils/notifications';
 
 type Tab = 'ALL' | 'JOBS' | 'ATTENDANCE' | 'STOCK';
@@ -26,6 +28,27 @@ const TAB_OF: Record<string, Exclude<Tab, 'ALL'>> = {
   STOCK_COUNT_MISMATCH: 'STOCK',
   UNIT_LOST: 'STOCK',
 };
+
+/** SME's coloured round icon tiles: a soft tint with the icon in the strong colour. */
+type Tone = 'warning' | 'danger' | 'info' | 'success';
+const TONE: Record<Tone, { bg: string; fg: string }> = isDark
+  ? { warning: { bg: 'rgba(245,158,11,0.1)', fg: '#FCD34D' }, danger: { bg: 'rgba(239,68,68,0.1)', fg: '#FCA5A5' }, info: { bg: 'rgba(14,165,233,0.1)', fg: '#7DD3FC' }, success: { bg: 'rgba(16,185,129,0.1)', fg: '#6EE7B7' } }
+  : { warning: { bg: '#FFFBEB', fg: '#D97706' }, danger: { bg: '#FEF2F2', fg: '#DC2626' }, info: { bg: '#F0F9FF', fg: '#0284C7' }, success: { bg: '#ECFDF5', fg: '#059669' } };
+const TONE_OF: Record<string, Tone> = {
+  TASK_REJECTED: 'danger',
+  TASK_CANCELLED: 'danger',
+  DRESS_REJECTED: 'danger',
+  CHECKOUT_REJECTED: 'danger',
+  STOCK_COUNT_MISMATCH: 'danger',
+  UNIT_LOST: 'danger',
+  LATE_CHECK_IN: 'warning',
+  PHOTO_FLAGGED: 'warning',
+  SERVICE_REQUEST: 'warning',
+  TASK_COMPLETED: 'success',
+  TASK_VERIFIED: 'success',
+  JOB_UPDATE: 'success',
+  APP_UPDATE: 'success',
+};
 const TAB_LABEL: Record<Tab, string> = { ALL: 'All', JOBS: 'Jobs', ATTENDANCE: 'Attendance', STOCK: 'Stock' };
 
 /** "12:32 PM" today, otherwise "23/10/26". */
@@ -36,9 +59,13 @@ function when(iso: string) {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit', timeZone: 'Africa/Nairobi' });
 }
 
-/** Inbox: filter tabs, unread dots, "Mark all as Read"; opening one marks it read and goes to what it is about. */
+/**
+ * Notifications, as in Optimas-SME: "Mark all read", filled topic tabs, then "New" and "Earlier". Each
+ * has a coloured round icon (red dot while unread); opening one marks it read and goes to what it is about.
+ */
 export default function Notifications() {
-  const { data, setData, refresh, refreshing, loading } = useApi<{ notifications: AppNotification[]; unread: number }>('/notifications');
+  const insets = useSafeAreaInsets();
+  const { data, setData, loading } = useApi<{ notifications: AppNotification[]; unread: number }>('/notifications');
   const [tab, setTab] = useState<Tab>('ALL');
 
   // On the installed web app: offer alerts that arrive even when the app is closed
@@ -58,10 +85,12 @@ export default function Notifications() {
   };
 
   const all = useMemo(() => data?.notifications ?? [], [data]);
-  // Only the tabs that have something in them
+  // Tabs: All, then only the topics that have something
   const tabs = useMemo(() => (['ALL', 'JOBS', 'ATTENDANCE', 'STOCK'] as Tab[]).filter((t) => t === 'ALL' || all.some((n) => TAB_OF[n.type] === t)), [all]);
   const shown = tab === 'ALL' ? all : all.filter((n) => TAB_OF[n.type] === tab);
   const unreadIn = (t: Tab) => (t === 'ALL' ? all : all.filter((n) => TAB_OF[n.type] === t)).filter((n) => !n.readAt).length;
+  const fresh = shown.filter((n) => !n.readAt);
+  const earlier = shown.filter((n) => n.readAt);
 
   const markRead = (ids?: string[]) => {
     const now = new Date().toISOString();
@@ -76,84 +105,151 @@ export default function Notifications() {
   };
 
   return (
-    <Screen refreshing={refreshing} onRefresh={refresh}>
-      <PageHeader
+    <View style={styles.root}>
+      <SmeAppBar
         title="Notifications"
         right={
-          <Pressable onPress={() => markRead()} disabled={!data?.unread} hitSlop={8} accessibilityRole="button" style={{ opacity: data?.unread ? 1 : 0.4 }}>
-            <Text variant="bodySm" color={colors.brand} style={{ fontFamily: fonts.semibold }}>
-              Mark all as Read
+          <Pressable onPress={() => markRead()} disabled={!data?.unread} accessibilityRole="button" style={({ pressed }) => [styles.markAll, !data?.unread && { opacity: 0.4 }, pressed && { transform: [{ scale: 0.95 }] }]}>
+            <Ionicons name="checkmark-done" size={16} color={SME.fg} />
+            <Text variant="label" color={SME.fg} fixedColor style={{ fontFamily: fonts.semibold, fontSize: 12 }}>
+              Mark all read
             </Text>
           </Pressable>
         }
       />
+      <ScrollView contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 40 }]} showsVerticalScrollIndicator={false}>
+        {tabs.length > 1 ? (
+          <SmeChips
+            items={tabs.map((t) => {
+              const n = unreadIn(t);
+              return { id: t, label: n ? `${TAB_LABEL[t]} · ${n}` : TAB_LABEL[t] };
+            })}
+            value={tabs.includes(tab) ? tab : 'ALL'}
+            onChange={setTab}
+          />
+        ) : null}
 
-      {tabs.length > 1 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
-          {tabs.map((t) => {
-            const on = t === tab;
-            const n = unreadIn(t);
-            return (
-              <Pressable key={t} onPress={() => setTab(t)} accessibilityRole="tab" accessibilityState={{ selected: on }} style={({ pressed }) => [styles.tab, on && styles.tabOn, pressed && { opacity: 0.8 }]}>
-                <Text variant="bodySm" color={on ? colors.white : colors.text} fixedColor={on} style={{ fontFamily: on ? fonts.semibold : fonts.medium }}>
-                  {TAB_LABEL[t]}
-                  {n ? ` · ${n}` : ''}
+        {push === 'default' ? (
+          <View style={styles.alerts}>
+            <Text variant="title" color={SME.fg} fixedColor style={{ fontFamily: fonts.medium, fontSize: 15 }}>
+              Get alerts when the app is closed
+            </Text>
+            <Text variant="bodySm" color={SME.fg3} fixedColor style={{ fontSize: 13 }}>
+              Job assignments, approvals and stock alerts will appear on this phone like any other app.
+            </Text>
+            <Button label="Turn on alerts" icon="notifications" onPress={turnOn} />
+          </View>
+        ) : null}
+
+        {loading && !data ? null : !shown.length ? (
+          <Empty />
+        ) : (
+          <>
+            {fresh.length ? (
+              <Section title="New" count={fresh.length}>
+                {fresh.map((n, i) => (
+                  <Row key={n.id} n={n} unread index={i} onOpen={open} />
+                ))}
+              </Section>
+            ) : (
+              <View style={styles.caughtUp}>
+                <Ionicons name="checkmark-done" size={16} color={isDark ? '#6EE7B7' : '#047857'} />
+                <Text variant="bodySm" color={isDark ? '#6EE7B7' : '#047857'} fixedColor style={{ fontFamily: fonts.medium, fontSize: 13 }}>
+                  You're all caught up
                 </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      ) : null}
+              </View>
+            )}
+            {earlier.length ? (
+              <Section title="Earlier" count={earlier.length}>
+                {earlier.map((n, i) => (
+                  <Row key={n.id} n={n} index={i} onOpen={open} />
+                ))}
+              </Section>
+            ) : null}
+          </>
+        )}
+      </ScrollView>
+    </View>
+  );
+}
 
-      {push === 'default' ? (
-        <Glass strong style={{ gap: space.md }}>
-          <Text variant="title">Get alerts when the app is closed</Text>
-          <Text variant="bodySm" color={colors.textMuted}>
-            Job assignments, approvals and stock alerts will appear on this phone like any other app.
-          </Text>
-          <Button label="Turn on alerts" icon="notifications" onPress={turnOn} />
-        </Glass>
-      ) : null}
-
-      {!loading && !shown.length ? <EmptyState icon="notifications-off-outline" title={all.length ? 'Nothing here' : 'No notifications yet'} message="Job assignments, stock and approvals will show up here." /> : null}
-      <View style={{ gap: 12 }}>
-        {shown.map((n, idx) => {
-          const style = notificationStyle[n.type] ?? { icon: 'notifications' as const, tint: colors.primary };
-          return (
-            <Reveal key={n.id} index={Math.min(idx, 8)}>
-              <Pressable onPress={() => open(n)} accessibilityRole="button" accessibilityLabel={`${n.readAt ? '' : 'New. '}${n.title}. ${n.body}`} style={({ pressed }) => [styles.card, pressed && { opacity: 0.75, transform: [{ scale: 0.99 }] }]}>
-                {!n.readAt ? <View style={styles.dot} /> : null}
-                <View style={styles.icon}>
-                  <Ionicons name={style.icon} size={22} color={style.tint} />
-                </View>
-                <View style={{ flex: 1, gap: 3 }}>
-                  <View style={styles.titleRow}>
-                    <Text variant="title" numberOfLines={1} style={{ flex: 1, fontFamily: n.readAt ? fonts.medium : fonts.semibold }}>
-                      {n.title}
-                    </Text>
-                    <Text variant="label" color={colors.textMuted}>
-                      {when(n.createdAt)}
-                    </Text>
-                  </View>
-                  <Text variant="bodySm" color={colors.textMuted} numberOfLines={3}>
-                    {n.body}
-                  </Text>
-                </View>
-              </Pressable>
-            </Reveal>
-          );
-        })}
+function Section({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
+  return (
+    <View>
+      <View style={styles.sectionHead}>
+        <Text variant="title" color={SME.fg} fixedColor style={{ fontFamily: fonts.semibold, fontSize: 15 }}>
+          {title}
+        </Text>
+        <Text variant="label" color={SME.fg4} fixedColor style={{ fontFamily: fonts.medium, fontSize: 12 }}>
+          {count}
+        </Text>
       </View>
-    </Screen>
+      <View style={{ gap: 4 }}>{children}</View>
+    </View>
+  );
+}
+
+function Row({ n, unread = false, index, onOpen }: { n: AppNotification; unread?: boolean; index: number; onOpen: (n: AppNotification) => void }) {
+  const icon = notificationStyle[n.type]?.icon ?? 'notifications';
+  const tone = TONE[TONE_OF[n.type] ?? 'info'];
+  return (
+    <Reveal index={Math.min(index, 8)}>
+      <Pressable
+        onPress={() => onOpen(n)}
+        accessibilityRole="button"
+        accessibilityLabel={`${unread ? 'New. ' : ''}${n.title}. ${n.body}`}
+        style={({ pressed }) => [styles.row, unread ? { backgroundColor: SME.unread } : { opacity: 0.7 }, pressed && { transform: [{ scale: 0.99 }] }]}
+      >
+        <View style={[styles.icon, { backgroundColor: tone.bg }]}>
+          <Ionicons name={icon} size={20} color={tone.fg} />
+          {unread ? <View style={styles.dot} accessibilityLabel="Unread" /> : null}
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <View style={styles.titleRow}>
+            <Text variant="body" color={unread ? SME.fg : SME.fg2} fixedColor numberOfLines={2} style={{ flex: 1, fontFamily: unread ? fonts.semibold : fonts.medium, fontSize: 14 }}>
+              {n.title}
+            </Text>
+            <Text variant="label" color={SME.fg4} fixedColor style={{ fontSize: 11, paddingTop: 2 }}>
+              {when(n.createdAt)}
+            </Text>
+          </View>
+          <Text variant="label" color={SME.fg3} fixedColor numberOfLines={2} style={{ fontSize: 12, marginTop: 2, lineHeight: 18 }}>
+            {n.body}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={SME.fg5} />
+      </Pressable>
+    </Reveal>
+  );
+}
+
+function Empty() {
+  return (
+    <View style={styles.empty}>
+      <View style={styles.emptyIcon}>
+        <Ionicons name="notifications-outline" size={40} color={SME.fg4} />
+      </View>
+      <Text variant="title" color={SME.fg} fixedColor style={{ fontFamily: fonts.medium, fontSize: 16, marginTop: 24 }}>
+        Nothing here
+      </Text>
+      <Text variant="body" color={SME.fg3} fixedColor align="center" style={{ fontSize: 14, marginTop: 6, maxWidth: 300 }}>
+        There's nothing that needs your attention.
+      </Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  tabs: { gap: 10, paddingVertical: 2 },
-  tab: { height: 44, paddingHorizontal: 22, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.glassStrong, borderWidth: 1, borderColor: colors.glassBorder },
-  tabOn: { backgroundColor: colors.brand, borderColor: colors.brand },
-  card: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 18, paddingHorizontal: 16, paddingLeft: 22, borderRadius: 16, backgroundColor: colors.glassStrong, borderWidth: 1, borderColor: colors.glassBorder },
-  dot: { position: 'absolute', left: 9, top: 14, width: 10, height: 10, borderRadius: 5, backgroundColor: colors.brand },
-  icon: { width: 52, height: 52, borderRadius: 26, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  root: { flex: 1, backgroundColor: SME.page },
+  body: { paddingHorizontal: 16, paddingTop: 8, gap: 20, maxWidth: 672, width: '100%', alignSelf: 'center' },
+  markAll: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 36, paddingHorizontal: 14, borderRadius: 18, backgroundColor: SME.surface3 },
+  alerts: { gap: space.sm, padding: 16, borderRadius: 16, backgroundColor: SME.surface },
+  caughtUp: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 16, backgroundColor: isDark ? 'rgba(16,185,129,0.1)' : '#ECFDF5' },
+  sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: 8 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 16 },
+  icon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  dot: { position: 'absolute', right: -2, top: -2, width: 12, height: 12, borderRadius: 6, backgroundColor: '#E23B41', borderWidth: 2, borderColor: isDark ? '#1E1E1E' : '#FFFFFF' },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  empty: { alignItems: 'center', paddingHorizontal: 24, paddingVertical: 64 },
+  emptyIcon: { width: 96, height: 96, borderRadius: 48, backgroundColor: SME.surface3, alignItems: 'center', justifyContent: 'center' },
 });
