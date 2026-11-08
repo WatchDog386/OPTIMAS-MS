@@ -180,7 +180,7 @@ export default function Overview() {
     },
     managers && {
       label: 'Teams',
-      icon: 'people-outline',
+      icon: 'people-circle-outline',
       onPress: () => router.push('/admin/team-new'),
     },
     {

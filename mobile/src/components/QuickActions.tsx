@@ -2,6 +2,11 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fonts, isDark, space } from '../theme';
 import { Text } from './Text';
+import { DuoIcon } from './DuoIcon';
+
+/** Optimas-SME's tiles: round grey, with green-and-red icons. */
+const TILE = isDark ? '#333333' : '#EEF2F0';
+const ICON_GREEN = isDark ? '#45B65C' : '#2DA043';
 
 export interface QuickAction {
   label: string;
@@ -46,7 +51,7 @@ export function QuickActions({ items, title = 'Quick Actions', action }: { items
         {items.map((a) => (
           <Pressable key={a.label} onPress={a.onPress} style={({ pressed }) => [styles.item, pressed && { transform: [{ scale: 0.94 }], opacity: 0.8 }]} accessibilityRole="button" accessibilityLabel={a.label}>
             <View style={styles.circle}>
-              <Ionicons name={a.icon} size={20} color={a.tint ?? (isDark ? colors.white : colors.brand)} />
+              {a.tint ? <Ionicons name={a.icon} size={26} color={a.tint} /> : <DuoIcon name={a.icon} size={28} color={ICON_GREEN} />}
               {a.badge ? (
                 <View style={styles.badge}>
                   <Text variant="label" color={colors.white} fixedColor style={{ fontSize: 10, lineHeight: 12, fontFamily: fonts.bold }}>
@@ -88,7 +93,7 @@ const styles = StyleSheet.create({
   manageOn: { backgroundColor: '#7CB83A', borderColor: '#7CB83A' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: space.lg },
   item: { width: '25%', alignItems: 'center', gap: space.sm, paddingHorizontal: 2 },
-  // Co-op icon circles: deep green with a lighter rim
-  circle: { width: 46, height: 46, borderRadius: 23, backgroundColor: isDark ? '#0F5A3C' : colors.glassStrong, borderWidth: 1, borderColor: isDark ? 'rgba(141,198,63,0.35)' : colors.glassBorder, alignItems: 'center', justifyContent: 'center' },
+  // Optimas-SME icon tiles: 56px grey circles
+  circle: { width: 56, height: 56, borderRadius: 28, backgroundColor: TILE, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: -2, right: -2, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.white },
 });

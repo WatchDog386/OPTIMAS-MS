@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fonts, isDark, space } from '../theme';
-import { CountUp, LiveBadge, Reveal, Skeleton } from './Motion';
+import { CountUp, Reveal, Skeleton } from './Motion';
 import { Text } from './Text';
 import { PILL, PILL_GREEN } from './QuickActions';
 import { router } from 'expo-router';
@@ -68,7 +68,6 @@ function HeroBar(p: BarProps) {
           <Text variant="title" numberOfLines={1} style={styles.hello}>
             Hello {p.firstName} 👋
           </Text>
-          {p.updatedAt !== undefined ? <LiveBadge updatedAt={p.updatedAt} /> : null}
         </View>
         <View style={styles.icons}>
           {p.onSearch ? <IconBtn icon="search" label="Search" onPress={p.onSearch} /> : null}
@@ -270,8 +269,8 @@ function IconBtn({ icon, label, onPress }: { icon: keyof typeof Ionicons.glyphMa
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  // Regular weight, like Co-op's "Hello Felix"
-  hello: { fontFamily: fonts.medium, fontSize: 16, letterSpacing: -0.2, textAlign: 'center' },
+  // A little bigger and bolder than SME's "Hello …"
+  hello: { fontFamily: fonts.bold, fontSize: 20, lineHeight: 26, letterSpacing: -0.2, textAlign: 'center' },
   icons: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   iconBtn: {
     width: 34,
