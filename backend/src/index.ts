@@ -2,9 +2,14 @@ import { env } from './config/env';
 import { createApp } from './app';
 import { prisma } from './lib/prisma';
 import { scheduleRetention } from './lib/retention';
+import { announceRelease } from './lib/release';
 
 const server = createApp().listen(env.PORT, () => {
   console.log(`🚀 Optimas MS API listening on http://localhost:${env.PORT}/api/v1`);
+  // A new release: tell everyone (once)
+  announceRelease()
+    .then((n) => n && console.log(`📣 Release ${env.APP_BUILD} announced to ${n} people`))
+    .catch((err) => console.error('[release] announcement failed', err));
 });
 // Delete personal data once it is no longer needed (periods in lib/retention.ts and the Privacy Policy)
 scheduleRetention();

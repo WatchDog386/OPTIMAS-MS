@@ -64,6 +64,8 @@ services:
       COMPANY_NAME: ${COMPANY_NAME:-Optimas Networks}
       COMPANY_ADDRESS: ${COMPANY_ADDRESS:-Nairobi, Kenya}
       PRIVACY_EMAIL: ${PRIVACY_EMAIL:-}
+      # The release now running (set by deploy.sh); a new one sends everyone an "updated" notification
+      APP_BUILD: ${APP_BUILD:-}
     volumes:
       - uploads:/app/uploads
     networks: [internal]

@@ -52,6 +52,8 @@ const schema = z.object({
   /** Signs the QR labels stuck on devices (deploy.sh makes it once). Empty: derived from JWT_SECRET. */
   ASSET_TAG_SECRET: z.string().default(''),
   /** Shown to customers and on the help, privacy and terms pages. Leave empty to hide a contact. */
+  /** Id of the release now running (deploy.sh sets it from git). A new one tells everyone the app was updated. */
+  APP_BUILD: z.string().default(''),
   SUPPORT_PHONE: z.string().default(''),
   SUPPORT_WHATSAPP: z.string().default(''),
   SUPPORT_EMAIL: z.string().default(''),

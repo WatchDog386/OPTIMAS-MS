@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { AppState, Platform } from 'react-native';
+import { toast } from '../store/feedback';
 
 /** Build id baked in at export time (see deploy/web.Dockerfile). Absent in development. */
 const BUILD = process.env.EXPO_PUBLIC_BUILD_ID;
-const CHECK_EVERY_MS = 5 * 60_000;
+const CHECK_EVERY_MS = 2 * 60_000;
 
 async function newerBuildLive(): Promise<boolean> {
   const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' });
@@ -22,6 +23,14 @@ export function useAppUpdate() {
   useEffect(() => {
     if (Platform.OS !== 'web' || !BUILD || typeof document === 'undefined') return;
     let stopped = false;
+    // The first time a new version opens on this phone, say so
+    try {
+      const seen = localStorage.getItem('optimas.build');
+      if (seen && seen !== BUILD) setTimeout(() => toast.success('Optimas MS updated', 'You are on the latest version.'), 2500);
+      localStorage.setItem('optimas.build', BUILD);
+    } catch {
+      // private browsing: nothing to compare with
+    }
     const check = async () => {
       try {
         if (!stopped && (await newerBuildLive())) setAvailable(true);

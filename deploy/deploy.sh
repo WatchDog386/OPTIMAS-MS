@@ -32,6 +32,10 @@ if [ -d .git ]; then
   git pull --ff-only
 fi
 
+# The release being deployed: when it is new, everyone gets an "Optimas MS has been updated" notification
+APP_BUILD="$(git rev-parse --short HEAD 2>/dev/null || date -u +%Y%m%d%H%M%S)"
+export APP_BUILD
+
 echo "▶ Building images…"
 $COMPOSE build
 

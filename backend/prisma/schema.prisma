@@ -426,6 +426,8 @@ enum NotificationType {
   SERVICE_REQUEST
   JOB_UPDATE
   CHAT_MESSAGE
+  /// A new version of the app went live
+  APP_UPDATE
 }
 
 model Notification {
