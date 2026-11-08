@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Image, Platform, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, fonts, isDark } from '../theme';
 import { DotsLoader } from './Loaders';
 import { Text } from './Text';
 
@@ -9,6 +8,8 @@ const LOGO = require('../../assets/logo-app.webp');
 const MIN_VISIBLE_MS = 1400;
 /** The close, minimise and zoom buttons of a Mac window: red, yellow, green. */
 export const MAC_DOTS = ['#FF5F57', '#FEBC2E', '#28C840'];
+/** The opening page is always the dark look, on blue (the same in light and dark mode). */
+export const SPLASH_BLUE = ['#16307A', '#122868', '#0C1D4F'] as const;
 
 /**
  * Opening splash. Mirrors the static splash in public/index.html (removed once fonts are in, so there is
@@ -40,12 +41,12 @@ export function Splash({ fontsReady, ready, onDone }: { fontsReady: boolean; rea
 
   return (
     <Animated.View style={[StyleSheet.absoluteFill, styles.root, { opacity }]} accessibilityLabel="Optimas MS is loading">
-      <LinearGradient colors={[colors.bgTop, isDark ? '#131416' : '#E9E9E9', colors.bgBottom]} locations={[0, 0.55, 1]} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={SPLASH_BLUE} locations={[0, 0.55, 1]} style={StyleSheet.absoluteFill} />
       <Animated.View style={[styles.center, { transform: [{ translateY: lift }] }]}>
-        <View style={isDark ? styles.logoPlate : undefined}>
+        <View style={styles.logoPlate}>
           <Image source={LOGO} style={styles.logo} resizeMode="contain" accessibilityLabel="Optimas Networks" />
         </View>
-        <Text variant="bodySm" color={colors.textMuted}>
+        <Text variant="bodySm" color="rgba(255,255,255,0.78)" fixedColor>
           Field operations, accounted for
         </Text>
       </Animated.View>
@@ -60,7 +61,7 @@ const styles = StyleSheet.create({
   root: { zIndex: 100, alignItems: 'center', justifyContent: 'center' },
   center: { alignItems: 'center', gap: 14 },
   logo: { width: 260, height: 99 },
-  // The navy logo needs a light backing in dark mode
+  // The navy logo sits on a white plate on the blue
   logoPlate: { backgroundColor: '#FFFFFF', borderRadius: 18, paddingHorizontal: 16, paddingVertical: 10 },
   dots: { position: 'absolute', bottom: 56 },
 });

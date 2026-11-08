@@ -61,22 +61,19 @@
         align-items: center;
         justify-content: center;
         gap: 14px;
-        background: linear-gradient(#f3f3f3, #e9e9e9 55%, #dedede);
+        /* Always the dark look, on blue (light and dark mode alike) */
+        background: linear-gradient(#16307a, #122868 55%, #0c1d4f);
         font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-        color: #1c1d1f;
+        color: #ffffff;
       }
       html.dark,
       html.dark body {
         background: #111214;
       }
-      html.dark #boot-splash .logo {
+      #boot-splash .logo {
         background: #fff;
         border-radius: 18px;
         padding: 10px 16px;
-      }
-      html.dark #boot-splash {
-        background: linear-gradient(#17181b, #131416 55%, #0e0f11);
-        color: #eceffd;
       }
       #boot-splash .logo {
         width: 260px;
@@ -84,7 +81,7 @@
       }
       #boot-splash .tag {
         font-size: 14px;
-        color: #6b6e70;
+        color: rgba(255, 255, 255, 0.78);
       }
       #boot-splash .dots {
         position: absolute;
