@@ -16,6 +16,7 @@ import { useAuth } from '../src/store/auth';
 import { registerForPush } from '../src/utils/push';
 import { openNotificationTarget } from '../src/utils/notifications';
 import { setupPwa } from '../src/utils/install';
+import { prefetchPages } from '../src/utils/prefetch';
 import { InstallPrompt } from '../src/components/InstallPrompt';
 import { Splash } from '../src/components/Splash';
 import { UpdateBanner } from '../src/components/UpdateBanner';
@@ -115,6 +116,8 @@ export default function RootLayout() {
   // Register this device for push once someone is signed in.
   useEffect(() => {
     if (userId) void registerForPush();
+    // Download every page's code in the background, so pages open without waiting for it
+    if (userId) prefetchPages();
   }, [userId]);
 
 

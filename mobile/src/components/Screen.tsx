@@ -10,6 +10,7 @@ import { ScreenHeader } from './ScreenHeader';
 import { Text } from './Text';
 import { useDesktop } from '../theme/desktop';
 import { desk } from './desktop/DesktopShell';
+import { usePageLoad } from '../store/pageLoad';
 
 interface Props {
   children: ReactNode;
@@ -61,6 +62,8 @@ export const TAB_BAR_CLEARANCE = 112;
 export function Screen({ children, scroll = true, edges = ['top'], contentStyle, footer, scrollEnabled = true, glow = true, stickyHeader }: Props) {
   const desktop = useDesktop();
   const insets = useSafeAreaInsets();
+  // The page is on screen: the page-change loader can go once its data (if any) is in
+  useEffect(() => usePageLoad.getState().shown(), []);
   const scrollY = useRef(new Animated.Value(0)).current;
   const items = Children.toArray(children);
   const pinned = scroll && items.length > 1 && (stickyHeader ?? isPageHeader(items[0]));

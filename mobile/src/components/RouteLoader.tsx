@@ -12,6 +12,8 @@ const MIN_MS = 300;
 const SETTLE_MS = 250;
 /** Never cover the screen longer than this: the page then shows whatever it has (or its own error). */
 const MAX_MS = 15_000;
+/** A page that never reports itself on screen (one with no data to load) is uncovered after this. */
+const UNREPORTED_MS = 2_500;
 /** Screens where an overlay would get in the way (live camera / scanner). */
 const SKIP = ['/capture', '/scan'];
 
@@ -26,6 +28,7 @@ export function RouteLoader() {
   const [visible, setVisible] = useState(false);
   const [since, setSince] = useState(0);
   const busy = usePageLoad((s) => s.pending.size > 0);
+  const shownAt = usePageLoad((s) => s.shownAt);
 
   // A new page: cover it
   useEffect(() => {
@@ -45,12 +48,15 @@ export function RouteLoader() {
     const hide = () => Animated.timing(v, { toValue: 0, duration: 200, easing: Easing.out(Easing.quad), useNativeDriver: NATIVE }).start(() => setVisible(false));
     const giveUp = setTimeout(hide, Math.max(0, since + MAX_MS - Date.now()));
     if (busy) return () => clearTimeout(giveUp);
-    const settle = setTimeout(hide, Math.max(SETTLE_MS, since + MIN_MS - Date.now()));
+    // Wait for the new page to be on screen (its code downloaded and drawn), not just for quiet: on a
+    // slow phone the old page was uncovered while the new one was still being drawn
+    const onScreen = shownAt >= since;
+    const settle = setTimeout(hide, onScreen ? Math.max(SETTLE_MS, since + MIN_MS - Date.now()) : Math.max(SETTLE_MS, since + UNREPORTED_MS - Date.now()));
     return () => {
       clearTimeout(giveUp);
       clearTimeout(settle);
     };
-  }, [visible, busy, since, v]);
+  }, [visible, busy, since, shownAt, v]);
 
   if (!visible) return null;
   return (

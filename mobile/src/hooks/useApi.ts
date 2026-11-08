@@ -74,6 +74,8 @@ export function useApi<T>(path: string | null, options: Options = {}) {
 
   useFocusEffect(
     useCallback(() => {
+      // This page is on screen now (the page-change loader waits for that, then for its data)
+      usePageLoad.getState().shown();
       void load();
       if (!options.poll) return;
       const t = setInterval(() => void load('poll'), options.poll);
