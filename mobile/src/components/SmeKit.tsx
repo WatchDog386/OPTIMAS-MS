@@ -38,7 +38,7 @@ export function goHome() {
 export function SmeAppBar({ title, right, onBack = goHome }: { title: string; right?: ReactNode; onBack?: () => void }) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={[styles.bar, { paddingTop: insets.top + 4, backgroundColor: isDark ? STATUS_BAR_COLOR : SME.page }]}>
+    <View style={[styles.bar, { paddingTop: insets.top + 4, backgroundColor: STATUS_BAR_COLOR }]}>
       <View style={styles.barSide}>
         <Pressable onPress={onBack} hitSlop={10} accessibilityRole="button" accessibilityLabel="Back" style={({ pressed }) => [styles.back, pressed && { opacity: 0.6 }]}>
           <Ionicons name="chevron-back" size={18} color={SME.fg2} />

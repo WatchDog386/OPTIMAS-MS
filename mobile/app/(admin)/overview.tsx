@@ -30,6 +30,7 @@ import { colors, fonts } from '../../src/theme';
 import { duration, firstName } from '../../src/utils/format';
 import { useDesktop } from '../../src/theme/desktop';
 import { AttendanceChartCard } from '../../src/components/AttendanceChartCard';
+import { WeekCard } from '../../src/components/WeekCard';
 import { DeskButton, KpiCard, MiniStat, Panel, PanelRow } from '../../src/components/desktop/Kit';
 import { desk } from '../../src/components/desktop/DesktopShell';
 import { Pressable } from 'react-native';
@@ -397,23 +398,14 @@ export default function Overview() {
         />
       </View>
 
-      <NotchCard onTab={() => router.push('/board')} tabLabel="All jobs">
-        <View style={{ gap: 14 }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-            }}
-          >
-            <Text variant="title" style={{ fontFamily: fonts.semibold, fontSize: 17, lineHeight: 22 }}>
-              Jobs done this week
-            </Text>
-            <GlassLink label="All jobs" onPress={() => router.push('/board')} />
-          </View>
-          <PillChart data={week} activeIndex={week.length - 1} format={(n) => `${n} ${n === 1 ? 'job' : 'jobs'}`} />
-        </View>
-      </NotchCard>
+      <WeekCard
+        owner={`${user.name} · ${user.staffNo}`}
+        data={week}
+        actions={[
+          { label: 'All jobs', onPress: () => router.push('/board') },
+          ...(managers ? [{ label: 'New job', onPress: () => router.push('/admin/task-new') }] : []),
+        ]}
+      />
 
 
       <QuickActions items={actions} action={managers ? { label: manage ? 'Done' : 'Manage', active: manage, onPress: () => setManage((m) => !m) } : undefined} />

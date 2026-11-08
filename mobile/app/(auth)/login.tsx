@@ -104,14 +104,12 @@ export default function Login() {
   // Fingerprint set up on this phone: come back in with it (or the phone's screen lock), no password
   const [fp, setFp] = useState(() => (Platform.OS === 'web' ? fingerprintAccount() : null));
   const [fpBusy, setFpBusy] = useState(false);
-  const [fpOther, setFpOther] = useState(false);
   const fpUnlock = async () => {
     if (!fp || fpBusy) return;
     setFpBusy(true);
     try {
       setSignedIn(await loginWithBiometric(fp.staffNo));
     } catch (e) {
-      setFpOther(true);
       const n = (e as { name?: string })?.name;
       if (n !== 'NotAllowedError' && n !== 'AbortError') toast.error('Not unlocked', biometricProblem(e));
     } finally {
@@ -120,18 +118,7 @@ export default function Login() {
   };
   if (fp && !signedIn) {
     return (
-      <LockedView
-        busy={fpBusy}
-        onUnlock={fpUnlock}
-        links={
-          fpOther
-            ? [
-                { label: 'Use password instead', onPress: () => (setIdentifier(fp.staffNo), setFp(null)) },
-                { label: 'Use another account', onPress: () => setFp(null), dim: true },
-              ]
-            : []
-        }
-      />
+      <LockedView busy={fpBusy} onUnlock={fpUnlock} onLogin={() => (setIdentifier(fp.staffNo), setFp(null))} />
     );
   }
 

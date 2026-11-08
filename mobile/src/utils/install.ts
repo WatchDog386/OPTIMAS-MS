@@ -126,7 +126,7 @@ export function installSteps(kind: BrowserKind = browserKind()): string[] {
 }
 
 /** Phone status bar colour; in dark mode also the top bar's background, so the two are one band. */
-export const STATUS_BAR_COLOR = isDark ? '#1A1C1B' : '#F8FAFC';
+export const STATUS_BAR_COLOR = isDark ? '#1A1C1B' : '#FFFFFF';
 /** The opening splash's blue: the status bar matches it until the splash has gone. */
 export const SPLASH_BAR_COLOR = '#16307A';
 

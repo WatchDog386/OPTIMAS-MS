@@ -28,6 +28,7 @@ import {
   type HeroStat,
   type TimelineItem,
 } from '../../src/components';
+import { WeekCard } from '../../src/components/WeekCard';
 import { useApi } from '../../src/hooks/useApi';
 import { useAuth } from '../../src/store/auth';
 import { colors, fonts } from '../../src/theme';
@@ -226,15 +227,14 @@ export default function TechHome() {
       ) : null}
 
       <Reveal index={5}>
-        <Glass strong style={{ gap: 14 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <Text variant="h1" style={styles.cardTitle}>
-              {'Jobs done\nThis week'}
-            </Text>
-            <GlassLink label="All jobs" onPress={() => router.push('/jobs')} />
-          </View>
-          <PillChart data={week} activeIndex={week.length - 1} format={(n) => `${n} ${n === 1 ? 'job' : 'jobs'}`} />
-        </Glass>
+        <WeekCard
+          owner={`${user.name} · ${user.staffNo}`}
+          data={week}
+          actions={[
+            { label: 'My jobs', onPress: () => router.push('/jobs') },
+            { label: 'Search', onPress: () => router.push('/search') },
+          ]}
+        />
       </Reveal>
 
       {lastReview ? (

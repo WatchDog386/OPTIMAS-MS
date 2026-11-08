@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
-import { router } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, ApiError } from '../api/client';
 import { useAuth } from '../store/auth';
@@ -80,8 +81,6 @@ const LOCK = { bg: '#121314', card: '#1E1F21', green: '#7CB82F', text: '#FFFFFF'
  */
 function LockScreen({ onUnlocked }: { name: string; onUnlocked: () => void }) {
   const [busy, setBusy] = useState(false);
-  // The password and sign-out ways in show after a fingerprint attempt does not work
-  const [other, setOther] = useState(false);
   useEffect(() => {
     void prepareBiometric('unlock');
   }, []);
@@ -92,7 +91,6 @@ function LockScreen({ onUnlocked }: { name: string; onUnlocked: () => void }) {
     try {
       if (await unlockWithBiometric()) onUnlocked();
     } catch (e) {
-      setOther(true);
       // Closing the phone's prompt is not worth a pop-up; anything else says why
       const n = (e as { name?: string })?.name;
       if (n !== 'NotAllowedError' && n !== 'AbortError') toast.error('Not unlocked', biometricProblem(e));
@@ -113,24 +111,8 @@ function LockScreen({ onUnlocked }: { name: string; onUnlocked: () => void }) {
     }
   };
 
-  const signOut = async () => {
-    await useAuth.getState().logout();
-    router.replace('/login');
-  };
-
   return (
-    <LockedView
-      busy={busy}
-      onUnlock={unlock}
-      links={
-        other
-          ? [
-              { label: 'Use password instead', onPress: password },
-              { label: 'Sign out', onPress: signOut, dim: true },
-            ]
-          : []
-      }
-    />
+    <LockedView busy={busy} onUnlock={unlock} onLogin={password} />
   );
 }
 
@@ -138,7 +120,7 @@ function LockScreen({ onUnlocked }: { name: string; onUnlocked: () => void }) {
  * The look of the lock: the app's dark pop-up card ("Optimas Locked", a lock, a green Unlock button),
  * with optional small links underneath. Used by the in-app lock and by the sign-in page when fingerprint is set up.
  */
-export function LockedView({ busy, onUnlock, links }: { busy: boolean; onUnlock: () => void; links: { label: string; onPress: () => void; dim?: boolean }[] }) {
+export function LockedView({ busy, onUnlock, onLogin }: { busy: boolean; onUnlock: () => void; onLogin: () => void }) {
   const insets = useSafeAreaInsets();
   // The fingerprint prompt opens by itself: when the lock appears and whenever the app comes back to the
   // front, so a touch on the sensor is all it takes. The button is there if the prompt was closed.
@@ -175,22 +157,19 @@ export function LockedView({ busy, onUnlock, links }: { busy: boolean; onUnlock:
         <Text variant="body" color={LOCK.muted} fixedColor style={styles.message}>
           Touch the fingerprint sensor to unlock.
         </Text>
-        <Pressable onPress={onUnlock} disabled={busy} accessibilityRole="button" accessibilityLabel="Unlock with fingerprint" style={({ pressed }) => [styles.btn, styles.btnFilled, busy && { opacity: 0.6 }, pressed && styles.pressed]}>
-          <Text variant="title" color={LOCK.text} fixedColor style={styles.btnText}>
-            Unlock
-          </Text>
-        </Pressable>
-        {links.length ? (
-          <View style={styles.row}>
-            {links.map((l) => (
-              <Pressable key={l.label} onPress={l.onPress} accessibilityRole="button" style={({ pressed }) => [styles.btn, styles.btnOutline, { flex: 1 }, pressed && styles.pressed]}>
-                <Text variant="title" color={LOCK.text} fixedColor style={[styles.btnText, { fontSize: 14 }, l.dim ? { opacity: 0.8 } : null]} numberOfLines={1}>
-                  {l.label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        ) : null}
+        {/* Two ways in: Login (password) and the fingerprint */}
+        <View style={styles.row}>
+          <Pressable onPress={onLogin} accessibilityRole="button" accessibilityLabel="Log in with your password" style={({ pressed }) => [styles.btn, styles.login, pressed && styles.pressed]}>
+            <LinearGradient colors={['#7CB82F', '#4E8A1C']} style={StyleSheet.absoluteFill} />
+            <Text variant="title" color={LOCK.text} fixedColor style={styles.btnText}>
+              Login
+            </Text>
+          </Pressable>
+          <Pressable onPress={onUnlock} disabled={busy} accessibilityRole="button" accessibilityLabel="Unlock with fingerprint" style={({ pressed }) => [styles.btn, styles.finger, busy && { opacity: 0.6 }, pressed && styles.pressed]}>
+            <LinearGradient colors={['#7CB82F', '#4E8A1C']} style={StyleSheet.absoluteFill} />
+            <Ionicons name="finger-print" size={28} color={LOCK.text} />
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -219,9 +198,9 @@ const styles = StyleSheet.create({
   emoji: { fontSize: 64, lineHeight: 76, textAlign: 'center', marginVertical: 14 },
   message: { textAlign: 'center', marginTop: 4, lineHeight: 24, fontSize: 16 },
   btn: { height: 54, borderRadius: 12, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10 },
-  btnFilled: { alignSelf: 'stretch', marginTop: 22, backgroundColor: LOCK.green },
-  btnOutline: { borderWidth: 1.5, borderColor: LOCK.green, backgroundColor: 'transparent' },
+  login: { flex: 1, overflow: 'hidden' },
+  finger: { width: 76, overflow: 'hidden' },
   btnText: { fontFamily: fonts.bold, fontSize: 16 },
-  row: { flexDirection: 'row', gap: 10, alignSelf: 'stretch', marginTop: 10 },
+  row: { flexDirection: 'row', gap: 12, alignSelf: 'stretch', marginTop: 22 },
   pressed: { opacity: 0.8, transform: [{ scale: 0.98 }] },
 });

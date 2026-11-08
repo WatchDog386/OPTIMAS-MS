@@ -87,7 +87,7 @@ export function Screen({ children, scroll = true, edges = ['top'], contentStyle,
         {fixedHead ? (
           // The bar's background reaches up under the status bar, in the status bar's own colour
           <View style={[styles.fixedHead, { paddingTop: (safeTop ? insets.top : 0) + top }]}>
-            <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.frost, FROST, { opacity: isDark ? 1 : scrollY.interpolate({ inputRange: [0, 14], outputRange: [0, 1], extrapolate: 'clamp' }) }]} />
+            <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.frost]} />
             {items[0]}
           </View>
         ) : null}
@@ -136,7 +136,8 @@ const styles = StyleSheet.create({
   fixedHead: { paddingHorizontal: space.lg, paddingBottom: 10, zIndex: 10 },
   sticky: { marginHorizontal: -space.lg, paddingHorizontal: space.lg, paddingBottom: 10, marginBottom: -10, zIndex: 10 },
   // Co-op look: solid, exactly the status bar's colour, so the two read as one band
-  frost: { backgroundColor: isDark ? STATUS_BAR_COLOR : 'rgba(240,240,240,0.86)', borderBottomWidth: 1, borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(28,29,31,0.06)', shadowColor: '#1C1D1F', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
+  // One solid band with the phone's status bar, at rest and while scrolling
+  frost: { backgroundColor: STATUS_BAR_COLOR, borderBottomWidth: 1, borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(28,29,31,0.06)', shadowColor: '#1C1D1F', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
   footer: {
     paddingHorizontal: space.lg,
     paddingVertical: space.md,
