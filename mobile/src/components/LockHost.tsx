@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Image, Platform, Pressable, StyleSheet, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, ApiError } from '../api/client';
@@ -72,8 +71,8 @@ function justSwitchedTheme() {
 }
 
 /** Lock-screen colours (like WhatsApp's): near-black page, green lock and green "Unlock". */
-// Always the white lock page, in light and dark mode alike
-const LOCK = { bg: '#FFFFFF', icon: '#25D366', green: '#1DAA61', text: '#111B21', line: '#D1D7DB', dim: '#667781' };
+// The app's pop-up look (like "Unlock with password"): a dark card with lime-green buttons, on a dark page
+const LOCK = { bg: '#121314', card: '#1E1F21', green: '#7CB82F', text: '#FFFFFF', muted: 'rgba(255,255,255,0.78)' };
 
 /**
  * The lock screen, as in WhatsApp: a green lock, "Optimas Locked" and one Unlock button. Tapping Unlock
@@ -136,7 +135,7 @@ function LockScreen({ onUnlocked }: { name: string; onUnlocked: () => void }) {
 }
 
 /**
- * The look of the lock: a green lock, "Optimas Locked" and an outlined Unlock button on a white page,
+ * The look of the lock: the app's dark pop-up card ("Optimas Locked", a lock, a green Unlock button),
  * with optional small links underneath. Used by the in-app lock and by the sign-in page when fingerprint is set up.
  */
 export function LockedView({ busy, onUnlock, links }: { busy: boolean; onUnlock: () => void; links: { label: string; onPress: () => void; dim?: boolean }[] }) {
@@ -165,41 +164,64 @@ export function LockedView({ busy, onUnlock, links }: { busy: boolean; onUnlock:
     return () => setThemeColor(STATUS_BAR_COLOR);
   }, []);
   return (
-    <View style={[StyleSheet.absoluteFill, styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom + 24 }]} accessibilityViewIsModal>
-      <View style={styles.middle}>
-        <Ionicons name="lock-closed" size={50} color={LOCK.icon} accessibilityElementsHidden />
-        <Text variant="h2" color={LOCK.text} fixedColor align="center" style={styles.title}>
+    <View style={[StyleSheet.absoluteFill, styles.root, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]} accessibilityViewIsModal>
+      <View style={styles.card}>
+        <Text variant="h2" color={LOCK.text} fixedColor style={styles.title}>
           Optimas Locked
         </Text>
-        <Pressable onPress={onUnlock} disabled={busy} accessibilityRole="button" accessibilityLabel="Unlock with fingerprint" style={({ pressed }) => [styles.unlock, pressed && { backgroundColor: 'rgba(33,192,99,0.08)' }]}>
-          <Text variant="body" color={LOCK.green} fixedColor style={styles.unlockLabel}>
+        <Text style={styles.emoji} accessibilityElementsHidden importantForAccessibility="no">
+          🔒
+        </Text>
+        <Text variant="body" color={LOCK.muted} fixedColor style={styles.message}>
+          Touch the fingerprint sensor to unlock.
+        </Text>
+        <Pressable onPress={onUnlock} disabled={busy} accessibilityRole="button" accessibilityLabel="Unlock with fingerprint" style={({ pressed }) => [styles.btn, styles.btnFilled, busy && { opacity: 0.6 }, pressed && styles.pressed]}>
+          <Text variant="title" color={LOCK.text} fixedColor style={styles.btnText}>
             Unlock
           </Text>
         </Pressable>
+        {links.length ? (
+          <View style={styles.row}>
+            {links.map((l) => (
+              <Pressable key={l.label} onPress={l.onPress} accessibilityRole="button" style={({ pressed }) => [styles.btn, styles.btnOutline, { flex: 1 }, pressed && styles.pressed]}>
+                <Text variant="title" color={LOCK.text} fixedColor style={[styles.btnText, { fontSize: 14 }, l.dim ? { opacity: 0.8 } : null]} numberOfLines={1}>
+                  {l.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
       </View>
-      {links.length ? (
-        <View style={styles.other}>
-          {links.map((l) => (
-            <Pressable key={l.label} onPress={l.onPress} hitSlop={8} accessibilityRole="button">
-              <Text variant="bodySm" color={l.dim ? LOCK.dim : LOCK.green} fixedColor style={styles.link}>
-                {l.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   // Above the app and its alert banners (60), below toasts (70) and dialogs (80) so the password prompt shows
-  root: { zIndex: 65, backgroundColor: LOCK.bg, paddingHorizontal: 27 },
-  // Green lock, "Optimas Locked" and a full-width outlined Unlock button, a little below the middle
-  middle: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 70 },
-  title: { fontFamily: fonts.regular, fontSize: 19, lineHeight: 24, letterSpacing: 0.2, marginTop: 26 },
-  unlock: { alignSelf: 'stretch', height: 35, borderRadius: 18, borderWidth: 1, borderColor: LOCK.line, alignItems: 'center', justifyContent: 'center', marginTop: 20 },
-  unlockLabel: { fontFamily: fonts.regular, fontSize: 11.5, letterSpacing: 0.2 },
-  other: { alignItems: 'center', gap: 14 },
-  link: { fontFamily: fonts.medium, paddingVertical: 4 },
+  root: { zIndex: 65, backgroundColor: LOCK.bg, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
+  // The pop-up card, as in "Unlock with password"
+  card: {
+    width: '100%',
+    maxWidth: 420,
+    alignItems: 'center',
+    paddingHorizontal: 22,
+    paddingTop: 30,
+    paddingBottom: 22,
+    borderRadius: 18,
+    backgroundColor: LOCK.card,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 30,
+    shadowOffset: { width: 0, height: 16 },
+    elevation: 24,
+  },
+  title: { fontFamily: fonts.bold, fontSize: 24, lineHeight: 30, textAlign: 'center' },
+  emoji: { fontSize: 64, lineHeight: 76, textAlign: 'center', marginVertical: 14 },
+  message: { textAlign: 'center', marginTop: 4, lineHeight: 24, fontSize: 16 },
+  btn: { height: 54, borderRadius: 12, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10 },
+  btnFilled: { alignSelf: 'stretch', marginTop: 22, backgroundColor: LOCK.green },
+  btnOutline: { borderWidth: 1.5, borderColor: LOCK.green, backgroundColor: 'transparent' },
+  btnText: { fontFamily: fonts.bold, fontSize: 16 },
+  row: { flexDirection: 'row', gap: 10, alignSelf: 'stretch', marginTop: 10 },
+  pressed: { opacity: 0.8, transform: [{ scale: 0.98 }] },
 });
