@@ -21,8 +21,9 @@ const inverseMap: Record<string, string> = {
 /**
  * The Business-SME (sme.optimas) text sizes. Phones use SME's own table (its text is about 15% smaller
  * than the sizes written in the screens: 14 → 12, 16 → 13.5, 17 → 14.5, 20 → 17 …); on a laptop the
- * sizes stay as written and only the smallest text is raised, as SME does. Bold becomes SemiBold and
- * small SemiBold becomes Medium, like SME's medium titles. Applied here, once, so every screen follows.
+ * sizes stay as written and only the smallest text is raised, as SME does. Weights follow SME too: its
+ * text is mostly Medium and SemiBold, so Regular becomes Medium and ExtraBold becomes Bold. Applied here,
+ * once, so every screen follows.
  */
 const PHONE: [number, number][] = [
   [9, 9], [10, 9], [11, 10], [12, 10.5], [13, 11], [14, 12], [15, 13], [16, 13.5], [17, 14.5], [18, 15.5],
@@ -38,7 +39,7 @@ function smeSize(n: number) {
   }
   return Math.round(n * 0.84 * 2) / 2;
 }
-const LIGHTER: Record<string, string> = { [fonts.extrabold]: fonts.bold, [fonts.bold]: fonts.semibold };
+const WEIGHT: Record<string, string> = { [fonts.regular]: fonts.medium, [fonts.extrabold]: fonts.bold };
 
 function smeStyle(style: TextStyle): TextStyle {
   const out = { ...style };
@@ -48,8 +49,7 @@ function smeStyle(style: TextStyle): TextStyle {
     if (typeof out.lineHeight === 'number') out.lineHeight = Math.round(out.lineHeight * k * 2) / 2;
     if (typeof out.letterSpacing === 'number') out.letterSpacing = out.letterSpacing * k;
   }
-  if (out.fontFamily && LIGHTER[out.fontFamily]) out.fontFamily = LIGHTER[out.fontFamily];
-  else if (out.fontFamily === fonts.semibold && (out.fontSize ?? 14) < 14) out.fontFamily = fonts.medium;
+  if (out.fontFamily && WEIGHT[out.fontFamily]) out.fontFamily = WEIGHT[out.fontFamily];
   return out;
 }
 

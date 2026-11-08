@@ -6,6 +6,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fonts, isDark, space } from '../theme';
 import { CountUp, LiveBadge, Reveal, Skeleton } from './Motion';
 import { Text } from './Text';
+import { PILL, PILL_GREEN } from './QuickActions';
 import { router } from 'expo-router';
 import { useApi } from '../hooks/useApi';
 
@@ -149,11 +150,20 @@ export function AdminHero(p: Props) {
           </Text>
         </Pressable>
         {p.onViewAll ? (
-          <Pressable onPress={p.onViewAll} hitSlop={8}>
-            <Text variant="label" color={colors.textMuted} style={{ fontFamily: fonts.medium }}>
-              {p.viewAllLabel ?? 'View All'}
-            </Text>
-          </Pressable>
+          isDark ? (
+            <Pressable onPress={p.onViewAll} hitSlop={8}>
+              <Text variant="label" color={colors.textMuted} style={{ fontFamily: fonts.medium }}>
+                {p.viewAllLabel ?? 'View All'}
+              </Text>
+            </Pressable>
+          ) : (
+            // Light mode: the dark-mode "Manage" pill
+            <Pressable onPress={p.onViewAll} hitSlop={8} accessibilityRole="button" style={({ pressed }) => [PILL, { height: 34, paddingHorizontal: 16 }, pressed && { opacity: 0.85 }]}>
+              <Text variant="bodySm" color={PILL_GREEN} fixedColor style={{ fontFamily: fonts.semibold, fontSize: 14 }}>
+                {p.viewAllLabel ?? 'View All'}
+              </Text>
+            </Pressable>
+          )
         ) : null}
       </View>
 

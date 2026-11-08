@@ -36,8 +36,7 @@ export function QuickActions({ items, title = 'Quick Actions', action }: { items
             accessibilityLabel={action.label}
             hitSlop={8}
           >
-            {isDark ? null : <Ionicons name={action.icon ?? (action.active ? 'chevron-up' : 'options-outline')} size={15} color={action.active ? colors.white : colors.text} />}
-            <Text variant="bodySm" color={action.active ? colors.white : isDark ? colors.brand : colors.text} fixedColor={action.active || isDark} style={{ fontFamily: fonts.semibold, fontSize: 15 }}>
+            <Text variant="bodySm" color={action.active ? colors.white : PILL_GREEN} fixedColor style={{ fontFamily: fonts.semibold, fontSize: 15 }}>
               {action.label}
             </Text>
           </Pressable>
@@ -66,14 +65,27 @@ export function QuickActions({ items, title = 'Quick Actions', action }: { items
   );
 }
 
+/** The dark-mode "Manage" pill, used in light mode too (Manage, View All): outlined, green label. */
+export const PILL_GREEN = '#8DC63F';
+export const PILL = {
+  flexDirection: 'row' as const,
+  alignItems: 'center' as const,
+  justifyContent: 'center' as const,
+  height: 38,
+  paddingHorizontal: 20,
+  borderRadius: 19,
+  backgroundColor: isDark ? 'transparent' : '#1A1C1B',
+  borderWidth: 1.5,
+  borderColor: 'rgba(255,255,255,0.38)',
+};
+
 const styles = StyleSheet.create({
   // The Co-op "Quick Actions" panel: smoky glass over the photo
   panel: { padding: 18, paddingBottom: 20, borderRadius: 12, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.lg },
-  manage: isDark
-    ? { flexDirection: 'row', alignItems: 'center', gap: 6, height: 38, paddingHorizontal: 20, borderRadius: 19, backgroundColor: 'transparent', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.38)' }
-    : { flexDirection: 'row', alignItems: 'center', gap: 6, height: 34, paddingHorizontal: 14, borderRadius: 17, backgroundColor: colors.glassStrong, borderWidth: 1, borderColor: colors.glassBorder },
-  manageOn: isDark ? { backgroundColor: colors.highlight, borderColor: colors.highlight } : { backgroundColor: colors.text, borderColor: colors.text },
+  // The same pill in light and dark mode: outlined, green label
+  manage: { ...PILL, gap: 6 },
+  manageOn: { backgroundColor: '#7CB83A', borderColor: '#7CB83A' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: space.lg },
   item: { width: '25%', alignItems: 'center', gap: space.sm, paddingHorizontal: 2 },
   // Co-op icon circles: deep green with a lighter rim
