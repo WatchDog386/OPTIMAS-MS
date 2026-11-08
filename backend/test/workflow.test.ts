@@ -47,7 +47,7 @@ describe('a technician’s day: check-in → job → completion → verification
       photoId(tech.token, 'TASK_END', task.id).then((pid) => api().post(`/api/v1/tasks/${task.id}/complete`).set(auth(tech.token)).send({ photoId: pid, notes: 'Installed and tested', ...body }));
 
     expect((await complete({})).body.error.code).toBe('SERIAL_REQUIRED');
-    expect((await complete({ serials: [serials[0]], signature: { path: 'M1 1 L20 20 L40 5', signedBy: 'Jane' } })).body.error.code).toBe('NOT_ACCEPTED');
+    expect((await complete({ serials: ['NOT-MY-DEVICE-1'], signature: { path: 'M1 1 L20 20 L40 5', signedBy: 'Jane' } })).body.error.code).toBe('NOT_FOUND');
     await api().post('/api/v1/inventory/accept').set(auth(tech.token)).send({});
     expect((await complete({ serials: [serials[0]] })).body.error.code).toBe('SIGNATURE_REQUIRED');
     const xss = await complete({ serials: [serials[0]], signature: { path: '<script>alert(1)</script>', signedBy: 'Jane' } });

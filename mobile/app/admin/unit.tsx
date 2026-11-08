@@ -18,6 +18,8 @@ export default function UnitTrace() {
   const [unit, setUnit] = useState<UnitHistory | null>(null);
   const [busy, setBusy] = useState(false);
   const [lostNote, setLostNote] = useState('');
+  const [account, setAccount] = useState('');
+  const [installNote, setInstallNote] = useState('');
   const params = useLocalSearchParams<{ serial?: string }>();
 
   const lookup = async (s = serial) => {
@@ -48,6 +50,20 @@ export default function UnitTrace() {
       await lookup(unit.serialNumber);
     } catch (e) {
       toast.error('Failed', e instanceof ApiError ? e.message : 'Try again');
+    }
+  };
+
+  // A device the technician installed but that is still listed in their hands
+  const markInstalled = async () => {
+    if (!unit) return;
+    try {
+      await api(`/inventory/units/${encodeURIComponent(unit.serialNumber)}/mark-installed`, { body: { customerAccount: account.trim(), note: installNote.trim() } });
+      toast.success('Marked installed', `${unit.serialNumber} moved from In hand to Installed.`);
+      setAccount('');
+      setInstallNote('');
+      await lookup(unit.serialNumber);
+    } catch (e) {
+      toast.error('Not marked installed', e instanceof ApiError ? e.message : 'Try again');
     }
   };
 
@@ -83,6 +99,10 @@ export default function UnitTrace() {
               <Text variant="bodySm" color={colors.textMuted}>
                 Installed on {unit.task.code} · {unit.task.customerName} · acct {unit.customerAccount ?? '—'}
               </Text>
+            ) : unit.status === 'INSTALLED' && unit.customerAccount ? (
+              <Text variant="bodySm" color={colors.textMuted}>
+                Installed for acct {unit.customerAccount}
+              </Text>
             ) : null}
           </Card>
 
@@ -109,6 +129,21 @@ export default function UnitTrace() {
               </View>
             </View>
           ))}
+
+          {unit.status === 'WITH_TECHNICIAN' || unit.status === 'IN_TRANSIT' ? (
+            <Card style={{ gap: space.md }}>
+              <View style={{ flexDirection: 'row', gap: space.sm, alignItems: 'center' }}>
+                <Ionicons name="checkmark-done" size={18} color={colors.success} />
+                <Text variant="title">Mark as installed</Text>
+              </View>
+              <Text variant="bodySm" color={colors.textMuted}>
+                For a device the technician already installed that is still showing in their hands.
+              </Text>
+              <Input placeholder="Customer account" autoCapitalize="characters" value={account} onChangeText={setAccount} />
+              <Input placeholder="How you confirmed it (required)" value={installNote} onChangeText={setInstallNote} />
+              <Button label="Mark installed" icon="checkmark-done-outline" disabled={account.trim().length < 2 || installNote.trim().length < 5} onPress={markInstalled} />
+            </Card>
+          ) : null}
 
           {unit.status === 'WITH_TECHNICIAN' || unit.status === 'IN_TRANSIT' ? (
             <Card style={{ gap: space.md }}>

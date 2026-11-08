@@ -7,7 +7,7 @@ import { Badge, Button, Card, EmptyState, ListRow, PageHeader, Screen, SectionHe
 import { useApi } from '../../src/hooks/useApi';
 import { router } from 'expo-router';
 import { requestScan } from '../../src/store/bridge';
-import { collectDevice } from '../../src/utils/devices';
+import { collectDevice, markInstalled } from '../../src/utils/devices';
 import { colors, space } from '../../src/theme';
 import { dateTime } from '../../src/utils/format';
 import { toast } from '../../src/store/feedback';
@@ -77,6 +77,7 @@ export default function MyStock() {
         <Button label="Check a device" icon="shield-checkmark-outline" variant="secondary" style={{ flex: 1 }} onPress={() => router.push('/verify')} />
         <Button label="Collect from customer" icon="arrow-undo-outline" variant="secondary" style={{ flex: 1 }} onPress={() => void collectDevice().then((ok) => (ok ? reload() : undefined))} />
       </View>
+      <Button label="Mark a device installed" icon="checkmark-done-outline" variant="secondary" onPress={() => void markInstalled().then((ok) => (ok ? reload() : undefined))} />
 
       <Card variant="hero" style={styles.hero}>
         <View style={{ flex: 1, gap: 4 }}>
@@ -97,7 +98,7 @@ export default function MyStock() {
         <>
           <SectionHeader title="Awaiting your confirmation" />
           <Text variant="bodySm" color={colors.textMuted}>
-            Only confirm items you have physically received. You cannot install unconfirmed devices.
+            Only confirm items you have physically received. A device you install is confirmed automatically.
           </Text>
           {data.pending.map((u) => (
             <ListRow key={u.id} icon="cube-outline" iconTint={colors.warning} title={u.item.name} subtitle={`S/N ${u.serialNumber}`} right={<Badge label="Issued" tone="warning" />} />
@@ -109,6 +110,11 @@ export default function MyStock() {
 
       <SectionHeader title="Routers & ONTs in hand" />
       {data?.units.length ? (
+        <Text variant="bodySm" color={colors.textMuted}>
+          Installed one and it is still here? Tap it to mark it installed.
+        </Text>
+      ) : null}
+      {data?.units.length ? (
         data.units.map((u) => {
           const overdue = (u.daysHeld ?? 0) >= data.ageAlertDays;
           return (
@@ -118,6 +124,7 @@ export default function MyStock() {
               iconTint={overdue ? colors.danger : colors.info}
               title={u.item.name}
               subtitle={`S/N ${u.serialNumber}`}
+              onPress={() => void markInstalled(u.serialNumber).then((ok) => (ok ? reload() : undefined))}
               right={<Badge label={u.daysHeld ? `${u.daysHeld}d held` : 'Today'} tone={overdue ? 'danger' : 'info'} />}
             />
           );

@@ -22,3 +22,40 @@ export async function collectDevice(): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * A device the technician installed but that is still listed as "in hand" (for example the job was
+ * closed without it): scan it (or pass the serial of a row tapped in My stock), give the customer's
+ * account, and it moves to Installed. Resolves true when done.
+ */
+export async function markInstalled(serial?: string): Promise<boolean> {
+  let code = serial;
+  if (!code) {
+    const scanned = await requestScan({ title: 'Scan the SN of the installed device' });
+    code = scanned?.[0];
+  }
+  if (!code) return false;
+  let unit: { serialNumber: string; item: { name: string } };
+  try {
+    unit = (await api<{ unit: typeof unit }>(`/inventory/my/find?code=${encodeURIComponent(code)}`)).unit;
+  } catch (e) {
+    toast.error('Not one of your devices', e instanceof ApiError ? e.message : 'Check the code and try again');
+    return false;
+  }
+  const account = await promptDialog({
+    title: 'Installed for which customer?',
+    message: `${unit.item.name} · S/N ${unit.serialNumber}. Enter the customer's account number.`,
+    emoji: '📡',
+    confirmLabel: 'Mark installed',
+    input: { placeholder: 'Customer account, e.g. FBI-CUS-1234', required: true },
+  });
+  if (!account) return false;
+  try {
+    await api('/inventory/install', { body: { serial: unit.serialNumber, customerAccount: account } });
+    toast.success('Marked installed', `${unit.serialNumber} moved from In hand to Installed.`);
+    return true;
+  } catch (e) {
+    toast.error('Not marked installed', e instanceof ApiError ? e.message : 'Try again');
+    return false;
+  }
+}

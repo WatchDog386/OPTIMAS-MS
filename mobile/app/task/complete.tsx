@@ -15,7 +15,7 @@ import { toast, celebrate } from '../../src/store/feedback';
 export default function CompleteTask() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const task = useApi<{ task: Task }>(`/tasks/${id}`);
-  const stock = useApi<{ units: SerialUnit[]; bulk: BulkHolding[] }>('/inventory/my');
+  const stock = useApi<{ units: SerialUnit[]; pending?: SerialUnit[]; bulk: BulkHolding[] }>('/inventory/my');
   const [serials, setSerials] = useState<string[]>([]);
   const [qty, setQty] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState('');
@@ -26,7 +26,8 @@ export default function CompleteTask() {
   const [signedBy, setSignedBy] = useState('');
   const [drawing, setDrawing] = useState(false);
 
-  const units = stock.data?.units ?? [];
+  // Devices accepted and devices still waiting to be accepted: both can be installed
+  const units = [...(stock.data?.units ?? []), ...(stock.data?.pending ?? [])];
   const bulk = stock.data?.bulk ?? [];
   const materials = useMemo(
     () =>
@@ -42,9 +43,20 @@ export default function CompleteTask() {
   const needsSerial = t.type === 'INSTALLATION';
 
   const addSerials = (list: string[]) => setSerials((s) => [...new Set([...s, ...list.map((x) => x.toUpperCase())])]);
+  // Each scanned code is checked against the technician's devices straight away, so a wrong code
+  // (MAC, the other serial on the sticker, someone else's device) is caught here, not at submit
   const scan = async () => {
     const r = await requestScan({ title: 'Scan installed device' });
-    if (r?.length) addSerials(r);
+    if (!r?.length) return;
+    for (const code of r) {
+      try {
+        const { unit } = await api<{ unit: { serialNumber: string; item: { name: string } } }>(`/inventory/my/find?code=${encodeURIComponent(code)}`);
+        addSerials([unit.serialNumber]);
+        toast.success(unit.item.name, `S/N ${unit.serialNumber} added`);
+      } catch (e) {
+        toast.error('Not one of your devices', e instanceof ApiError ? e.message : 'Check the code and try again');
+      }
+    }
   };
 
   const submit = async () => {
@@ -85,7 +97,7 @@ export default function CompleteTask() {
 
       <SectionHeader title={needsSerial ? 'Installed device (required)' : 'Devices installed'} />
       <Text variant="bodySm" color={colors.textMuted}>
-        Scan the serial on the router/ONT left at the customer. It must be in your custody.
+        Scan the SN on the router/ONT left at the customer, or tap it in your list below. When the job is submitted it moves from In hand to Installed.
       </Text>
       {serials.map((s) => (
         <ListRow

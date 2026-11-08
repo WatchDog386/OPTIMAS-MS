@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { ItemCategory, TrackingMode, UnitStatus } from '@prisma/client';
 import { env } from '../../config/env';
 import { prisma } from '../../lib/prisma';
-import { badRequest, conflict } from '../../lib/http-error';
+import { badRequest, conflict, notFound } from '../../lib/http-error';
 import { ah } from '../../middleware/async';
 import { ROLES, me, requireRole } from '../../middleware/auth';
 import { parse } from '../../middleware/validate';
@@ -356,6 +356,61 @@ inventoryRouter.get(
   }),
 );
 
+/** Which of my devices a scanned code means (the job-completion screen checks every scan with this). */
+inventoryRouter.get(
+  '/my/find',
+  ah(async (req, res) => {
+    const code = typeof req.query.code === 'string' ? req.query.code : '';
+    if (!code.trim()) throw badRequest('Scan or type a serial number');
+    const unit = await svc.findHeldUnit(prisma, me(req).id, code);
+    if (!unit) {
+      const elsewhere = await prisma.serialUnit.findFirst({ where: { serialNumber: { in: svc.codeVariants(code) } }, include: { holder: { select: { name: true } } } });
+      if (elsewhere) throw conflict(`${elsewhere.serialNumber} is not one of your devices${elsewhere.holder ? ` (${elsewhere.holder.name} holds it)` : ` (${elsewhere.status.toLowerCase().replace('_', ' ')})`}`, 'NOT_IN_CUSTODY');
+      throw notFound('That code among your devices. Scan the code marked SN, or pick the device from your list');
+    }
+    res.json({ unit: { id: unit.id, serialNumber: unit.serialNumber, status: unit.status, item: { name: unit.item.name } } });
+  }),
+);
+
+const installSchema = z.object({
+  serial: z.string().trim().min(3),
+  customerAccount: z.string().trim().min(2, 'Enter the customer account number'),
+  note: z.string().trim().max(300).optional(),
+});
+
+/** A technician records a device installed at a customer when there was no Installation job in the app. */
+inventoryRouter.post(
+  '/install',
+  ah(async (req, res) => {
+    const user = me(req);
+    if (user.role !== 'TECHNICIAN') throw forbidden('Only technicians install devices');
+    const b = parse(installSchema, req.body);
+    const unit = await prisma.$transaction((tx) => svc.installSerial(tx, user.id, b.serial, { id: null, customerAccount: b.customerAccount.toUpperCase() }));
+    await audit(user.id, 'UNIT_INSTALLED', 'SerialUnit', unit.id, `Installed ${unit.serialNumber} at ${b.customerAccount.toUpperCase()} without a job${b.note ? `: ${b.note}` : ''}`);
+    res.json({ unit: { serialNumber: unit.serialNumber, status: 'INSTALLED', customerAccount: b.customerAccount.toUpperCase() } });
+  }),
+);
+
+/** Store or managers: a device a technician already installed, but which still shows as in their hands. */
+inventoryRouter.post(
+  '/units/:serial/mark-installed',
+  store,
+  ah(async (req, res) => {
+    const b = parse(installSchema.omit({ serial: true }).extend({ note: z.string().trim().min(5, 'Say how you know it is installed') }), req.body);
+    const serial = readCode(req.params.serial).serial;
+    const unit = await prisma.serialUnit.findFirst({ where: { serialNumber: { in: svc.codeVariants(serial) } } });
+    if (!unit) throw badRequest(`No device with serial ${serial}`);
+    if (unit.status !== 'WITH_TECHNICIAN' && unit.status !== 'IN_TRANSIT') throw conflict(`${unit.serialNumber} is not with a technician (${unit.status.toLowerCase().replace('_', ' ')})`);
+    const holderId = unit.holderId;
+    await prisma.$transaction(async (tx) => {
+      await tx.serialUnit.update({ where: { id: unit.id }, data: { status: 'INSTALLED', holderId: null, heldSince: null, customerAccount: b.customerAccount.toUpperCase(), installedAt: new Date() } });
+      await tx.stockMovement.create({ data: { type: 'INSTALL', itemId: unit.itemId, serialUnitId: unit.id, quantity: 1, fromUserId: holderId, actorId: me(req).id, note: b.note } });
+    });
+    await audit(me(req).id, 'UNIT_INSTALLED', 'SerialUnit', unit.id, `Marked ${unit.serialNumber} installed at ${b.customerAccount.toUpperCase()}: ${b.note}`);
+    res.json({ unit: { serialNumber: unit.serialNumber, status: 'INSTALLED' } });
+  }),
+);
+
 inventoryRouter.post(
   '/accept',
   ah(async (req, res) => {
@@ -412,8 +467,13 @@ inventoryRouter.get(
   '/units/:serial/history',
   store,
   ah(async (req, res) => {
-    const unit = await prisma.serialUnit.findUnique({
-      where: { serialNumber: readCode(req.params.serial).serial },
+    // The exact serial first, then its other printed forms (GPON text/hex, "SN:" prefix), then the MAC
+    const code = readCode(req.params.serial).serial;
+    const found =
+      (await prisma.serialUnit.findFirst({ where: { serialNumber: { in: svc.codeVariants(code) } }, select: { id: true } })) ??
+      (await prisma.serialUnit.findFirst({ where: { macAddress: { equals: code, mode: 'insensitive' } }, select: { id: true } }));
+    const unit = !found ? null : await prisma.serialUnit.findUnique({
+      where: { id: found.id },
       include: {
         item: true,
         holder: { select: { id: true, name: true, staffNo: true } },

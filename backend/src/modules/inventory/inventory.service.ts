@@ -212,16 +212,56 @@ export async function reportLost(tx: Tx, actorId: string, serialNumber: string, 
 // ───────────────────────────── Field usage ───────────────────────────
 
 /** Installs a serialised unit at a customer. The unit must be accepted and held by the technician. */
+/**
+ * The other ways one device's code can be written, so a scan matches what the store recorded:
+ * a GPON serial as text or hex (HWTC1A2B3C4D ⇄ 485754431A2B3C4D), and a MAC with or without separators.
+ */
+export function codeVariants(raw: string): string[] {
+  const s = readCode(raw).serial.replace(/^(S\/N|SN|GPON\s*SN|SERIAL( NO\.?| NUMBER)?)\s*[:#.-]?\s*/, '').trim();
+  const out = new Set([s, s.replace(/[\s:.-]/g, '')]);
+  const text = /^([A-Z]{4})([0-9A-F]{8})$/.exec(s);
+  if (text) out.add(Buffer.from(text[1], 'ascii').toString('hex').toUpperCase() + text[2]);
+  const hex = /^([0-9A-F]{8})([0-9A-F]{8})$/.exec(s);
+  if (hex) {
+    const vendor = Buffer.from(hex[1], 'hex').toString('ascii');
+    if (/^[A-Z]{4}$/.test(vendor)) out.add(vendor + hex[2]);
+  }
+  return [...out].filter(Boolean);
+}
+
+/**
+ * The device in this person's hands that a scanned code means: the exact serial, its other GPON form,
+ * its MAC address, or — when only one of their devices fits — a serial the scan is part of (or that is
+ * part of the scan, as when a label adds a prefix). Null when none of their devices fits.
+ */
+export async function findHeldUnit(tx: Tx, userId: string, raw: string) {
+  const variants = codeVariants(raw);
+  const held = await tx.serialUnit.findMany({ where: { holderId: userId, status: { in: [...CUSTODY] } }, include: { item: true } });
+  const mac = (m: string | null) => (m ?? '').toUpperCase().replace(/[\s:.-]/g, '');
+  const exact = held.find((u) => variants.includes(u.serialNumber) || (u.macAddress && variants.includes(mac(u.macAddress))));
+  if (exact) return exact;
+  const long = variants.filter((v) => v.length >= 6);
+  const partial = held.filter((u) => long.some((v) => u.serialNumber.includes(v) || v.includes(u.serialNumber)));
+  return partial.length === 1 ? partial[0] : null;
+}
+
+/** Marks one of this technician's devices installed at a customer (on a job, or recorded on its own). */
 export async function installSerial(
   tx: Tx,
   userId: string,
   serialNumber: string,
-  task: { id: string; customerAccount: string | null },
+  task: { id: string | null; customerAccount: string | null },
 ) {
-  const [unit] = await unitsBySerial(tx, [serialNumber]);
-  if (unit.holderId !== userId) throw conflict(`${unit.serialNumber} is not in your custody`, 'NOT_IN_CUSTODY');
-  if (unit.status === 'IN_TRANSIT') throw conflict(`Accept ${unit.serialNumber} in "My stock" before installing it`, 'NOT_ACCEPTED');
-  if (unit.status !== 'WITH_TECHNICIAN') throw conflict(`${unit.serialNumber} cannot be installed (${unit.status})`);
+  const unit = await findHeldUnit(tx, userId, serialNumber);
+  if (!unit) {
+    const elsewhere = await tx.serialUnit.findFirst({ where: { serialNumber: { in: codeVariants(serialNumber) } } });
+    if (elsewhere) throw conflict(`${elsewhere.serialNumber} is not in your custody (${elsewhere.status.toLowerCase().replace('_', ' ')})`, 'NOT_IN_CUSTODY');
+    throw notFound(`Device ${readCode(serialNumber).serial} among your devices. Scan the code marked SN, or pick the device from your list`);
+  }
+  // Taking a device out and installing it proves it was received: accept it on the way
+  if (unit.status === 'IN_TRANSIT') {
+    await tx.stockMovement.create({ data: { type: 'ACCEPT', itemId: unit.itemId, serialUnitId: unit.id, quantity: 1, toUserId: userId, actorId: userId } });
+  }
   await tx.serialUnit.update({
     where: { id: unit.id },
     data: {
