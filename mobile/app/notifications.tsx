@@ -61,7 +61,7 @@ function when(iso: string) {
 
 /**
  * Notifications, as in Optimas-SME: "Mark all read", filled topic tabs, then "New" and "Earlier". Each
- * has a coloured round icon (red dot while unread); opening one marks it read and goes to what it is about.
+ * is a clear card with a coloured round icon (a red dot while unread, green once read); opening one marks it read and goes to what it is about.
  */
 export default function Notifications() {
   const insets = useSafeAreaInsets();
@@ -184,7 +184,7 @@ function Section({ title, count, children }: { title: string; count: number; chi
           {count}
         </Text>
       </View>
-      <View style={{ gap: 4 }}>{children}</View>
+      <View style={{ gap: 8 }}>{children}</View>
     </View>
   );
 }
@@ -198,15 +198,16 @@ function Row({ n, unread = false, index, onOpen }: { n: AppNotification; unread?
         onPress={() => onOpen(n)}
         accessibilityRole="button"
         accessibilityLabel={`${unread ? 'New. ' : ''}${n.title}. ${n.body}`}
-        style={({ pressed }) => [styles.row, unread ? { backgroundColor: SME.unread } : { opacity: 0.7 }, pressed && { transform: [{ scale: 0.99 }] }]}
+        style={({ pressed }) => [styles.row, pressed && { transform: [{ scale: 0.99 }] }]}
       >
         <View style={[styles.icon, { backgroundColor: tone.bg }]}>
           <Ionicons name={icon} size={20} color={tone.fg} />
-          {unread ? <View style={styles.dot} accessibilityLabel="Unread" /> : null}
+          {/* Red until it is read, then green */}
+          <View style={[styles.dot, { backgroundColor: unread ? '#E23B41' : '#2DA043' }]} accessibilityLabel={unread ? 'Unread' : 'Read'} />
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
           <View style={styles.titleRow}>
-            <Text variant="body" color={unread ? SME.fg : SME.fg2} fixedColor numberOfLines={2} style={{ flex: 1, fontFamily: unread ? fonts.semibold : fonts.medium, fontSize: 14 }}>
+            <Text variant="body" color={SME.fg} fixedColor numberOfLines={2} style={{ flex: 1, fontFamily: fonts.semibold, fontSize: 14 }}>
               {n.title}
             </Text>
             <Text variant="label" color={SME.fg4} fixedColor style={{ fontSize: 11, paddingTop: 2 }}>
@@ -246,9 +247,10 @@ const styles = StyleSheet.create({
   alerts: { gap: space.sm, padding: 16, borderRadius: 16, backgroundColor: SME.surface },
   caughtUp: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 16, backgroundColor: isDark ? 'rgba(16,185,129,0.1)' : '#ECFDF5' },
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: 8 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 16 },
+  // Every notification, read or not, in the same clear card
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 16, backgroundColor: SME.surface, borderWidth: 1, borderColor: isDark ? '#303538' : '#E2E8F0' },
   icon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  dot: { position: 'absolute', right: -2, top: -2, width: 12, height: 12, borderRadius: 6, backgroundColor: '#E23B41', borderWidth: 2, borderColor: isDark ? '#1E1E1E' : '#FFFFFF' },
+  dot: { position: 'absolute', right: -2, top: -2, width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: isDark ? '#1E1E1E' : '#FFFFFF' },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   empty: { alignItems: 'center', paddingHorizontal: 24, paddingVertical: 64 },
   emptyIcon: { width: 96, height: 96, borderRadius: 48, backgroundColor: SME.surface3, alignItems: 'center', justifyContent: 'center' },
