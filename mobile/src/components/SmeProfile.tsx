@@ -18,7 +18,7 @@ import { useLocationSetting } from './LocationSetting';
 import { usePrivacyItems } from './PrivacyRows';
 import { TAB_BAR_CLEARANCE } from './Screen';
 import { ShiftCard } from './ShiftCard';
-import { ProfileRing, SME, SmeAppBar, SmeLogOut, SmeRow, SmeSection } from './SmeKit';
+import { ProfileRing, SME, SmeAppBar, useScrolledBar, SmeLogOut, SmeRow, SmeSection } from './SmeKit';
 import { Text } from './Text';
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -45,6 +45,7 @@ function completion(u: User) {
  */
 export function SmeProfilePage({ tools = [], children, tabs = true }: { tools?: ProfileTool[]; children?: ReactNode; tabs?: boolean }) {
   const insets = useSafeAreaInsets();
+  const bar = useScrolledBar();
   const stored = useAuth((s) => s.user)!;
   const me = useApi<{ user: User }>('/auth/me');
   const user = me.data?.user ?? stored;
@@ -73,8 +74,8 @@ export function SmeProfilePage({ tools = [], children, tabs = true }: { tools?: 
 
   return (
     <View style={styles.root}>
-      <SmeAppBar title="My Profile" />
-      <ScrollView contentContainerStyle={[styles.body, { paddingBottom: (tabs ? TAB_BAR_CLEARANCE : 32) + insets.bottom }]} showsVerticalScrollIndicator={false}>
+      <SmeAppBar title="My Profile" scrolled={bar.scrolled} />
+      <ScrollView onScroll={bar.onScroll} scrollEventThrottle={32} contentContainerStyle={[styles.body, { paddingBottom: (tabs ? TAB_BAR_CLEARANCE : 32) + insets.bottom }]} showsVerticalScrollIndicator={false}>
         <View style={styles.head}>
           <ProfileRing percent={completion(user)} initial={user.name?.charAt(0).toUpperCase()} photo={user.avatarUrl} onEdit={() => void photo(changeAvatar)} />
           <Text variant="title" color={SME.fg} fixedColor style={styles.name}>

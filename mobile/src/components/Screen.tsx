@@ -1,7 +1,8 @@
-import { Children, isValidElement, useEffect, useRef, type ReactElement, type ReactNode } from 'react';
+import { Children, isValidElement, useCallback, useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { Animated, Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets, type Edge } from 'react-native-safe-area-context';
-import { STATUS_BAR_COLOR } from '../utils/install';
+import { useFocusEffect } from 'expo-router';
+import { BAR_SCROLLED_COLOR, STATUS_BAR_COLOR, setThemeColor } from '../utils/install';
 import { colors, isDark, space } from '../theme';
 import { GlassBackground } from './Glass';
 import { NATIVE, prefersReducedMotion, spring } from '../utils/motion';
@@ -73,6 +74,21 @@ export function Screen({ children, scroll = true, edges = ['top'], contentStyle,
   const fixedHead = pinned && !desktop;
   const body = fixedHead ? items.slice(1) : pinned ? [<StickyHead key="sticky-head" scrollY={scrollY} top={top}>{items[0]}</StickyHead>, ...items.slice(1)] : children;
   const safeTop = edges.includes('top');
+  // At rest the top bar is see-through and the status bar is the page colour; scrolled, both take the
+  // band colour together. Re-applied when the page comes back into view, undone when it leaves.
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    if (!fixedHead) return;
+    const id = scrollY.addListener(({ value }) => setScrolled((was) => (value > 14) !== was ? value > 14 : was));
+    return () => scrollY.removeListener(id);
+  }, [fixedHead, scrollY]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!fixedHead) return;
+      setThemeColor(scrolled ? BAR_SCROLLED_COLOR : STATUS_BAR_COLOR);
+      return () => setThemeColor(STATUS_BAR_COLOR);
+    }, [fixedHead, scrolled]),
+  );
   // Every page arrives the same way: it fades in while rising a few pixels into place
   const enter = useRef(new Animated.Value(prefersReducedMotion() ? 1 : 0)).current;
   useEffect(() => {
@@ -87,7 +103,7 @@ export function Screen({ children, scroll = true, edges = ['top'], contentStyle,
         {fixedHead ? (
           // The bar's background reaches up under the status bar, in the status bar's own colour
           <View style={[styles.fixedHead, { paddingTop: (safeTop ? insets.top : 0) + top }]}>
-            <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.frost]} />
+            <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.frost, { opacity: scrollY.interpolate({ inputRange: [0, 14], outputRange: [0, 1], extrapolate: 'clamp' }) }]} />
             {items[0]}
           </View>
         ) : null}
@@ -137,7 +153,7 @@ const styles = StyleSheet.create({
   sticky: { marginHorizontal: -space.lg, paddingHorizontal: space.lg, paddingBottom: 10, marginBottom: -10, zIndex: 10 },
   // Co-op look: solid, exactly the status bar's colour, so the two read as one band
   // One solid band with the phone's status bar, at rest and while scrolling
-  frost: { backgroundColor: STATUS_BAR_COLOR, borderBottomWidth: 1, borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(28,29,31,0.06)', shadowColor: '#1C1D1F', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
+  frost: { backgroundColor: BAR_SCROLLED_COLOR, borderBottomWidth: 1, borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(28,29,31,0.06)', shadowColor: '#1C1D1F', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
   footer: {
     paddingHorizontal: space.lg,
     paddingVertical: space.md,

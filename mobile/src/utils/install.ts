@@ -125,8 +125,10 @@ export function installSteps(kind: BrowserKind = browserKind()): string[] {
   }
 }
 
-/** Phone status bar colour; in dark mode also the top bar's background, so the two are one band. */
-export const STATUS_BAR_COLOR = isDark ? '#1A1C1B' : '#FFFFFF';
+/** Phone status bar colour at rest: the page's own colour, so the top of the screen is one even surface. */
+export const STATUS_BAR_COLOR = isDark ? '#121212' : '#F8FAFC';
+/** Once the page is scrolled, the top bar and the status bar turn this colour together (one band). */
+export const BAR_SCROLLED_COLOR = isDark ? '#1A1C1B' : '#FFFFFF';
 /** The opening splash's blue: the status bar matches it until the splash has gone. */
 export const SPLASH_BAR_COLOR = '#16307A';
 

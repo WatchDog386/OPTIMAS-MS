@@ -4,7 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../src/api/client';
 import { Button, Reveal, Text } from '../src/components';
-import { SME, SmeAppBar, SmeChips } from '../src/components/SmeKit';
+import { SME, SmeAppBar, useScrolledBar, SmeChips } from '../src/components/SmeKit';
 import { enableWebPush, webPushState, type WebPushState } from '../src/utils/webpush';
 import { toast } from '../src/store/feedback';
 import { useApi } from '../src/hooks/useApi';
@@ -65,6 +65,7 @@ function when(iso: string) {
  */
 export default function Notifications() {
   const insets = useSafeAreaInsets();
+  const bar = useScrolledBar();
   const { data, setData, loading } = useApi<{ notifications: AppNotification[]; unread: number }>('/notifications');
   const [tab, setTab] = useState<Tab>('ALL');
 
@@ -107,6 +108,7 @@ export default function Notifications() {
   return (
     <View style={styles.root}>
       <SmeAppBar
+        scrolled={bar.scrolled}
         title="Notifications"
         right={
           <Pressable onPress={() => markRead()} disabled={!data?.unread} accessibilityRole="button" style={({ pressed }) => [styles.markAll, !data?.unread && { opacity: 0.4 }, pressed && { transform: [{ scale: 0.95 }] }]}>
@@ -117,7 +119,7 @@ export default function Notifications() {
           </Pressable>
         }
       />
-      <ScrollView contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 40 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView onScroll={bar.onScroll} scrollEventThrottle={32} contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 40 }]} showsVerticalScrollIndicator={false}>
         {tabs.length > 1 ? (
           <SmeChips
             items={tabs.map((t) => {

@@ -1,11 +1,11 @@
-import type { ReactNode } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 import { fonts, isDark } from '../theme';
-import { STATUS_BAR_COLOR } from '../utils/install';
+import { BAR_SCROLLED_COLOR, STATUS_BAR_COLOR, setThemeColor } from '../utils/install';
 import { useAuth } from '../store/auth';
 import { Text } from './Text';
 
@@ -34,11 +34,30 @@ export function goHome() {
   else router.replace(home as never);
 }
 
+/**
+ * Whether the page under the bar is scrolled: at rest the bar and status bar are the page colour (one even
+ * surface); scrolled, both turn the band colour. Pass `onScroll` to the page's ScrollView.
+ */
+export function useScrolledBar() {
+  const [scrolled, setScrolled] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      setThemeColor(scrolled ? BAR_SCROLLED_COLOR : STATUS_BAR_COLOR);
+      return () => setThemeColor(STATUS_BAR_COLOR);
+    }, [scrolled]),
+  );
+  const onScroll = useCallback((e: { nativeEvent: { contentOffset: { y: number } } }) => {
+    const now = e.nativeEvent.contentOffset.y > 14;
+    setScrolled((was) => (was === now ? was : now));
+  }, []);
+  return { scrolled, onScroll };
+}
+
 /** SME's page bar: "Back" on the left, the title in the middle, an action on the right. Stays put. */
-export function SmeAppBar({ title, right, onBack = goHome }: { title: string; right?: ReactNode; onBack?: () => void }) {
+export function SmeAppBar({ title, right, onBack = goHome, scrolled = false }: { title: string; right?: ReactNode; onBack?: () => void; scrolled?: boolean }) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={[styles.bar, { paddingTop: insets.top + 4, backgroundColor: STATUS_BAR_COLOR }]}>
+    <View style={[styles.bar, { paddingTop: insets.top + 4, backgroundColor: scrolled ? BAR_SCROLLED_COLOR : STATUS_BAR_COLOR }, scrolled && styles.barScrolled]}>
       <View style={styles.barSide}>
         <Pressable onPress={onBack} hitSlop={10} accessibilityRole="button" accessibilityLabel="Back" style={({ pressed }) => [styles.back, pressed && { opacity: 0.6 }]}>
           <Ionicons name="chevron-back" size={18} color={SME.fg2} />
@@ -221,7 +240,8 @@ export function SmeLogOut({ onPress, label = 'Log out' }: { onPress: () => void;
 }
 
 const styles = StyleSheet.create({
-  bar: { flexDirection: 'row', alignItems: 'center', minHeight: 56, paddingHorizontal: 12, paddingBottom: 4 },
+  bar: { flexDirection: 'row', alignItems: 'center', minHeight: 56, paddingHorizontal: 12, paddingBottom: 4, zIndex: 2 },
+  barScrolled: { borderBottomWidth: 1, borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(28,29,31,0.06)' },
   barSide: { flex: 1, minWidth: 0 },
   back: { flexDirection: 'row', alignItems: 'center', gap: 2, height: 40, alignSelf: 'flex-start', paddingRight: 6 },
   barTitle: { fontFamily: fonts.medium, fontSize: 17, textAlign: 'center', maxWidth: '52%' },
