@@ -9,8 +9,11 @@ const LOGO = require('../../assets/logo-app.webp');
 const MIN_VISIBLE_MS = 1400;
 /** The close, minimise and zoom buttons of a Mac window: red, yellow, green. */
 export const MAC_DOTS = ['#FF5F57', '#FEBC2E', '#28C840'];
-/** The opening page is always the dark look, on blue (the same in light and dark mode). */
-export const SPLASH_BLUE = ['#16307A', '#122868', '#0C1D4F'] as const;
+/**
+ * The opening page is always the dark look, on one solid blue (the same in light and dark mode) — the
+ * installed app's launch screen colour (manifest background_color), so the two run into each other.
+ */
+export const SPLASH_BLUE = ['#16307A', '#16307A', '#16307A'] as const;
 
 /**
  * Opening splash. Mirrors the static splash in public/index.html (removed once fonts are in, so there is
