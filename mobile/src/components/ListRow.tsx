@@ -3,6 +3,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, radius, space } from '../theme';
 import { Text } from './Text';
+import { OPENED_ON_DESKTOP } from '../theme/desktop';
+import { desk } from '../theme/desk';
 
 interface Props {
   title: string;
@@ -58,7 +60,9 @@ const styles = StyleSheet.create({
     borderColor: colors.glassBorder,
     padding: space.md + 2,
     overflow: 'hidden',
+    // On a laptop: a dashboard list row (white, hairline border, 4px corners)
+    ...(OPENED_ON_DESKTOP ? { backgroundColor: desk.panel, borderColor: desk.border, borderRadius: 4, paddingVertical: 12, paddingHorizontal: 16 } : null),
   },
   flat: { backgroundColor: 'transparent', borderWidth: 0, borderRadius: 0, paddingHorizontal: 2, paddingVertical: space.md },
-  icon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  icon: OPENED_ON_DESKTOP ? { width: 36, height: 36, borderRadius: 4, alignItems: 'center', justifyContent: 'center' } : { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
 });

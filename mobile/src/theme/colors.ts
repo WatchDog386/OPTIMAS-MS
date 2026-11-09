@@ -169,7 +169,10 @@ export function setThemeMode(mode: ThemeMode) {
   if (typeof window !== 'undefined') window.location.reload();
 }
 
-export const colors = isDark ? dark : light;
+import { OPENED_ON_DESKTOP } from './desktop';
+const base = isDark ? dark : light;
+/** On a laptop, the chosen-item highlight is the desktop's green instead of the phone's lime/yellow. */
+export const colors: typeof light = OPENED_ON_DESKTOP ? { ...base, highlight: '#2DA043', onHighlight: '#FFFFFF' } : base;
 
 /** Bank-card themes, as on the Business-SME dashboard. */
 export const cardThemes = {

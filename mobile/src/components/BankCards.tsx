@@ -4,6 +4,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, fonts } from '../theme';
 
+import { OPENED_ON_DESKTOP } from '../theme/desktop';
+import { desk } from '../theme/desk';
 import { Text } from './Text';
 
 type Icon = keyof typeof Ionicons.glyphMap;
@@ -70,10 +72,10 @@ export function ActionCardRow({ items }: { items: ActionCardItem[] }) {
           accessibilityRole="button"
           accessibilityState={{ selected: !!c.selected }}
           accessibilityLabel={`${c.title}. ${c.status}. ${c.action}`}
-          style={({ pressed }) => [styles.action, { backgroundColor: c.color }, c.selected && styles.selected, pressed && { transform: [{ scale: 0.97 }] }]}
+          style={({ pressed }) => [styles.action, { backgroundColor: c.color }, OPENED_ON_DESKTOP && styles.deskAction, c.selected && styles.selected, pressed && { transform: [{ scale: 0.97 }] }]}
         >
           <View style={styles.actionTop}>
-            <Ionicons name={c.icon} size={24} color="#FFFFFF" />
+            <Ionicons name={c.icon} size={24} color={OPENED_ON_DESKTOP ? desk.teal : '#FFFFFF'} />
             {c.badge ? (
               <View style={styles.badge}>
                 <Text variant="label" color={colors.onHighlight} fixedColor style={{ fontFamily: fonts.bold }}>
@@ -82,18 +84,18 @@ export function ActionCardRow({ items }: { items: ActionCardItem[] }) {
               </View>
             ) : null}
           </View>
-          <Text variant="h2" color="#FFFFFF" fixedColor numberOfLines={1} style={{ fontSize: 15, lineHeight: 20 }}>
+          <Text variant="h2" color={OPENED_ON_DESKTOP ? desk.strong : '#FFFFFF'} fixedColor numberOfLines={1} style={{ fontSize: 15, lineHeight: 20 }}>
             {c.title}
           </Text>
-          <Text variant="label" color="rgba(255,255,255,0.8)" fixedColor numberOfLines={1} style={{ fontSize: 12 }}>
+          <Text variant="label" color={OPENED_ON_DESKTOP ? desk.muted : 'rgba(255,255,255,0.8)'} fixedColor numberOfLines={1} style={{ fontSize: 12 }}>
             {c.status}
           </Text>
           <View style={styles.link}>
-            <Text variant="label" color="#FFFFFF" fixedColor style={{ fontFamily: fonts.semibold, fontSize: 13, textDecorationLine: 'underline' }}>
+            <Text variant="label" color={OPENED_ON_DESKTOP ? desk.teal : '#FFFFFF'} fixedColor style={{ fontFamily: fonts.semibold, fontSize: 13, textDecorationLine: OPENED_ON_DESKTOP ? 'none' : 'underline' }}>
               {c.action}
             </Text>
-            <View style={styles.linkArrow}>
-              <Ionicons name="chevron-forward" size={11} color="#FFFFFF" />
+            <View style={[styles.linkArrow, OPENED_ON_DESKTOP && { borderColor: desk.teal }]}>
+              <Ionicons name="chevron-forward" size={11} color={OPENED_ON_DESKTOP ? desk.teal : '#FFFFFF'} />
             </View>
           </View>
         </Pressable>
@@ -175,6 +177,8 @@ export function SectionLead({ text, accent }: { text: string; accent?: string })
 }
 
 const styles = StyleSheet.create({
+  // On a laptop: a white dashboard card with a hairline border
+  deskAction: { backgroundColor: desk.panel, borderWidth: 1, borderColor: desk.border, borderRadius: 4 },
   feature: { minHeight: 128, borderRadius: 18, paddingVertical: 18, paddingLeft: 18, paddingRight: 12, flexDirection: 'row', alignItems: 'center', overflow: 'hidden' },
   featureTitle: { fontFamily: fonts.bold, fontSize: 16.5 },
   art: { width: 88, height: 88, alignItems: 'center', justifyContent: 'center' },

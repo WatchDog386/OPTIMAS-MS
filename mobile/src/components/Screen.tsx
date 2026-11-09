@@ -140,7 +140,7 @@ export function Screen({ children, scroll = true, edges = ['top'], contentStyle,
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgBottom },
   // Desktop: the Business-SME page — light grey, roomier margins, nothing hidden behind a tab bar
-  desktop: { paddingHorizontal: 32, paddingTop: 28, paddingBottom: 48, width: '100%', maxWidth: 1320, alignSelf: 'center' },
+  desktop: { paddingHorizontal: 30, paddingTop: 30, paddingBottom: 48, gap: 20, width: '100%', maxWidth: 1320, alignSelf: 'center' },
   desktopFooter: { paddingHorizontal: 32, backgroundColor: desk.bar, borderTopColor: desk.border },
   content: {
     padding: space.lg,

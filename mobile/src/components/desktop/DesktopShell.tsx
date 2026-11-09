@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { Role } from '../../api/types';
@@ -10,22 +10,8 @@ import { useDesktop } from '../../theme/desktop';
 import { Text } from '../Text';
 
 /** The Business-SME desktop colours: navy rail, light page. */
-export const desk = {
-  nav: '#0E2135',
-  navText: '#E2E8F0',
-  navMuted: '#8A9AAE',
-  navActive: '#4DA3FF',
-  navHover: 'rgba(255,255,255,0.06)',
-  orgCard: 'rgba(255,255,255,0.06)',
-  page: isDark ? '#111214' : '#F7F8FA',
-  bar: isDark ? '#17181B' : '#FFFFFF',
-  panel: isDark ? '#1A1B1E' : '#FFFFFF',
-  mini: isDark ? '#24262A' : '#F3F4F6',
-  border: isDark ? '#2C2E33' : '#E5E7EB',
-  ink: isDark ? '#ECEFED' : '#17201C',
-  muted: isDark ? '#A3ADA8' : '#6B7280',
-  green: '#2DA043',
-};
+export { desk } from '../../theme/desk';
+import { desk } from '../../theme/desk';
 
 type Icon = keyof typeof Ionicons.glyphMap;
 type Item = { label: string; icon: Icon; href: string; badge?: number };
@@ -153,8 +139,8 @@ function Frame({ path, children }: { path: string; children: ReactNode }) {
     const badge = i.label === 'Notifications' ? bell : i.badge;
     return (
       <Pressable key={i.href} onPress={() => go(i.href)} style={(state) => [styles.item, (state as { hovered?: boolean }).hovered && !on && { backgroundColor: desk.navHover }]} accessibilityRole="link" accessibilityState={{ selected: on }}>
-        <Ionicons name={i.icon} size={19} color={on ? desk.navActive : desk.navText} />
-        <Text variant="body" color={on ? desk.navActive : desk.navText} fixedColor style={[styles.itemText, on && { fontFamily: fonts.medium }]} numberOfLines={1}>
+        <Ionicons name={i.icon} size={16} color={on ? desk.navActive : desk.navText} style={{ opacity: on ? 1 : 0.85 }} />
+        <Text variant="body" color={on ? desk.navActive : desk.navText} fixedColor style={[styles.itemText, !on && { opacity: 0.85 }]} numberOfLines={1}>
           {i.label}
         </Text>
         {badge ? (
@@ -172,12 +158,15 @@ function Frame({ path, children }: { path: string; children: ReactNode }) {
     <View style={styles.root}>
       <View style={styles.rail}>
         <Pressable onPress={() => go(homeFor(user.role))} style={styles.org} accessibilityRole="link" accessibilityLabel="Home">
-          <Text variant="title" color="#FFFFFF" fixedColor style={{ fontFamily: fonts.semibold, fontSize: 15 }} numberOfLines={1}>
-            Optimas Fibre
-          </Text>
-          <Text variant="label" color={desk.navMuted} fixedColor numberOfLines={1}>
-            {ROLE_NAME[user.role]}
-          </Text>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text variant="title" color="#FFFFFF" fixedColor style={{ fontFamily: fonts.semibold, fontSize: 15, lineHeight: 20 }} numberOfLines={1}>
+              Optimas Fibre
+            </Text>
+            <Text variant="label" color={desk.navMuted} fixedColor style={{ fontSize: 12, lineHeight: 16 }} numberOfLines={1}>
+              {ROLE_NAME[user.role]} · {user.staffNo}
+            </Text>
+          </View>
+          <Ionicons name="chevron-down" size={14} color="#FFFFFF" />
         </Pressable>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 8 }} showsVerticalScrollIndicator={false}>
           {nav.groups.map((g, gi) => (
@@ -196,12 +185,12 @@ function Frame({ path, children }: { path: string; children: ReactNode }) {
 
       <View style={styles.main}>
         <View style={styles.bar}>
-          <Text variant="body" color={desk.ink} fixedColor style={{ fontSize: 15, flex: 1 }} numberOfLines={1}>
+          <Text variant="body" color={desk.ink} fixedColor style={{ fontFamily: fonts.medium, fontSize: 16, flex: 1 }} numberOfLines={1}>
             {active?.label ?? ''}
           </Text>
           <View style={styles.dark}>
-            <Switch value={isDark} onValueChange={() => setThemeMode(isDark ? 'light' : 'dark')} trackColor={{ true: desk.green, false: desk.border }} thumbColor="#FFFFFF" accessibilityLabel="Dark mode" />
-            <Text variant="body" color={isDark ? desk.green : desk.muted} fixedColor>
+            <Switch value={isDark} onValueChange={() => setThemeMode(isDark ? 'light' : 'dark')} trackColor={{ true: desk.teal, false: '#CBD5D0' }} thumbColor="#FFFFFF" accessibilityLabel="Dark mode" />
+            <Text variant="body" color={isDark ? desk.teal : desk.muted} fixedColor style={{ fontFamily: fonts.medium, fontSize: 15 }}>
               Dark
             </Text>
           </View>
@@ -220,10 +209,17 @@ function Frame({ path, children }: { path: string; children: ReactNode }) {
           </Pressable>
           <Pressable onPress={() => go(nav.bottom[nav.bottom.length - 1]!.href)} style={styles.me} accessibilityLabel="Profile">
             <View style={styles.avatar}>
-              <Text variant="label" color={desk.ink} fixedColor style={{ fontFamily: fonts.semibold }}>
-                {initials(user.name)}
-              </Text>
+              {user.avatarUrl ? (
+                <Image source={{ uri: user.avatarUrl }} style={{ width: '100%', height: '100%' }} accessibilityLabel="My photo" />
+              ) : (
+                <Text variant="label" color="#FFFFFF" fixedColor style={{ fontFamily: fonts.semibold, fontSize: 13 }}>
+                  {initials(user.name)}
+                </Text>
+              )}
             </View>
+            <Text variant="body" color={desk.muted} fixedColor style={{ fontSize: 14 }} numberOfLines={1}>
+              {user.name.split(' ')[0]}
+            </Text>
             <Ionicons name="chevron-down" size={14} color={desk.muted} />
           </Pressable>
         </View>
@@ -235,19 +231,21 @@ function Frame({ path, children }: { path: string; children: ReactNode }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, flexDirection: 'row', backgroundColor: desk.page },
-  rail: { width: 240, backgroundColor: desk.nav, paddingHorizontal: 8, paddingTop: 8 },
-  org: { paddingHorizontal: 12, paddingVertical: 11, borderRadius: 8, backgroundColor: desk.orgCard, gap: 1, marginBottom: 10 },
-  group: { paddingHorizontal: 8, marginTop: 12, marginBottom: 6, letterSpacing: 1.2, fontSize: 12 },
-  item: { flexDirection: 'row', alignItems: 'center', gap: 12, height: 38, paddingHorizontal: 8, borderRadius: 8 },
-  itemText: { flex: 1, fontSize: 14.5 },
-  badge: { minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5, backgroundColor: '#DC2626', alignItems: 'center', justifyContent: 'center' },
+  // The rail: deep teal-navy, grouped links, the page you are on in teal
+  rail: { width: 232, backgroundColor: desk.nav },
+  org: { flexDirection: 'row', alignItems: 'center', gap: 8, margin: 6, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 4, backgroundColor: desk.orgCard },
+  group: { paddingHorizontal: 18, marginTop: 16, marginBottom: 2, letterSpacing: 0.5, fontSize: 12, fontFamily: fonts.medium },
+  item: { flexDirection: 'row', alignItems: 'center', gap: 11, height: 32, paddingHorizontal: 18 },
+  itemText: { flex: 1, fontSize: 14 },
+  badge: { minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5, backgroundColor: desk.red, alignItems: 'center', justifyContent: 'center' },
   badgeText: { fontFamily: fonts.semibold, fontSize: 11, lineHeight: 13 },
-  railBottom: { paddingVertical: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)' },
+  railBottom: { paddingVertical: 8, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)' },
   main: { flex: 1, minWidth: 0 },
-  bar: { height: 56, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 24, backgroundColor: desk.bar, borderBottomWidth: 1, borderBottomColor: desk.border },
-  dark: { flexDirection: 'row', alignItems: 'center', gap: 8, marginRight: 10 },
-  barBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  barBadge: { position: 'absolute', top: 2, right: 0, minWidth: 17, height: 17, borderRadius: 9 },
-  me: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 6 },
-  avatar: { width: 34, height: 34, borderRadius: 17, borderWidth: 1.5, borderColor: '#CBD5E1', alignItems: 'center', justifyContent: 'center' },
+  // The white top bar: page title on the left, dark mode, search, alerts and you on the right
+  bar: { height: 66, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 30, backgroundColor: desk.bar, borderBottomWidth: 1, borderBottomColor: desk.border },
+  dark: { flexDirection: 'row', alignItems: 'center', gap: 10, marginRight: 8 },
+  barBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
+  barBadge: { position: 'absolute', top: 0, right: -4, minWidth: 17, height: 17, borderRadius: 9 },
+  me: { flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 6 },
+  avatar: { width: 34, height: 34, borderRadius: 17, overflow: 'hidden', backgroundColor: desk.nav, alignItems: 'center', justifyContent: 'center' },
 });

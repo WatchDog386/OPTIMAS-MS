@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, gradients, isDark, radius, shadow, space, SurfaceContext } from '../theme';
+import { OPENED_ON_DESKTOP } from '../theme/desktop';
+import { desk } from '../theme/desk';
 
 interface Props {
   children: ReactNode;
@@ -37,7 +39,7 @@ export function Card({ children, onPress, variant = 'default', style, padded = t
     );
 
   const elevation = variant === 'default' ? shadow.card : isHero ? shadow.raised : undefined;
-  if (!onPress) return <View style={[elevation, { borderRadius: radius.xl }]}>{body}</View>;
+  if (!onPress) return <View style={[elevation, { borderRadius: OPENED_ON_DESKTOP ? 4 : radius.xl }]}>{body}</View>;
   return (
     <Pressable
       onPress={onPress}
@@ -50,7 +52,8 @@ export function Card({ children, onPress, variant = 'default', style, padded = t
 }
 
 const styles = StyleSheet.create({
-  base: { backgroundColor: colors.glass, borderRadius: radius.xl, overflow: 'hidden' },
+  // On a laptop: the dashboard card (white, hairline border, 4px corners)
+  base: OPENED_ON_DESKTOP ? { backgroundColor: desk.panel, borderRadius: 4, overflow: 'hidden', borderWidth: 1, borderColor: desk.border } : { backgroundColor: colors.glass, borderRadius: radius.xl, overflow: 'hidden' },
   padded: { padding: space.lg + 2 },
   elevated: { borderWidth: 1, borderColor: colors.glassBorder },
   outline: { borderWidth: 1, borderColor: colors.glassBorder, backgroundColor: isDark ? colors.glass : 'rgba(255,255,255,0.35)' },

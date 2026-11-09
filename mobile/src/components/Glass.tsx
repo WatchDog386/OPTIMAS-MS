@@ -4,6 +4,8 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Defs, Line, Pattern, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { colors, isDark } from '../theme';
+import { OPENED_ON_DESKTOP } from '../theme/desktop';
+import { desk } from '../theme/desk';
 
 /* ─────────────────────────── Backdrop ─────────────────────────── */
 
@@ -31,6 +33,17 @@ interface GlassProps {
 
 /** Frosted translucent white surface with a bright hairline edge. */
 export function Glass({ children, style, strong, radius = 28, padded = true, onPress }: GlassProps) {
+  // On a laptop every card is the dashboard's: white, a hairline border, 4px corners
+  if (OPENED_ON_DESKTOP) {
+    const card = <View style={[styles.desk, padded && styles.deskPadded, style]}>{children}</View>;
+    return onPress ? (
+      <Pressable onPress={onPress} style={(s) => [(s as { hovered?: boolean }).hovered && { opacity: 0.92 }]}>
+        {card}
+      </Pressable>
+    ) : (
+      card
+    );
+  }
   const body = (
     <View style={[styles.glass, { borderRadius: radius }, padded && styles.padded, style]}>
       {/* A live blur per card is costly on phones' browsers (it redraws while scrolling); the cards are
@@ -88,6 +101,8 @@ export function Hatch({ radius = 999, color = colors.hatch, gap = 7 }: { radius?
 const styles = StyleSheet.create({
   glass: { overflow: 'hidden', borderWidth: 1, borderColor: colors.glassBorder },
   padded: { padding: 20 },
+  desk: { borderRadius: 4, borderWidth: 1, borderColor: desk.border, backgroundColor: desk.panel, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 2, shadowOffset: { width: 0, height: 1 } },
+  deskPadded: { padding: 24 },
   topBlend: { position: 'absolute', top: 0, left: 0, right: 0, height: 140 },
   shadow: { shadowColor: '#1C1D1F', shadowOpacity: 0.08, shadowRadius: 22, shadowOffset: { width: 0, height: 10 }, elevation: 2 },
   circle: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, shadowColor: '#1C1D1F', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 1 },

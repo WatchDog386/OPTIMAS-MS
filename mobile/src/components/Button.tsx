@@ -3,6 +3,8 @@ import { ActivityIndicator, Animated, Pressable, StyleSheet, View, type StylePro
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fonts, isDark, radius, space, useInverse } from '../theme';
 import { Text } from './Text';
+import { OPENED_ON_DESKTOP } from '../theme/desktop';
+import { desk } from '../theme/desk';
 import { NATIVE, haptic, prefersReducedMotion, spring } from '../utils/motion';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -46,6 +48,15 @@ const light: Record<Variant, { bg: string; fg: string; border?: string }> = isDa
       outline: { bg: '#1A1C1B', fg: PILL_LIME, border: '#1A1C1B' },
     };
 
+/** On a laptop: the dashboard's flat buttons (green main action, light grey second, white outline). */
+const deskButtons: Record<Variant, { bg: string; fg: string; border?: string }> = {
+  primary: { bg: desk.green, fg: '#FFFFFF', border: desk.green },
+  secondary: { bg: desk.row, fg: desk.ink, border: desk.row },
+  ghost: { bg: 'transparent', fg: desk.teal },
+  danger: { bg: isDark ? 'rgba(204,59,53,0.16)' : '#FDECEB', fg: desk.red, border: isDark ? 'rgba(204,59,53,0.16)' : '#FDECEB' },
+  outline: { bg: desk.panel, fg: desk.ink, border: desk.border },
+};
+
 /** On navy hero cards the primary action becomes the lime brand button. */
 const inverse: Record<Variant, { bg: string; fg: string; border?: string }> = {
   primary: { bg: colors.highlight, fg: colors.onHighlight },
@@ -56,7 +67,8 @@ const inverse: Record<Variant, { bg: string; fg: string; border?: string }> = {
 };
 
 export function Button({ label, onPress, variant = 'primary', icon, trailingIcon, caps, loading, disabled, size = 'md', style }: Props) {
-  const p = (useInverse() ? inverse : light)[variant];
+  const inv = useInverse();
+  const p = (OPENED_ON_DESKTOP && !inv ? deskButtons : inv ? inverse : light)[variant];
   const inactive = disabled || loading;
   const scale = useRef(new Animated.Value(1)).current;
   const [down, setDown] = useState(false);
@@ -85,6 +97,8 @@ export function Button({ label, onPress, variant = 'primary', icon, trailingIcon
       style={[
         styles.base,
         size === 'lg' && styles.lg,
+        OPENED_ON_DESKTOP && styles.desk,
+        OPENED_ON_DESKTOP && size === 'lg' && { height: 40 },
         { backgroundColor: p.bg, borderColor: p.border ?? 'transparent' },
         down && { opacity: 0.88 },
         inactive && { opacity: 0.45 },
@@ -101,7 +115,7 @@ export function Button({ label, onPress, variant = 'primary', icon, trailingIcon
             variant="title"
             color={p.fg}
             fixedColor
-            style={[{ fontFamily: fonts.semibold, fontSize: size === 'lg' ? 16 : 15 }, caps && { fontFamily: fonts.bold }]}
+            style={[{ fontFamily: OPENED_ON_DESKTOP ? fonts.medium : fonts.semibold, fontSize: OPENED_ON_DESKTOP ? 14 : size === 'lg' ? 16 : 15 }, caps && { fontFamily: fonts.bold }]}
           >
             {label}
           </Text>
@@ -123,5 +137,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   lg: { height: 52 },
+  desk: { height: 36, borderRadius: 4, borderWidth: 1, paddingHorizontal: 16 },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
 });

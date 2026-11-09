@@ -54,7 +54,7 @@ export function Panel({ title, link, onLink, children, style }: { title: string;
         </Text>
         {link ? (
           <Pressable onPress={onLink} accessibilityRole="link" hitSlop={6}>
-            <Text variant="body" color={desk.green} fixedColor style={{ fontFamily: fonts.medium }}>
+            <Text variant="body" color={desk.teal} fixedColor style={{ fontFamily: fonts.medium, fontSize: 14 }}>
               {link}
             </Text>
           </Pressable>
@@ -93,12 +93,12 @@ export function PanelRow({ label, value, onPress }: { label: string; value: stri
   );
 }
 
-/** The Business-SME buttons: outlined grey and filled green, with an icon. */
+/** The dashboard buttons: flat green for the main action, white with a hairline border for the rest. */
 export function DeskButton({ label, icon, onPress, filled }: { label: string; icon: Icon; onPress: () => void; filled?: boolean }) {
   return (
     <Pressable onPress={onPress} style={(s) => [styles.btn, filled ? styles.btnFilled : styles.btnOutline, (s as { hovered?: boolean }).hovered && { opacity: 0.9 }]} accessibilityRole="button">
-      <Ionicons name={icon} size={17} color={filled ? '#FFFFFF' : desk.ink} />
-      <Text variant="body" color={filled ? '#FFFFFF' : desk.ink} fixedColor style={{ fontFamily: fonts.medium }}>
+      <Ionicons name={icon} size={15} color={filled ? '#FFFFFF' : desk.ink} />
+      <Text variant="body" color={filled ? '#FFFFFF' : desk.ink} fixedColor style={{ fontFamily: fonts.medium, fontSize: 14 }}>
         {label}
       </Text>
     </Pressable>
@@ -110,11 +110,11 @@ const styles = StyleSheet.create({
   kpiBody: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 14, paddingTop: 12, paddingBottom: 14, gap: 10 },
   kpiValue: { fontFamily: fonts.bold, fontSize: 24, lineHeight: 30 },
   kpiFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, height: 31 },
-  panel: { backgroundColor: desk.panel, borderWidth: 1, borderColor: desk.border, borderRadius: 8, padding: 20, gap: 16 },
+  panel: { backgroundColor: desk.panel, borderWidth: 1, borderColor: desk.border, borderRadius: 4, padding: 24, gap: 16 },
   panelHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  mini: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: 12, borderRadius: 6, backgroundColor: desk.mini },
-  row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 4 },
-  btn: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 38, paddingHorizontal: 16, borderRadius: 6, borderWidth: 1 },
+  mini: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: 12, borderRadius: 4, backgroundColor: desk.mini },
+  row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: desk.row },
+  btn: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 36, paddingHorizontal: 16, borderRadius: 4, borderWidth: 1 },
   btnOutline: { backgroundColor: desk.panel, borderColor: desk.border },
   btnFilled: { backgroundColor: desk.green, borderColor: desk.green },
 });
