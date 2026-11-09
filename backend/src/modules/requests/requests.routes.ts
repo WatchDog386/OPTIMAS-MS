@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { cacheFor } from '../../lib/cache';
 import { z } from 'zod';
 import { RequestStatus } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
@@ -14,6 +15,7 @@ export const requestsRouter = Router();
 
 requestsRouter.get(
   '/',
+  cacheFor(10_000),
   ah(async (req, res) => {
     const status = typeof req.query.status === 'string' && req.query.status in RequestStatus ? (req.query.status as RequestStatus) : undefined;
     const requests = await prisma.serviceRequest.findMany({

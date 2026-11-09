@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { cacheFor } from '../../lib/cache';
 import { z } from 'zod';
 import { ReviewStatus } from '@prisma/client';
 import { env } from '../../config/env';
@@ -42,6 +43,7 @@ async function custodySummary(userId: string) {
 
 attendanceRouter.get(
   '/today',
+  cacheFor(10_000, 'user'),
   ah(async (req, res) => {
     const userId = me(req).id;
     const workDate = workDateOf();

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { cacheFor } from '../../lib/cache';
 import { z } from 'zod';
 import { ItemCategory, TrackingMode, UnitStatus } from '@prisma/client';
 import { env } from '../../config/env';
@@ -24,6 +25,7 @@ const DAY_MS = 86_400_000;
 
 inventoryRouter.get(
   '/items',
+  cacheFor(15_000),
   ah(async (_req, res) => {
     const [items, unitGroups, bulkGroups] = await Promise.all([
       prisma.inventoryItem.findMany({ where: { active: true }, orderBy: [{ category: 'asc' }, { name: 'asc' }] }),
@@ -566,6 +568,7 @@ inventoryRouter.get(
  */
 inventoryRouter.get(
   '/reconciliation',
+  cacheFor(15_000),
   store,
   ah(async (_req, res) => {
     res.json(await buildReconciliation());

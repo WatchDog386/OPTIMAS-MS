@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { cacheFor } from '../../lib/cache';
 import { z } from 'zod';
 import { env } from '../../config/env';
 import { prisma } from '../../lib/prisma';
@@ -26,6 +27,7 @@ const flagged = (...photos: ({ flags: string[] } | null | undefined)[]) => photo
 /** How much is waiting in each queue. */
 approvalsRouter.get(
   '/summary',
+  cacheFor(10_000),
   ah(async (_req, res) => {
     const [checkIns, checkOuts, jobs, stock] = await Promise.all([
       prisma.attendance.findMany({ where: { dressReview: 'PENDING' }, select: { checkInPhoto: { select: { flags: true } } } }),

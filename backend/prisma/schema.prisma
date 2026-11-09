@@ -84,6 +84,8 @@ model User {
   passkeys             Passkey[]
 
   @@index([customerAccount])
+  /// Everyone in a role (alerts to supervisors and admins, technician lists)
+  @@index([role, active])
 }
 
 // ─────────────────────────── Photo integrity ──────────────────────────
@@ -180,6 +182,10 @@ model Attendance {
 
   @@unique([userId, workDate])
   @@index([workDate])
+  /// The approval queues (check-ins and check-outs waiting) and a person's history
+  @@index([dressReview, workDate])
+  @@index([checkOutReview, workDate])
+  @@index([userId, workDate(sort: Desc)])
 }
 
 // ──────────────────────────────── Tasks ───────────────────────────────
@@ -266,6 +272,10 @@ model Task {
 
   @@index([assigneeId, status])
   @@index([teamId])
+  /// Lists and counts by state (open, completed to verify, done this week) and by customer
+  @@index([status, endedAt])
+  @@index([status, createdAt])
+  @@index([customerAccount])
 }
 
 model TaskMaterial {
@@ -347,6 +357,9 @@ model SerialUnit {
   material  TaskMaterial?
 
   @@index([holderId, status])
+  /// Store counts, reconciliation and looking a device up at a customer
+  @@index([status])
+  @@index([customerAccount])
 }
 
 model BulkHolding {
@@ -398,6 +411,10 @@ model StockMovement {
   @@index([itemId, createdAt])
   @@index([toUserId])
   @@index([fromUserId])
+  /// A device's history, the ledger by kind and the latest movements
+  @@index([serialUnitId, createdAt])
+  @@index([type, createdAt])
+  @@index([createdAt])
 }
 
 model StockCount {
@@ -451,6 +468,8 @@ model Notification {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, readAt, createdAt])
+  /// A person's latest notifications, newest first
+  @@index([userId, createdAt(sort: Desc)])
 }
 
 model PushToken {
@@ -509,6 +528,8 @@ model ServiceRequest {
   task     Task?
 
   @@index([status, createdAt])
+  /// A customer's own requests
+  @@index([customerId, createdAt])
 }
 
 // ─────────────────────────────── Audit ───────────────────────────────

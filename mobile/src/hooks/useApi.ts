@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { api, ApiError } from '../api/client';
+import { api, ApiError, lastWrite } from '../api/client';
 import { apiCache, clearApiCache } from '../api/cache';
 import { usePageLoad } from '../store/pageLoad';
 
 const cache = apiCache;
+/** A read made this recently is reused when a screen opens, instead of asking the server again. */
+const FRESH_MS = 12_000;
 export { clearApiCache };
 
 interface Options {
@@ -41,6 +43,17 @@ export function useApi<T>(path: string | null, options: Options = {}) {
   const load = useCallback(
     async (mode: 'focus' | 'refresh' | 'poll' = 'focus') => {
       if (!path || (mode === 'poll' && inFlight.current)) return;
+      // Fetched a moment ago (the sign-in screen preloading the dashboard, another part of the screen) and
+      // nothing changed on this phone since: reuse it instead of asking again
+      const recent = cache.get(path);
+      if (mode === 'focus' && recent && Date.now() - recent.at < FRESH_MS && recent.at > lastWrite()) {
+        hasData.current = true;
+        everLoaded.current = true;
+        setDataState(recent.data as T);
+        setUpdatedAt(recent.at);
+        setLoading(false);
+        return;
+      }
       inFlight.current = true;
       // Only before this screen has shown anything at all (a filter change inside an open page does not count)
       const first = mode === 'focus' && !everLoaded.current;

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { cacheFor } from '../../lib/cache';
 import { z } from 'zod';
 import { prisma } from '../../lib/prisma';
 import { ah } from '../../middleware/async';
@@ -22,6 +23,7 @@ notificationsRouter.get(
 
 notificationsRouter.get(
   '/unread-count',
+  cacheFor(8_000, 'user'),
   ah(async (req, res) => {
     res.json({ unread: await prisma.notification.count({ where: { userId: me(req).id, readAt: null } }) });
   }),

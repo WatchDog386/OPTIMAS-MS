@@ -11,6 +11,8 @@ const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   CORS_ORIGIN: z.string().default('*'),
   DATABASE_URL: z.string().min(1),
+  /** API processes to run (one per CPU core by default, at most 8); 1 runs a single process. */
+  WEB_CONCURRENCY: z.coerce.number().int().min(0).default(0),
   JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters'),
   JWT_EXPIRES_IN: z.string().default('12h'),
   UPLOAD_DIR: z.string().default('uploads'),

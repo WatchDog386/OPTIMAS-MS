@@ -29,6 +29,9 @@ import { chatRouter } from './modules/chat/chat.routes';
 import { publicRouter } from './modules/public/public.routes';
 import { passkeyLoginRouter, passkeyRouter } from './modules/auth/passkey.routes';
 import { activityFeed } from './lib/activity';
+import { invalidateOnWrite } from './lib/cache';
+import { batch } from './lib/batch';
+import { ah } from './middleware/async';
 
 export function createApp() {
   const app = express();
@@ -85,8 +88,12 @@ export function createApp() {
     legacyHeaders: false,
     message: { error: { message: 'Too many sign-in attempts. Try again in 15 minutes.', code: 'RATE_LIMITED' } },
   });
+  // Any successful change empties the in-memory answer cache (so cached reads are never out of date)
+  api.use(invalidateOnWrite);
   // Every action taken in the app is told to the admins and supervisors (the activity feed)
   api.use(activityFeed);
+  // Several reads in one request (see lib/batch.ts)
+  api.post('/batch', requireAuth, ah(batch));
   api.use('/auth/login', loginLimit);
   // Fingerprint sign-in (no session yet): same limit as the password, then its own router before the signed-in one
   api.use('/auth/passkeys/login', loginLimit);

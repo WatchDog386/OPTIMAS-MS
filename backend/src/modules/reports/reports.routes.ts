@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { cacheFor } from '../../lib/cache';
 import { env } from '../../config/env';
 import { prisma } from '../../lib/prisma';
 import { workDateOf } from '../../lib/time';
@@ -83,6 +84,7 @@ reportsRouter.get(
  */
 reportsRouter.get(
   '/me',
+  cacheFor(15_000, 'user'),
   ah(async (req, res) => {
     const userId = me(req).id;
     const now = Date.now();

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { cacheFor } from '../../lib/cache';
 import { prisma } from '../../lib/prisma';
 import { positionsOf } from '../location/location.service';
 import { workDateOf } from '../../lib/time';
@@ -9,6 +10,8 @@ import { ah } from '../../middleware/async';
  * Everything is computed from the existing tasks, attendance, photos (GPS) and stock ledger.
  */
 export const insightsRouter = Router();
+// Office-wide figures that every manager's dashboard polls: answered from memory for 15 s (emptied on any change)
+insightsRouter.use(cacheFor(15_000));
 const DAY_MS = 86_400_000;
 const dayKey = (d: Date) => workDateOf(d).toISOString().slice(0, 10);
 const round1 = (n: number) => Math.round(n * 10) / 10;

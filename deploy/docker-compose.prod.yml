@@ -6,6 +6,29 @@ services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
+    # Tuned for many people at once on a small VM: room for every API process's connections, more memory
+    # for caching data and sorting, SSD-friendly planning. Adjust PG_SHARED_BUFFERS to ~25% of the VM's RAM.
+    command:
+      - postgres
+      - -c
+      - max_connections=${PG_MAX_CONNECTIONS:-200}
+      - -c
+      - shared_buffers=${PG_SHARED_BUFFERS:-256MB}
+      - -c
+      - effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-768MB}
+      - -c
+      - work_mem=8MB
+      - -c
+      - maintenance_work_mem=64MB
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - effective_io_concurrency=200
+      - -c
+      - wal_buffers=16MB
+      - -c
+      - checkpoint_completion_target=0.9
+    shm_size: 256mb
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-optimas}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}
@@ -28,7 +51,10 @@ services:
     environment:
       NODE_ENV: production
       PORT: 4000
-      DATABASE_URL: postgresql://${POSTGRES_USER:-optimas}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-optimas_ms}?schema=public
+      # Each API process keeps up to DB_POOL connections open (they are reused, not opened per request)
+      DATABASE_URL: postgresql://${POSTGRES_USER:-optimas}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-optimas_ms}?schema=public&connection_limit=${DB_POOL:-15}&pool_timeout=20
+      # API processes: one per CPU core by default (set a number to override, 1 for a single process)
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-0}
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in deploy/.env}
       ASSET_TAG_SECRET: ${ASSET_TAG_SECRET:-}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-12h}
