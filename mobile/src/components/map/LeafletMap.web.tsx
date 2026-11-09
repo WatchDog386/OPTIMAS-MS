@@ -91,13 +91,14 @@ interface Live {
   anim?: number;
 }
 
-export default function LeafletMap({ pins, route, trail, fitKey, follow, recenterKey, padBottom = 0, padTop = 0, onPinPress, onMapPress, onUserPan, style }: MapCanvasProps) {
+export default function LeafletMap({ pins, circles, route, trail, fitKey, follow, recenterKey, padBottom = 0, padTop = 0, onPinPress, onMapPress, onUserPan, style }: MapCanvasProps) {
   // On the web a View's ref is its DOM element, which is what Leaflet draws into
   const host = useRef<HTMLElement | null>(null);
   const map = useRef<L.Map | null>(null);
   const markers = useRef(new Map<string, Live>());
   const routeLayers = useRef<{ casing: L.Polyline; line: L.Polyline; key: string } | null>(null);
   const trailLayer = useRef<L.Polyline | null>(null);
+  const circleLayers = useRef(new Map<string, L.Circle>());
   const userPanned = useRef(false);
   const cb = useRef({ onPinPress, onMapPress, onUserPan });
   cb.current = { onPinPress, onMapPress, onUserPan };
@@ -209,6 +210,29 @@ export default function LeafletMap({ pins, route, trail, fitKey, follow, recente
     }
   }, [pins, ready, follow]);
 
+  // Shaded circles (the office's check-in zone, the GPS accuracy): added, resized or removed as they change
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !ready) return;
+    const live = circleLayers.current;
+    const seen = new Set<string>();
+    for (const c of circles ?? []) {
+      seen.add(c.id);
+      const style = { color: c.color, weight: c.dashed ? 1.5 : 2, opacity: 0.85, fillColor: c.color, fillOpacity: c.dashed ? 0.08 : 0.14, dashArray: c.dashed ? '4 6' : undefined, interactive: false };
+      const existing = live.get(c.id);
+      if (existing) {
+        existing.setLatLng([c.lat, c.lng]);
+        existing.setRadius(c.radiusM);
+        existing.setStyle(style);
+      } else live.set(c.id, L.circle([c.lat, c.lng], { radius: c.radiusM, ...style }).addTo(m));
+    }
+    for (const [id, layer] of live) {
+      if (seen.has(id)) continue;
+      layer.remove();
+      live.delete(id);
+    }
+  }, [circles, ready]);
+
   // Trail (dashed) and route (drawn in)
   useEffect(() => {
     const m = map.current;
@@ -266,6 +290,11 @@ export default function LeafletMap({ pins, route, trail, fitKey, follow, recente
     const m = map.current;
     if (!m) return;
     const pts: LatLng[] = [...pins.map((p) => [p.lat, p.lng] as LatLng), ...(route ?? [])];
+    // Circles count by their edges, so a whole zone is in view
+    for (const c of circles ?? []) {
+      const b = L.latLng(c.lat, c.lng).toBounds(c.radiusM * 2);
+      pts.push([b.getNorth(), b.getEast()], [b.getSouth(), b.getWest()]);
+    }
     if (!pts.length) return;
     userPanned.current = false;
     if (pts.length === 1) m.flyTo(pts[0], 15, { duration: 0.8 });

@@ -44,8 +44,8 @@ services:
       GEOCODING_URL: ${GEOCODING_URL-https://nominatim.openstreetmap.org}
       CAPTURE_TTL_SECONDS: ${CAPTURE_TTL_SECONDS:-90}
       MIN_GPS_ACCURACY_M: ${MIN_GPS_ACCURACY_M:-100}
-      OFFICE_LAT: ${OFFICE_LAT:--1.185254}
-      OFFICE_LNG: ${OFFICE_LNG:-36.903793}
+      OFFICE_LAT: ${OFFICE_LAT:--1.18527}
+      OFFICE_LNG: ${OFFICE_LNG:-36.90382}
       OFFICE_RADIUS_M: ${OFFICE_RADIUS_M:-300}
       # Found on the map when the app starts if no coordinates are set; a supervisor can also set it in the app
       OFFICE_ADDRESS: "${OFFICE_ADDRESS:-Barber & Spa, Kahawa Station Road, Kahawa West, Nairobi}"

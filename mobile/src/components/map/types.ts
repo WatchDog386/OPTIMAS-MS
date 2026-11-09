@@ -22,8 +22,20 @@ export interface MapPin {
   selected?: boolean;
 }
 
+/** A shaded circle on the map, e.g. the office's check-in zone or the GPS accuracy around "me". */
+export interface MapCircle {
+  id: string;
+  lat: number;
+  lng: number;
+  radiusM: number;
+  color: string;
+  /** Dashed outline (an uncertain area, like GPS accuracy). */
+  dashed?: boolean;
+}
+
 export interface MapCanvasProps {
   pins: MapPin[];
+  circles?: MapCircle[];
   /** Road route to draw (drawn in with an animation whenever a new route arrives). */
   route?: LatLng[] | null;
   /** Path already driven (dashed). */

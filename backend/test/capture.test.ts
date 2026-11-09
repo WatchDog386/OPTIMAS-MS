@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { api, auth, capture, CHECKLIST, jpeg, login, newTechnician, photoId } from './helpers';
+import { api, auth, capture, CHECKLIST, eventually, jpeg, login, newTechnician, photoId } from './helpers';
 
 describe('camera-only photo integrity', () => {
   let tech: string;
@@ -29,6 +29,21 @@ describe('camera-only photo integrity', () => {
 
     expect(checkIn.status).toBe(201);
     expect(checkIn.body.record.checkInPhoto.flags).toContain('OUTSIDE_GEOFENCE');
+    // Supervisors are told how far away it was
+    const sup = (await login('FBI-SUP-001')).token;
+    const alert = await eventually(
+      () => api().get('/api/v1/notifications').set(auth(sup)),
+      (r) => r.body.notifications.some((n: { type: string; data: { attendanceId?: string } }) => n.type === 'PHOTO_FLAGGED' && n.data?.attendanceId === checkIn.body.record.id),
+    );
+    const n = alert.body.notifications.find((x: { data: { attendanceId?: string } }) => x.data?.attendanceId === checkIn.body.record.id);
+    expect(n.body).toMatch(/Checked in [\d.]+ km from the office/);
+  });
+
+  it('does not count a reading too rough to place someone at the office', async () => {
+    const rough = await capture(tech, 'CHECK_IN', { lat: -1.18525, lng: 36.90379, accuracyM: 2500 });
+    expect(rough.body.flags).toContain('LOCATION_UNCONFIRMED');
+    const precise = await capture(tech, 'CHECK_IN', { lat: -1.18525, lng: 36.90379, accuracyM: 12 });
+    expect(precise.body.flags).toEqual([]);
   });
 
   it('rejects non-JPEG uploads', async () => {

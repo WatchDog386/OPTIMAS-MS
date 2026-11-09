@@ -16,6 +16,7 @@ import { colors, fonts, radius, space } from '../src/theme';
 import { useStatusBarColor } from '../src/utils/statusBar';
 import { appendFile, grabCameraFrame, photoFromPhoneCamera } from '../src/utils/upload';
 import { distanceLabel, metres, watchFix, type Fix } from '../src/utils/location';
+import { PRECISE_ENOUGH_M } from '../src/components/OfficeCheck';
 import { useApi } from '../src/hooks/useApi';
 
 /**
@@ -83,10 +84,15 @@ export default function Capture() {
     };
   }, []);
 
-  /** Waits a few seconds for the first GPS fix (the shutter is often pressed before it arrives). */
+  /**
+   * Waits a few seconds for a GPS fix (the shutter is often pressed before it arrives). For check-in and
+   * check-out it also waits for a precise one: a phone's first reading often comes from Wi-Fi or the mobile
+   * network and can be hundreds of metres out, which would wrongly place someone at (or away from) the office.
+   */
+  const precise = (f: Fix | null) => !!f && f.accuracy != null && f.accuracy <= PRECISE_ENOUGH_M;
   const waitForFix = async (ms = 10_000) => {
     const until = Date.now() + ms;
-    while (!location.current && !gpsOff && Date.now() < until) await new Promise((r) => setTimeout(r, 250));
+    while (!gpsOff && Date.now() < until && (atOffice ? !precise(location.current) : !location.current)) await new Promise((r) => setTimeout(r, 250));
     return location.current;
   };
 
@@ -107,8 +113,9 @@ export default function Capture() {
       const photo = frame ? { uri: frame.uri } : await camera.current!.takePictureAsync({ quality: 0.6, exif: false, shutterSound: false, imageType: 'jpg' });
       setPreview(photo.uri);
       // 3. Upload with location + device metadata (waiting a moment for the GPS if it is not ready yet)
-      if (!location.current) setGpsWait(true);
-      const loc = location.current ?? (await waitForFix());
+      const ready = atOffice ? precise(location.current) : !!location.current;
+      if (!ready) setGpsWait(true);
+      const loc = ready ? location.current : await waitForFix(atOffice ? 12_000 : 10_000);
       setGpsWait(false);
       const form = new FormData();
       if (frame) form.append('photo', frame.blob, 'capture.jpg');
@@ -252,20 +259,39 @@ function GpsLine({ fix, off, office }: { fix: Fix | null; off: boolean; office?:
     );
   }
   const away = office ? metres([fix.lat, fix.lng], [office.lat, office.lng]) : null;
-  const inside = away != null && office ? away <= office.radiusM : null;
+  const rough = fix.accuracy == null || fix.accuracy > PRECISE_ENOUGH_M;
+  // A coloured status chip: green at the office, red away, amber while the reading is still rough
+  const state = office === undefined ? (rough ? 'wait' : 'ok') : !office ? 'info' : away! > office.radiusM && !(rough && away! - (fix.accuracy ?? 0) <= office.radiusM) ? 'bad' : rough && (fix.accuracy ?? Infinity) > office.radiusM ? 'wait' : 'ok';
+  const tone = { ok: '#2DA043', bad: '#DC2626', wait: '#D97706', info: colors.textMuted }[state];
+  const title =
+    office === undefined
+      ? `GPS ±${distanceLabel(fix.accuracy ?? 0)}`
+      : !office
+        ? 'Office location not set yet'
+        : state === 'ok'
+          ? 'At the office'
+          : state === 'bad'
+            ? `${distanceLabel(away!)} from the office`
+            : 'Finding your exact position…';
   return (
-    <View style={styles.gps}>
-      <Ionicons name={inside === false ? 'warning-outline' : 'location'} size={15} color={inside === false ? colors.warning : colors.success} />
-      <Text variant="label" color={inside === false ? colors.warning : colors.textMuted} style={{ flex: 1 }}>
-        GPS ±{Math.round(fix.accuracy ?? 0)} m
-        {away != null && office ? (inside ? ` · at the office (${distanceLabel(away)})` : ` · ${distanceLabel(away)} from the office`) : office === null ? ' · office location not set yet' : ''}
-      </Text>
+    <View style={[styles.gpsChip, { borderColor: tone, backgroundColor: `${tone}14` }]}>
+      <Ionicons name={state === 'ok' ? 'checkmark-circle' : state === 'bad' ? 'alert-circle' : 'locate'} size={18} color={tone} />
+      <View style={{ flex: 1 }}>
+        <Text variant="label" color={tone} fixedColor style={{ fontFamily: fonts.semibold, fontSize: 13 }}>
+          {title}
+        </Text>
+        <Text variant="label" color={colors.textMuted} style={{ fontSize: 11 }}>
+          GPS ±{distanceLabel(fix.accuracy ?? 0)}
+          {office && away != null ? ` · ${distanceLabel(away)} to the office pin` : ''}
+        </Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   gps: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  gpsChip: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1 },
   root: { flex: 1, backgroundColor: '#000' },
   center: { alignItems: 'center', justifyContent: 'center', padding: space.xxl, gap: space.lg, backgroundColor: colors.bg },
   overlay: { flex: 1, justifyContent: 'space-between' },

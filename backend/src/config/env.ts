@@ -22,8 +22,8 @@ const schema = z.object({
   LATE_GRACE_MINUTES: z.coerce.number().default(15),
   CAPTURE_TTL_SECONDS: z.coerce.number().default(90),
   MIN_GPS_ACCURACY_M: z.coerce.number().default(100),
-  OFFICE_LAT: optionalNumber.default(-1.185254),
-  OFFICE_LNG: optionalNumber.default(36.903793),
+  OFFICE_LAT: optionalNumber.default(-1.18527),
+  OFFICE_LNG: optionalNumber.default(36.90382),
   OFFICE_RADIUS_M: z.coerce.number().default(300),
   /** Where staff check in, by address: looked up on the map when no coordinates are set. */
   OFFICE_ADDRESS: z.string().default('Barber & Spa, Kahawa Station Road, Kahawa West, Nairobi'),

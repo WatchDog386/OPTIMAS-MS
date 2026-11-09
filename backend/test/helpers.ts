@@ -30,17 +30,18 @@ export async function newTechnician(adminToken: string) {
 /** A unique minimal JPEG payload (only the magic bytes are checked server-side). */
 export const jpeg = () => Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), crypto.randomBytes(256)]);
 
-export async function capture(token: string, purpose: string, opts: { taskId?: string; lat?: number; lng?: number; file?: Buffer } = {}) {
+export async function capture(token: string, purpose: string, opts: { taskId?: string; lat?: number; lng?: number; accuracyM?: number; file?: Buffer } = {}) {
   const ch = await api().post('/api/v1/capture/challenge').set(auth(token)).send({ purpose, taskId: opts.taskId });
   if (ch.status !== 201) throw new Error(`challenge failed ${ch.status}`);
-  const res = await api()
+  const req = api()
     .post('/api/v1/capture/upload')
     .set(auth(token))
     .field('challengeId', ch.body.challengeId)
     .field('nonce', ch.body.nonce)
     .field('lat', String(opts.lat ?? -1.185254))
-    .field('lng', String(opts.lng ?? 36.903793))
-    .attach('photo', opts.file ?? jpeg(), 'p.jpg');
+    .field('lng', String(opts.lng ?? 36.903793));
+  if (opts.accuracyM !== undefined) req.field('accuracyM', String(opts.accuracyM));
+  const res = await req.attach('photo', opts.file ?? jpeg(), 'p.jpg');
   return res;
 }
 

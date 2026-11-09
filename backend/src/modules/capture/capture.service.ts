@@ -85,6 +85,8 @@ export async function acceptCapture(userId: string, file: Buffer, input: Capture
   if (office) {
     const d = distanceMetres(input.lat!, input.lng!, office.lat, office.lng);
     if (d > office.radiusM) flags.push('OUTSIDE_GEOFENCE');
+    // Inside the zone, but the reading is too rough to say so (it could be anywhere in a wide circle)
+    else if (input.accuracyM !== undefined && input.accuracyM > office.radiusM) flags.push('LOCATION_UNCONFIRMED');
   }
 
   const now = new Date();

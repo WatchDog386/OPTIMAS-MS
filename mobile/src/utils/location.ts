@@ -51,25 +51,59 @@ export async function currentFix(): Promise<Fix | null> {
   }
 }
 
+/*
+ * On the web the whole app shares ONE browser location watch. Browsers often send positions only to the
+ * first watcher (a second one, started by a screen while the live tracking is already running, can wait
+ * forever when the phone is standing still), so every screen subscribes to this one watch instead, and
+ * gets the latest known position straight away.
+ */
+type Listener = { onFix: (f: Fix) => void; onError?: () => void };
+const hub: { id: number | null; listeners: Set<Listener>; last: Fix | null; denied: boolean } = { id: null, listeners: new Set(), last: null, denied: false };
+
+function webHub(onFix: (f: Fix) => void, onError?: () => void): () => void {
+  const geo = typeof navigator !== 'undefined' ? navigator.geolocation : undefined;
+  if (!geo) {
+    onError?.();
+    return () => {};
+  }
+  const me: Listener = { onFix, onError };
+  hub.listeners.add(me);
+  // The latest position (if fresh) straight away, then every new one
+  if (hub.last && Date.now() - hub.last.at < 60_000) setTimeout(() => hub.listeners.has(me) && onFix(hub.last!), 0);
+  if (hub.denied) setTimeout(() => onError?.(), 0);
+  if (hub.id === null) {
+    hub.denied = false;
+    hub.id = geo.watchPosition(
+      (p) => {
+        const f: Fix = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: clean(p.coords.accuracy, 100_000), heading: clean(p.coords.heading, 360), speed: clean(p.coords.speed, 100), at: p.timestamp || Date.now() };
+        hub.last = f;
+        hub.listeners.forEach((l) => l.onFix(f));
+      },
+      (e) => {
+        if (e.code !== e.PERMISSION_DENIED) return;
+        hub.denied = true;
+        hub.listeners.forEach((l) => l.onError?.());
+      },
+      { enableHighAccuracy: true, maximumAge: 3000, timeout: 20_000 },
+    );
+  }
+  return () => {
+    hub.listeners.delete(me);
+    // Nobody is listening any more: stop using the GPS
+    if (!hub.listeners.size && hub.id !== null) {
+      geo.clearWatch(hub.id);
+      hub.id = null;
+    }
+  };
+}
+
 /**
  * Follows the phone's position until the returned function is called.
  * On the web this talks to the browser directly: expo-location's web watcher mixes up its own ids with the
  * browser's (so only the first watcher ever hears anything) and never stops the browser watch.
  */
 export function watchFix(onFix: (f: Fix) => void, onError?: () => void): () => void {
-  if (Platform.OS === 'web') {
-    const geo = typeof navigator !== 'undefined' ? navigator.geolocation : undefined;
-    if (!geo) {
-      onError?.();
-      return () => {};
-    }
-    const id = geo.watchPosition(
-      (p) => onFix({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: clean(p.coords.accuracy, 100_000), heading: clean(p.coords.heading, 360), speed: clean(p.coords.speed, 100), at: p.timestamp || Date.now() }),
-      (e) => e.code === e.PERMISSION_DENIED && onError?.(),
-      { enableHighAccuracy: true, maximumAge: 3000, timeout: 20_000 },
-    );
-    return () => geo.clearWatch(id);
-  }
+  if (Platform.OS === 'web') return webHub(onFix, onError);
   let stopped = false;
   let sub: Location.LocationSubscription | null = null;
   Location.watchPositionAsync({ accuracy: Location.Accuracy.BestForNavigation, timeInterval: 4000, distanceInterval: 5 }, (l) => !stopped && onFix(toFix(l)))

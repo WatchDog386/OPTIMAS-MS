@@ -71,6 +71,7 @@ export const flagLabel: Record<string, string> = {
   NO_LOCATION: 'No GPS',
   LOW_GPS_ACCURACY: 'Weak GPS',
   OUTSIDE_GEOFENCE: 'Outside office',
+  LOCATION_UNCONFIRMED: 'Location not confirmed',
   DEVICE_CLOCK_SKEW: 'Clock mismatch',
   OFFLINE_CAPTURE: 'Taken offline',
 };

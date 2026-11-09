@@ -10,7 +10,9 @@ import { useApi } from '../src/hooks/useApi';
 import { requestCapture } from '../src/store/bridge';
 import { colors, radius, space } from '../src/theme';
 import { duration, flagLabel, time } from '../src/utils/format';
-import { celebrate, toast } from '../src/store/feedback';
+import { celebrate, confirmDialog, toast } from '../src/store/feedback';
+import { OfficeCheckCard, useOfficeCheck } from '../src/components/OfficeCheck';
+import { distanceLabel } from '../src/utils/location';
 
 const DRESS_CODE = [
   { key: 'uniform', icon: 'shirt-outline', label: 'Full company uniform', hint: 'Branded Optimas shirt / reflector jacket, clean and tucked in' },
@@ -28,8 +30,43 @@ export default function CheckIn() {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<{ record: Attendance; flags: string[] } | null>(null);
   const allChecked = Object.values(checks).every(Boolean);
+  const where = useOfficeCheck();
+
+  /** Says plainly when this check-in will not count as at the office, before the photo is taken. */
+  const confirmPlace = async () => {
+    const step = isIn ? 'check in' : 'check out';
+    const radius = distanceLabel(where.office?.radiusM ?? 300);
+    if (where.state === 'away')
+      return confirmDialog({
+        title: 'You are not at the office',
+        message: `You are ${distanceLabel(where.away ?? 0)} from the office (the check-in zone is ${radius}). If you ${step} here, your supervisor will be told you were away from the office.`,
+        emoji: '📍',
+        tone: 'danger',
+        confirmLabel: `${isIn ? 'Check in' : 'Check out'} anyway`,
+        cancelLabel: 'Cancel',
+      });
+    if (where.state === 'weak' || where.state === 'searching')
+      return confirmDialog({
+        title: 'Location not confirmed yet',
+        message: `Your phone has not found your exact position${where.fix?.accuracy ? ` (±${distanceLabel(where.fix.accuracy)})` : ''}. Wait a few seconds near a window or outside. If you ${step} now, it will be marked "location not confirmed".`,
+        emoji: '🛰️',
+        confirmLabel: 'Continue anyway',
+        cancelLabel: 'Wait',
+      });
+    if (where.state === 'off')
+      return confirmDialog({
+        title: 'Location is off',
+        message: `Without your location the office cannot be confirmed, and your supervisor will be told. Allow location for this app, or ${step} anyway.`,
+        emoji: '📍',
+        tone: 'danger',
+        confirmLabel: 'Continue anyway',
+        cancelLabel: 'Cancel',
+      });
+    return true;
+  };
 
   const submit = async () => {
+    if (!(await confirmPlace())) return;
     const photo = await requestCapture(isIn ? 'CHECK_IN' : 'CHECK_OUT');
     if (!photo) return;
     setBusy(true);
@@ -92,6 +129,8 @@ export default function CheckIn() {
           {`Working hours ${time(today.data.shiftStart)} – ${time(today.data.shiftEnd)} · later than ${time(new Date(new Date(today.data.shiftStart).getTime() + today.data.graceMinutes * 60_000).toISOString())} counts as late`}
         </Text>
       ) : null}
+
+      <OfficeCheckCard check={where} />
 
       {isIn ? (
         <>

@@ -65,6 +65,8 @@ done
 echo "Saved in deploy/.env."
 
 if docker ps >/dev/null 2>&1 && $COMPOSE ps --services 2>/dev/null | grep -qx api; then
+  # A spot set earlier in the app takes priority over these settings: clear it so these coordinates are used
+  $COMPOSE exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -qc "DELETE FROM \"Setting\" WHERE key = '"'"'office'"'"'"' >/dev/null 2>&1 || true
   $COMPOSE up -d api >/dev/null
   echo "App restarted: check-ins away from the office are now flagged."
 else

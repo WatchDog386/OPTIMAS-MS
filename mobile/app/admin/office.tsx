@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { api, ApiError } from '../../src/api/client';
-import { Button, Glass, Input, Loading, MapCanvas, Screen, ScreenHeader, Segmented, Text, type MapPin } from '../../src/components';
+import { Button, Glass, Input, Loading, MapCanvas, Screen, ScreenHeader, Segmented, Text, type MapCircle, type MapPin } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { toast } from '../../src/store/feedback';
 import { confirmAction } from '../../src/utils/confirm';
@@ -45,6 +45,11 @@ export default function OfficeLocation() {
   if (fix) pins.push({ id: 'me', kind: 'me', lat: fix.lat, lng: fix.lng, live: true });
   if (picked) pins.push({ id: 'picked', kind: 'job', lat: picked.lat, lng: picked.lng, label: 'New', selected: true });
   const away = office && fix ? metres([fix.lat, fix.lng], [office.lat, office.lng]) : null;
+  // The check-in zone around the office (and around a spot about to be saved), and the GPS accuracy
+  const circles: MapCircle[] = [];
+  if (office) circles.push({ id: 'zone', lat: office.lat, lng: office.lng, radiusM: Number(radiusM) || office.radiusM, color: '#2DA043' });
+  if (picked) circles.push({ id: 'picked-zone', lat: picked.lat, lng: picked.lng, radiusM: Number(radiusM), color: '#2563EB', dashed: true });
+  if (fix?.accuracy) circles.push({ id: 'accuracy', lat: fix.lat, lng: fix.lng, radiusM: fix.accuracy, color: '#2563EB', dashed: true });
 
   /** Saves a spot as the office, after saying how far that moves it. */
   const saveSpot = async (spot: { lat: number; lng: number }, how: string) => {
@@ -105,7 +110,7 @@ export default function OfficeLocation() {
     >
       <ScreenHeader title="Office location" subtitle="Where staff check in and out" />
       <View style={styles.map}>
-        <MapCanvas pins={pins} fitKey={`${office?.lat ?? ''}${office?.lng ?? ''}`} onMapPress={(at) => at && setPicked(at)} style={{ flex: 1 }} />
+        <MapCanvas pins={pins} circles={circles} fitKey={`${office?.lat ?? ''}${office?.lng ?? ''}`} onMapPress={(at) => at && setPicked(at)} style={{ flex: 1 }} />
       </View>
       <Glass strong style={{ gap: 6 }}>
         {office ? (

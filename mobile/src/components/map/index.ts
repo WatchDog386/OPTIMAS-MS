@@ -1,2 +1,2 @@
 export { MapCanvas } from './MapCanvas';
-export type { MapCanvasProps, MapPin, PinKind } from './types';
+export type { MapCanvasProps, MapCircle, MapPin, PinKind } from './types';

@@ -14,6 +14,7 @@ import { notify, notifyRoles } from '../notifications/notifications.service';
 import { time as fmtTime } from '../../lib/time';
 import { getOffice, resetOffice, setOffice } from '../../lib/office';
 import { inServiceArea } from '../../lib/routing';
+import { distanceMetres } from '../../lib/geo';
 
 export const attendanceRouter = Router();
 
@@ -98,15 +99,7 @@ attendanceRouter.post(
     if (record.status === 'LATE') {
       void notifyRoles(['SUPERVISOR', 'ADMIN'], { type: 'LATE_CHECK_IN', title: `${who} checked in late`, body: `Checked in at ${fmtTime(record.checkInAt)}`, data: { attendanceId: record.id } });
     }
-    const flags = record.checkInPhoto.flags.filter((f) => f === 'OUTSIDE_GEOFENCE' || f === 'NO_LOCATION');
-    if (flags.length) {
-      void notifyRoles(['SUPERVISOR', 'ADMIN'], {
-        type: 'PHOTO_FLAGGED',
-        title: `Check-in flagged — ${who}`,
-        body: flags.includes('OUTSIDE_GEOFENCE') ? 'Checked in away from the office.' : 'Checked in without GPS location.',
-        data: { attendanceId: record.id },
-      });
-    }
+    void flagLocation(record.id, record.checkInPhoto, who, 'in');
     res.status(201).json({ record });
   }),
 );
@@ -130,9 +123,29 @@ attendanceRouter.post(
         include: { checkInPhoto: photoSelect, checkOutPhoto: photoSelect },
       });
     });
+    if (record.checkOutPhoto) void flagLocation(record.id, record.checkOutPhoto, me(req).name, 'out');
     res.json({ record, custody: await custodySummary(userId) });
   }),
 );
+
+/**
+ * Tells supervisors and admins when a check-in or check-out was not at the office: how far away it was,
+ * or that there was no location, or that the reading was too rough to confirm.
+ */
+async function flagLocation(attendanceId: string, photo: { flags: string[]; lat: number | null; lng: number | null; accuracyM: number | null }, who: string, step: 'in' | 'out') {
+  const what = step === 'in' ? 'Check-in' : 'Check-out';
+  const did = step === 'in' ? 'Checked in' : 'Checked out';
+  let body: string | null = null;
+  if (photo.flags.includes('OUTSIDE_GEOFENCE')) {
+    const office = await getOffice();
+    const away = office && photo.lat != null && photo.lng != null ? distanceMetres(photo.lat, photo.lng, office.lat, office.lng) : null;
+    const far = away == null ? 'away' : away >= 1000 ? `${(away / 1000).toFixed(1)} km` : `${Math.round(away)} m`;
+    body = `${did} ${far === 'away' ? 'away from the office' : `${far} from the office`}${photo.accuracyM != null ? ` (GPS ±${Math.round(photo.accuracyM)} m)` : ''}.`;
+  } else if (photo.flags.includes('NO_LOCATION')) body = `${did} without GPS location.`;
+  else if (photo.flags.includes('LOCATION_UNCONFIRMED')) body = `${did}, but the GPS was too rough to confirm the office (±${Math.round(photo.accuracyM ?? 0)} m).`;
+  if (!body) return;
+  await notifyRoles(['SUPERVISOR', 'ADMIN'], { type: 'PHOTO_FLAGGED', title: `${what} flagged — ${who}`, body, data: { attendanceId } });
+}
 
 attendanceRouter.get(
   '/history',
