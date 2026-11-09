@@ -61,6 +61,9 @@ const RULES: Rule[] = [
   ['POST', /^\/inventory\/items(\/catalog-entry(-bulk)?)?$/, (who, _r, o) => ({ title: `${who} added to the catalogue`, body: o.item?.name ?? (o.count ? plural(o.count, 'item') : undefined) })],
   ['PATCH', /^\/inventory\/items\/[^/]+$/, (who, _r, o) => ({ title: `${who} updated a catalogue item`, body: o.item?.name })],
 
+  ['POST', /^\/inventory\/requests\/[^/]+\/approve$/, (who, _r, o) => ({ title: `${who} approved a stock change`, body: o.request?.summary })],
+  ['POST', /^\/inventory\/requests\/[^/]+\/reject$/, (who, _r, o) => ({ title: `${who} rejected a stock change`, body: `${o.request?.summary ?? ''} — ${o.request?.reviewNote ?? ''}` })],
+
   // Customers and requests
   ['POST', /^\/customer\/requests$/, (who) => ({ title: `${who} asked for a service visit` })],
   ['POST', /^\/customer\/jobs\/[^/]+\/rate$/, (who, r) => ({ title: `${who} rated a visit`, body: r.body?.rating ? `${'★'.repeat(Number(r.body.rating))}${r.body?.feedback ? ` “${String(r.body.feedback).slice(0, 80)}”` : ''}` : undefined })],
@@ -92,6 +95,8 @@ export function activityFeed(req: Request, res: Response, next: NextFunction) {
 async function tell(req: Request, rule: Rule, out: Body) {
   try {
     const actor = req.user!;
+    // A stock change filed for approval: the admins already get "Stock approval needed"
+    if (out.pending) return;
     const say = rule[2](actor.name, req, out);
     if (!say) return;
     const managers = await prisma.user.findMany({ where: { role: { in: ['ADMIN', 'SUPERVISOR'] }, active: true, id: { not: actor.id } }, select: { id: true } });

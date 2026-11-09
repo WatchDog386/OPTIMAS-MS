@@ -27,16 +27,18 @@ const flagged = (...photos: ({ flags: string[] } | null | undefined)[]) => photo
 approvalsRouter.get(
   '/summary',
   ah(async (_req, res) => {
-    const [checkIns, checkOuts, jobs] = await Promise.all([
+    const [checkIns, checkOuts, jobs, stock] = await Promise.all([
       prisma.attendance.findMany({ where: { dressReview: 'PENDING' }, select: { checkInPhoto: { select: { flags: true } } } }),
       prisma.attendance.findMany({ where: { checkOutReview: 'PENDING' }, select: { checkOutPhoto: { select: { flags: true } } } }),
       prisma.task.findMany({ where: { status: 'COMPLETED' }, select: { startPhoto: { select: { flags: true } }, endPhoto: { select: { flags: true } } } }),
+      prisma.stockRequest.count({ where: { status: 'PENDING' } }),
     ]);
     res.json({
       checkIns: checkIns.length,
       checkOuts: checkOuts.length,
       jobs: jobs.length,
-      total: checkIns.length + checkOuts.length + jobs.length,
+      stock,
+      total: checkIns.length + checkOuts.length + jobs.length + stock,
       flagged: checkIns.filter((r) => flagged(r.checkInPhoto)).length + checkOuts.filter((r) => flagged(r.checkOutPhoto)).length + jobs.filter((t) => flagged(t.startPhoto, t.endPhoto)).length,
     });
   }),

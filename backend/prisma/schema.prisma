@@ -55,6 +55,8 @@ model User {
   updatedAt          DateTime  @updatedAt
 
   photos               Photo[]
+  stockRequests        StockRequest[]        @relation("StockRequestBy")
+  stockReviews         StockRequest[]        @relation("StockRequestReviewer")
   challenges           CaptureChallenge[]
   attendance           Attendance[]          @relation("AttendanceUser")
   reviewedAttend       Attendance[]          @relation("AttendanceReviewer")
@@ -432,6 +434,8 @@ enum NotificationType {
   APP_UPDATE
   /// Something someone did in the app (the managers' activity feed)
   ACTIVITY
+  /// A stock change waiting for an admin, or the admin's decision on one
+  STOCK_APPROVAL
 }
 
 model Notification {
@@ -663,4 +667,48 @@ model TeamMember {
 
   @@unique([teamId, userId])
   @@index([userId])
+}
+
+// ─────────────────────────── Stock approvals ───────────────────────────
+
+/// Every change to stock waits for an admin: what was asked (to be carried out on approval), by whom.
+enum StockRequestType {
+  INSTALL
+  MARK_INSTALLED
+  RETURN
+  RECOVER
+  REPORT_LOST
+  RECEIVE
+  ISSUE
+  ADJUST
+}
+
+enum StockRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model StockRequest {
+  id            String             @id @default(cuid())
+  type          StockRequestType
+  status        StockRequestStatus @default(PENDING)
+  /// Exactly what was asked, carried out as it is when an admin approves.
+  payload       Json
+  /// One line for the approval list, e.g. "Install HW240037 at FBI-CUS-1023".
+  summary       String
+  requestedById String
+  /// The device it is about, if any (one pending request per device at a time).
+  serialUnitId  String?
+  taskId        String?
+  reviewedById  String?
+  reviewedAt    DateTime?
+  reviewNote    String?
+  createdAt     DateTime           @default(now())
+
+  requestedBy User  @relation("StockRequestBy", fields: [requestedById], references: [id])
+  reviewedBy  User? @relation("StockRequestReviewer", fields: [reviewedById], references: [id])
+
+  @@index([status, createdAt])
+  @@index([serialUnitId, status])
 }

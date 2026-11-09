@@ -31,6 +31,7 @@ export const notificationStyle: Record<string, { icon: keyof typeof Ionicons.gly
   CHAT_MESSAGE: { icon: 'chatbubble-ellipses', tint: colors.navy },
   APP_UPDATE: { icon: 'sparkles', tint: colors.success },
   ACTIVITY: { icon: 'pulse', tint: colors.info },
+  STOCK_APPROVAL: { icon: 'cube', tint: colors.warning },
 };
 
 /** Where tapping a notification (in the inbox or from a push) should take the user. */
@@ -46,6 +47,8 @@ export function openNotificationTarget(type: string, data?: Record<string, unkno
   if (type === 'SERVICE_REQUEST') return router.push('/admin/requests');
   if (typeof data?.taskId === 'string') return router.push(`/task/${data.taskId}`);
   if (type === 'STOCK_ISSUED') return router.push('/stock');
+  // A stock change: admins open the Stock approvals; the person who asked sees it in My stock
+  if (type === 'STOCK_APPROVAL') return router.push((useAuth.getState().user?.role === 'ADMIN' ? '/admin/approvals?tab=stock' : useAuth.getState().user?.role === 'TECHNICIAN' ? '/stock' : '/store') as never);
   // Late or flagged check-ins open straight on the review desk, where the photo can be approved
   if (type === 'LATE_CHECK_IN' || type === 'PHOTO_FLAGGED') return router.push('/admin/approvals?tab=checkins');
   if (type === 'STOCK_COUNT_MISMATCH') return router.push('/admin/reconciliation');

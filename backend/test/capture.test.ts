@@ -35,7 +35,7 @@ describe('camera-only photo integrity', () => {
       () => api().get('/api/v1/notifications').set(auth(sup)),
       (r) => r.body.notifications.some((n: { type: string; data: { attendanceId?: string } }) => n.type === 'PHOTO_FLAGGED' && n.data?.attendanceId === checkIn.body.record.id),
     );
-    const n = alert.body.notifications.find((x: { data: { attendanceId?: string } }) => x.data?.attendanceId === checkIn.body.record.id);
+    const n = alert.body.notifications.find((x: { type: string; data: { attendanceId?: string } }) => x.type === 'PHOTO_FLAGGED' && x.data?.attendanceId === checkIn.body.record.id);
     expect(n.body).toMatch(/Checked in [\d.]+ km from the office/);
   });
 

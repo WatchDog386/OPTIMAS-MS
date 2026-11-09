@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { api, auth, checkIn, createTask, login, newTechnician, photoId, receiveSerials } from './helpers';
+import { api, approveAllStock, auth, checkIn, createTask, login, newTechnician, photoId, receiveSerials } from './helpers';
 
 const verify = (token: string, code: string) => api().post('/api/v1/inventory/verify').set(auth(token)).send({ code });
 
 describe('device labels: is this the one we issued?', () => {
   it('prints signed labels, accepts them everywhere a serial goes, and spots fakes', async () => {
     const admin = (await login('FBI-ADM-001')).token;
-    const store = (await login('FBI-STR-001')).token;
+    const store = (await login('FBI-ADM-001')).token;
     const [tech, other] = await Promise.all([newTechnician(admin), newTechnician(admin)]);
     const { serials, item } = await receiveSerials(store, 'RTR-HW-AX3', 2);
 
@@ -42,7 +42,7 @@ describe('device labels: is this the one we issued?', () => {
 
   it('lets the technician on the job collect an installed device back, and nobody else', async () => {
     const admin = (await login('FBI-ADM-001')).token;
-    const store = (await login('FBI-STR-001')).token;
+    const store = (await login('FBI-ADM-001')).token;
     const sup = (await login('FBI-SUP-001')).token;
     const [tech, stranger] = await Promise.all([newTechnician(admin), newTechnician(admin)]);
     const { serials } = await receiveSerials(store, 'RTR-HW-AX3', 1);
@@ -54,12 +54,15 @@ describe('device labels: is this the one we issued?', () => {
     await api().post(`/api/v1/tasks/${task.id}/start`).set(auth(tech.token)).send({ photoId: await photoId(tech.token, 'TASK_START', task.id) });
     const done = await api().post(`/api/v1/tasks/${task.id}/complete`).set(auth(tech.token)).send({ photoId: await photoId(tech.token, 'TASK_END', task.id), notes: 'Installed and tested', serials, signature: { path: 'M1 1 L20 20 L40 5', signedBy: 'Jane' } });
     expect(done.status).toBe(200);
+    // The install waits for the admin
+    expect(await approveAllStock(admin)).toBeGreaterThanOrEqual(1);
 
     const body = { code: serials[0], reason: 'Customer is relocating', condition: 'GOOD' };
     expect((await api().post('/api/v1/inventory/recover').set(auth(stranger.token)).send(body)).status).toBe(403);
     const back = await api().post('/api/v1/inventory/recover').set(auth(tech.token)).send(body);
-    expect(back.status).toBe(200);
-    expect(back.body.status).toBe('WITH_TECHNICIAN');
+    expect(back.status).toBe(202);
+    expect(back.body.pending).toBe(true);
+    await approveAllStock(admin);
     expect((await verify(tech.token, serials[0])).body.verdict.title).toBe('Yes, this is the one issued to you');
     const trail = await api().get(`/api/v1/inventory/units/${serials[0]}/history`).set(auth(store));
     expect(trail.body.unit.movements.map((m: { type: string }) => m.type)).toEqual(['RECEIVE', 'ISSUE', 'ACCEPT', 'INSTALL', 'RECOVER']);

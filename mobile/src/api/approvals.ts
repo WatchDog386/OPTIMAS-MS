@@ -17,6 +17,8 @@ export interface ApprovalSummary {
   checkIns: number;
   checkOuts: number;
   jobs: number;
+  /** Stock changes waiting for an admin. */
+  stock?: number;
   total: number;
   flagged: number;
 }

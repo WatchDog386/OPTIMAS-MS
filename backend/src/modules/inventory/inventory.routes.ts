@@ -9,6 +9,7 @@ import { ROLES, me, requireRole } from '../../middleware/auth';
 import { parse } from '../../middleware/validate';
 import * as svc from './inventory.service';
 import { buildReconciliation } from './reconciliation';
+import { approve, gate, reject } from './stock-approval';
 import { notify, notifyRoles } from '../notifications/notifications.service';
 import { audit } from '../../lib/audit';
 import { readCode, tagFor } from '../../lib/assetTag';
@@ -221,18 +222,12 @@ inventoryRouter.post(
   store,
   ah(async (req, res) => {
     const body = parse(adjustSchema, req.body);
-    const actor = me(req).id;
-    const item = await prisma.$transaction(async (tx) => {
-      const it = await tx.inventoryItem.findUnique({ where: { id: body.itemId } });
-      if (!it) throw badRequest('Item not found', 'NOT_FOUND');
-      if (it.tracking !== 'BULK') throw badRequest('Serialised devices are adjusted by marking units faulty or lost, not by quantity');
-      if (it.storeQuantity + body.quantity < 0) throw badRequest(`Only ${it.storeQuantity} ${it.unit} in store`, 'INSUFFICIENT_STOCK');
-      const updated = await tx.inventoryItem.update({ where: { id: it.id }, data: { storeQuantity: { increment: body.quantity } } });
-      await tx.stockMovement.create({ data: { type: 'ADJUST', itemId: it.id, quantity: body.quantity, actorId: actor, note: body.reason } });
-      return updated;
-    });
-    await audit(actor, 'STOCK_ADJUSTED', 'InventoryItem', item.id, `${body.quantity > 0 ? '+' : ''}${body.quantity} ${item.unit} ${item.name}: ${body.reason}`);
-    res.json({ item });
+    const it = await prisma.inventoryItem.findUnique({ where: { id: body.itemId } });
+    if (!it) throw badRequest('Item not found', 'NOT_FOUND');
+    const out = await gate(me(req), 'ADJUST', body, { summary: `Adjust ${it.name}: ${body.quantity > 0 ? '+' : ''}${body.quantity} ${it.unit} — ${body.reason}` });
+    if (out.pending) return void res.status(202).json(out);
+    await audit(me(req).id, 'STOCK_ADJUSTED', 'InventoryItem', it.id, `${body.quantity > 0 ? '+' : ''}${body.quantity} ${it.unit} ${it.name}: ${body.reason}`);
+    res.json({ item: out.result });
   }),
 );
 
@@ -250,7 +245,11 @@ inventoryRouter.post(
   store,
   ah(async (req, res) => {
     const body = parse(receiveSchema, req.body);
-    res.status(201).json(await prisma.$transaction((tx) => svc.receiveStock(tx, me(req).id, body)));
+    const it = await prisma.inventoryItem.findUnique({ where: { id: body.itemId } });
+    if (!it) throw badRequest('Item not found', 'NOT_FOUND');
+    const what = body.serials?.length ? `${body.serials.length} × ${it.name}` : `${body.quantity ?? 0} ${it.unit} ${it.name}`;
+    const out = await gate(me(req), 'RECEIVE', body, { summary: `Receive ${what} into the store` });
+    res.status(out.pending ? 202 : 201).json(out.pending ? out : out.result);
   }),
 );
 
@@ -282,18 +281,11 @@ inventoryRouter.post(
   store,
   ah(async (req, res) => {
     const b = parse(transferSchema, req.body);
-    const actor = me(req).id;
-    const result = await prisma.$transaction(async (tx) => ({
-      serials: b.serials?.length ? await svc.issueSerials(tx, actor, b.userId, b.serials, b.note) : undefined,
-      bulk: b.itemId && b.quantity ? await svc.issueBulk(tx, actor, b.userId, b.itemId, b.quantity, b.note) : undefined,
-    }));
-    const parts = [result.serials && `${result.serials.issued} device(s)`, result.bulk && `materials`].filter(Boolean).join(' and ');
-    void notify([b.userId], {
-      type: 'STOCK_ISSUED',
-      title: 'Stock issued to you',
-      body: `${parts} issued by ${me(req).name}. Confirm receipt in My stock.`,
-    });
-    res.status(201).json(result);
+    const to = await prisma.user.findUnique({ where: { id: b.userId }, select: { name: true } });
+    const item = b.itemId ? await prisma.inventoryItem.findUnique({ where: { id: b.itemId }, select: { name: true, unit: true } }) : null;
+    const what = [b.serials?.length ? `${b.serials.length} device(s) (${b.serials.slice(0, 3).join(', ')}${b.serials.length > 3 ? '…' : ''})` : null, item && b.quantity ? `${b.quantity} ${item.unit} ${item.name}` : null].filter(Boolean).join(' and ');
+    const out = await gate(me(req), 'ISSUE', b, { summary: `Issue ${what} to ${to?.name ?? 'a technician'}` });
+    res.status(out.pending ? 202 : 201).json(out.pending ? out : out.result);
   }),
 );
 
@@ -302,12 +294,11 @@ inventoryRouter.post(
   store,
   ah(async (req, res) => {
     const b = parse(transferSchema.and(z.object({ condition: z.enum(['GOOD', 'FAULTY']).default('GOOD') })), req.body);
-    const actor = me(req).id;
-    const result = await prisma.$transaction(async (tx) => ({
-      serials: b.serials?.length ? await svc.returnSerials(tx, actor, b.serials, b.condition, b.note) : undefined,
-      bulk: b.itemId && b.quantity ? await svc.returnBulk(tx, actor, b.userId, b.itemId, b.quantity, b.note) : undefined,
-    }));
-    res.json(result);
+    const from = await prisma.user.findUnique({ where: { id: b.userId }, select: { name: true } });
+    const what = [b.serials?.length ? `${b.serials.length} device(s) (${b.serials.slice(0, 3).join(', ')}${b.serials.length > 3 ? '…' : ''})` : null, b.itemId && b.quantity ? `${b.quantity} of an item` : null].filter(Boolean).join(' and ');
+    const out = await gate(me(req), 'RETURN', b, { summary: `Return ${what} from ${from?.name ?? 'a technician'} to the store (${b.condition === 'GOOD' ? 'working' : 'faulty'})` });
+    if (out.pending) return void res.status(202).json(out);
+    res.json(out.result);
   }),
 );
 
@@ -316,12 +307,11 @@ inventoryRouter.post(
   store,
   ah(async (req, res) => {
     const b = parse(z.object({ serialNumber: z.string().min(1), note: z.string().trim().min(5, 'Explain what happened') }), req.body);
-    const lost = await prisma.$transaction((tx) => svc.reportLost(tx, me(req).id, b.serialNumber, b.note));
-    await audit(me(req).id, 'UNIT_LOST', 'SerialUnit', lost.serialNumber, `Reported ${lost.serialNumber} lost: ${b.note}`);
-    const msg = { type: 'UNIT_LOST' as const, title: `Device ${lost.serialNumber} reported lost`, body: b.note, data: { serialNumber: lost.serialNumber } };
-    void notify([lost.accountableUserId], msg);
-    void notifyRoles(['SUPERVISOR', 'ADMIN'], msg, me(req).id);
-    res.json(lost);
+    const unit = await prisma.serialUnit.findFirst({ where: { serialNumber: { in: svc.codeVariants(b.serialNumber) } }, select: { id: true, serialNumber: true } });
+    const out = await gate(me(req), 'REPORT_LOST', b, { summary: `Report ${unit?.serialNumber ?? b.serialNumber} lost — ${b.note}`, serialUnitId: unit?.id });
+    if (out.pending) return void res.status(202).json(out);
+    await audit(me(req).id, 'UNIT_LOST', 'SerialUnit', String(out.result.serialNumber), `Reported ${out.result.serialNumber} lost: ${b.note}`);
+    res.json(out.result);
   }),
 );
 
@@ -343,12 +333,14 @@ inventoryRouter.get(
       }),
       prisma.stockCount.findFirst({ where: { userId }, orderBy: { createdAt: 'desc' } }),
     ]);
+    const waiting = await prisma.stockRequest.findMany({ where: { requestedById: userId, status: 'PENDING' }, orderBy: { createdAt: 'desc' }, select: { id: true, type: true, summary: true, serialUnitId: true, createdAt: true } });
     const now = Date.now();
     res.json({
       pending: units.filter((u) => u.status === 'IN_TRANSIT'),
       units: units
         .filter((u) => u.status === 'WITH_TECHNICIAN')
-        .map((u) => ({ ...u, daysHeld: u.heldSince ? Math.floor((now - u.heldSince.getTime()) / DAY_MS) : 0 })),
+        .map((u) => ({ ...u, daysHeld: u.heldSince ? Math.floor((now - u.heldSince.getTime()) / DAY_MS) : 0, awaitingApproval: waiting.find((w) => w.serialUnitId === u.id)?.summary ?? null })),
+      waiting,
       bulk,
       // As it stands today: devices since installed, returned or lost are no longer missing
       lastCount: lastCount && {
@@ -390,9 +382,11 @@ inventoryRouter.post(
     const user = me(req);
     if (user.role !== 'TECHNICIAN') throw forbidden('Only technicians install devices');
     const b = parse(installSchema, req.body);
-    const unit = await prisma.$transaction((tx) => svc.installSerial(tx, user.id, b.serial, { id: null, customerAccount: b.customerAccount.toUpperCase() }));
-    await audit(user.id, 'UNIT_INSTALLED', 'SerialUnit', unit.id, `Installed ${unit.serialNumber} at ${b.customerAccount.toUpperCase()} without a job${b.note ? `: ${b.note}` : ''}`);
-    res.json({ unit: { serialNumber: unit.serialNumber, status: 'INSTALLED', customerAccount: b.customerAccount.toUpperCase() } });
+    const account = b.customerAccount.toUpperCase();
+    const held = await prisma.$transaction((tx) => svc.findHeldUnit(tx, user.id, b.serial));
+    const out = await gate(user, 'INSTALL', { serial: held?.serialNumber ?? b.serial, customerAccount: account, note: b.note }, { summary: `Install ${held?.serialNumber ?? b.serial}${held ? ` (${held.item.name})` : ''} at ${account}${b.note ? ` — ${b.note}` : ''}`, serialUnitId: held?.id });
+    if (out.pending) return void res.status(202).json(out);
+    res.json({ unit: { serialNumber: out.result.serialNumber, status: 'INSTALLED', customerAccount: account } });
   }),
 );
 
@@ -405,14 +399,58 @@ inventoryRouter.post(
     const serial = readCode(req.params.serial).serial;
     const unit = await prisma.serialUnit.findFirst({ where: { serialNumber: { in: svc.codeVariants(serial) } } });
     if (!unit) throw badRequest(`No device with serial ${serial}`);
-    if (unit.status !== 'WITH_TECHNICIAN' && unit.status !== 'IN_TRANSIT') throw conflict(`${unit.serialNumber} is not with a technician (${unit.status.toLowerCase().replace('_', ' ')})`);
-    const holderId = unit.holderId;
-    await prisma.$transaction(async (tx) => {
-      await tx.serialUnit.update({ where: { id: unit.id }, data: { status: 'INSTALLED', holderId: null, heldSince: null, customerAccount: b.customerAccount.toUpperCase(), installedAt: new Date() } });
-      await tx.stockMovement.create({ data: { type: 'INSTALL', itemId: unit.itemId, serialUnitId: unit.id, quantity: 1, fromUserId: holderId, actorId: me(req).id, note: b.note } });
-    });
-    await audit(me(req).id, 'UNIT_INSTALLED', 'SerialUnit', unit.id, `Marked ${unit.serialNumber} installed at ${b.customerAccount.toUpperCase()}: ${b.note}`);
+    const account = b.customerAccount.toUpperCase();
+    const out = await gate(me(req), 'MARK_INSTALLED', { serial: unit.serialNumber, customerAccount: account, note: b.note }, { summary: `Mark ${unit.serialNumber} installed at ${account} — ${b.note}`, serialUnitId: unit.id });
+    if (out.pending) return void res.status(202).json(out);
+    await audit(me(req).id, 'UNIT_INSTALLED', 'SerialUnit', unit.id, `Marked ${unit.serialNumber} installed at ${account}: ${b.note}`);
     res.json({ unit: { serialNumber: unit.serialNumber, status: 'INSTALLED' } });
+  }),
+);
+
+// ───────────────────────────── Stock approvals ───────────────────────
+
+const requestInclude = { requestedBy: { select: { id: true, name: true, staffNo: true, role: true } }, reviewedBy: { select: { id: true, name: true } } } as const;
+
+/**
+ * Stock changes waiting for an admin (status=PENDING) or decided (status=DONE). Admins see everyone's; the
+ * store and supervisors see everyone's too (read only); anyone else sees their own.
+ */
+inventoryRouter.get(
+  '/requests',
+  ah(async (req, res) => {
+    const user = me(req);
+    const done = req.query.status === 'DONE';
+    const requests = await prisma.stockRequest.findMany({
+      where: { status: done ? { in: ['APPROVED', 'REJECTED'] } : 'PENDING', ...(ROLES.STORE.includes(user.role) ? {} : { requestedById: user.id }) },
+      orderBy: { createdAt: done ? 'desc' : 'asc' },
+      take: done ? 100 : 300,
+      include: requestInclude,
+    });
+    res.json({ requests });
+  }),
+);
+
+const adminOnly = requireRole(ROLES.ADMIN);
+
+/** An admin approves a stock change: it is carried out now, as the person who asked for it. */
+inventoryRouter.post(
+  '/requests/:id/approve',
+  adminOnly,
+  ah(async (req, res) => {
+    const { note } = parse(z.object({ note: z.string().trim().max(300).optional() }), req.body ?? {});
+    const r = await approve(req.params.id, me(req), note);
+    res.json({ request: await prisma.stockRequest.findUnique({ where: { id: r.id }, include: requestInclude }) });
+  }),
+);
+
+/** An admin rejects a stock change: nothing moves, and the person who asked is told why. */
+inventoryRouter.post(
+  '/requests/:id/reject',
+  adminOnly,
+  ah(async (req, res) => {
+    const { note } = parse(z.object({ note: z.string().trim().min(3, 'Say why it is not approved').max(300) }), req.body);
+    const r = await reject(req.params.id, me(req), note);
+    res.json({ request: await prisma.stockRequest.findUnique({ where: { id: r.id }, include: requestInclude }) });
   }),
 );
 
@@ -660,18 +698,9 @@ inventoryRouter.post(
       if (!job) throw forbidden('You can only collect a device from a customer you have a current or recent job for');
       taskId = job.id;
     }
-    const now = new Date();
-    const status = storeSide ? (b.condition === 'GOOD' ? 'IN_STORE' : 'FAULTY') : 'WITH_TECHNICIAN';
-    await prisma.$transaction([
-      prisma.serialUnit.update({ where: { id: unit.id }, data: { status, holderId: storeSide ? null : user.id, heldSince: storeSide ? null : now, customerAccount: null, taskId: null, installedAt: null } }),
-      prisma.stockMovement.create({
-        data: { type: 'RECOVER', itemId: unit.itemId, serialUnitId: unit.id, quantity: 1, toUserId: storeSide ? null : user.id, actorId: user.id, taskId, note: `From ${unit.customerAccount ?? 'customer'} · ${b.condition === 'GOOD' ? 'working' : 'faulty'} · ${b.reason}` },
-      }),
-    ]);
+    const out = await gate(user, 'RECOVER', { unitId: unit.id, serial, storeSide, taskId, condition: b.condition, reason: b.reason }, { summary: `Collect ${serial} (${unit.item.name}) from ${unit.customerAccount ?? 'a customer'} · ${b.condition === 'GOOD' ? 'working' : 'faulty'} — ${b.reason}`, serialUnitId: unit.id, taskId });
+    if (out.pending) return void res.status(202).json(out);
     await audit(user.id, 'DEVICE_RECOVERED', 'SerialUnit', unit.id, `Collected ${serial} from ${unit.customerAccount ?? 'customer'} (${b.condition.toLowerCase()}): ${b.reason}`);
-    if (!storeSide) {
-      void notifyRoles(['STOREKEEPER', 'SUPERVISOR', 'ADMIN'], { type: 'STOCK_ISSUED', title: `${user.name} collected ${unit.item.name}`, body: `${serial} from ${unit.customerAccount ?? 'a customer'}${b.condition === 'FAULTY' ? ' · faulty' : ''} — ${b.reason}` }, user.id);
-    }
-    res.json({ serial, status, holder: storeSide ? null : user.name });
+    res.json({ serial, status: out.result.status, holder: storeSide ? null : user.name });
   }),
 );

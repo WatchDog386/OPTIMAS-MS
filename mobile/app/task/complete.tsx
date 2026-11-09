@@ -7,7 +7,7 @@ import { api, ApiError } from '../../src/api/client';
 import type { BulkHolding, SerialUnit, Task } from '../../src/api/types';
 import { Button, Card, Input, ListRow, Loading, Screen, ScreenHeader, SectionHeader, SignaturePad, Text } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
-import { requestCapture, requestScan } from '../../src/store/bridge';
+import { requestCapture } from '../../src/store/bridge';
 import { colors, fonts, radius, space } from '../../src/theme';
 import { kes } from '../../src/utils/format';
 import { toast, celebrate } from '../../src/store/feedback';
@@ -43,24 +43,28 @@ export default function CompleteTask() {
   const needsSerial = t.type === 'INSTALLATION';
 
   const addSerials = (list: string[]) => setSerials((s) => [...new Set([...s, ...list.map((x) => x.toUpperCase())])]);
-  // Each scanned code is checked against the technician's devices straight away, so a wrong code
-  // (MAC, the other serial on the sticker, someone else's device) is caught here, not at submit
-  const scan = async () => {
-    const r = await requestScan({ title: 'Scan installed device' });
-    if (!r?.length) return;
-    for (const code of r) {
-      try {
-        const { unit } = await api<{ unit: { serialNumber: string; item: { name: string } } }>(`/inventory/my/find?code=${encodeURIComponent(code)}`);
-        addSerials([unit.serialNumber]);
-        toast.success(unit.item.name, `S/N ${unit.serialNumber} added`);
-      } catch (e) {
-        toast.error('Not one of your devices', e instanceof ApiError ? e.message : 'Check the code and try again');
-      }
+  // The technician TYPES the SN from the sticker (scanning often picked up the MAC address by mistake);
+  // it is checked against their devices straight away
+  const [typed, setTyped] = useState('');
+  const [checking, setChecking] = useState(false);
+  const addTyped = async () => {
+    const code = typed.trim().toUpperCase();
+    if (code.length < 4) return toast.warning('Enter the SN', 'Type the serial number exactly as printed next to "SN" on the sticker.');
+    setChecking(true);
+    try {
+      const { unit } = await api<{ unit: { serialNumber: string; item: { name: string } } }>(`/inventory/my/find?code=${encodeURIComponent(code)}`);
+      addSerials([unit.serialNumber]);
+      setTyped('');
+      toast.success(unit.item.name, `S/N ${unit.serialNumber} added`);
+    } catch (e) {
+      toast.error('Not one of your devices', e instanceof ApiError ? e.message : 'Check the SN and try again');
+    } finally {
+      setChecking(false);
     }
   };
 
   const submit = async () => {
-    if (needsSerial && !serials.length) return toast.warning('Device required', 'Scan the serial number of the router/ONT you installed.');
+    if (needsSerial && !serials.length) return toast.warning('Device required', 'Type the serial number (SN) of the router/ONT you installed.');
     if (needsSerial && !signature) return toast.warning('Customer signature required', 'Ask the customer to sign to confirm the installation.');
     if (signature && signedBy.trim().length < 2) return toast.warning('Who signed?', 'Enter the name of the person who signed.');
     if (notes.trim().length < 5) return toast.warning('Add notes', 'Briefly describe the work done.');
@@ -82,7 +86,7 @@ export default function CompleteTask() {
           signature: signature ? { path: signature, signedBy: signedBy.trim() } : undefined,
         },
       });
-      celebrate('Job completed', 'Your report has been sent for verification.');
+      celebrate('Job completed', serials.length ? 'Your report has been sent for verification, and the device for admin approval.' : 'Your report has been sent for verification.');
       goBack();
     } catch (e) {
       toast.error('Could not complete job', e instanceof ApiError ? e.message : 'Try again');
@@ -97,7 +101,7 @@ export default function CompleteTask() {
 
       <SectionHeader title={needsSerial ? 'Installed device (required)' : 'Devices installed'} />
       <Text variant="bodySm" color={colors.textMuted}>
-        Scan the SN on the router/ONT left at the customer, or tap it in your list below. When the job is submitted it moves from In hand to Installed.
+        Type the serial number (SN) printed on the router/ONT left at the customer — not the MAC address — or tap it in your list below. After you submit, an admin approves it and it moves from In hand to Installed.
       </Text>
       {serials.map((s) => (
         <ListRow
@@ -112,7 +116,21 @@ export default function CompleteTask() {
           }
         />
       ))}
-      <Button label="Scan device serial" icon="barcode-outline" variant="secondary" onPress={scan} />
+      <View style={{ flexDirection: 'row', gap: space.sm, alignItems: 'center' }}>
+        <View style={{ flex: 1 }}>
+          <Input
+            icon="keypad-outline"
+            placeholder="Type the SN, e.g. HWTC1A2B3C4D"
+            autoCapitalize="characters"
+            autoCorrect={false}
+            value={typed}
+            onChangeText={setTyped}
+            onSubmitEditing={() => void addTyped()}
+            returnKeyType="done"
+          />
+        </View>
+        <Button label="Add" icon="add" variant="secondary" loading={checking} onPress={() => void addTyped()} />
+      </View>
       {units.filter((u) => !serials.includes(u.serialNumber)).length ? (
         <View style={styles.chips}>
           {units

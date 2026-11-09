@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { isPending, toastPending } from '../../../src/utils/stockApproval';
 import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { goBack } from '../../../src/utils/nav';
@@ -56,7 +57,13 @@ export default function ItemDetail() {
   const adjust = () =>
     run('adjust', async () => {
       const n = Number(qty);
-      await api('/inventory/adjust', { body: { itemId: item.id, quantity: dir === 'add' ? n : -n, reason } });
+      const r = await api('/inventory/adjust', { body: { itemId: item.id, quantity: dir === 'add' ? n : -n, reason } });
+      if (isPending(r)) {
+        toastPending(r);
+        setQty('');
+        setReason('');
+        return;
+      }
       toast.success('Stock adjusted', `${dir === 'add' ? '+' : '−'}${n} ${item.unit} recorded in the ledger.`);
       setQty('');
       setReason('');

@@ -6,7 +6,7 @@ describe('inventory chain of custody', () => {
   let store: string;
   beforeAll(async () => {
     admin = (await login('FBI-ADM-001')).token;
-    store = (await login('FBI-STR-001')).token;
+    store = (await login('FBI-ADM-001')).token;
   });
 
   it('refuses duplicate serial registration', async () => {

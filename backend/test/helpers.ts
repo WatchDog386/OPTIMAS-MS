@@ -95,3 +95,13 @@ export async function eventually<T>(fn: () => Promise<T>, check: (v: T) => boole
   }
   return last;
 }
+
+/** Approves every stock change waiting (as the admin), as an admin would in Approvals → Stock. */
+export async function approveAllStock(adminToken: string) {
+  const list = await api().get('/api/v1/inventory/requests').set(auth(adminToken));
+  for (const r of list.body.requests as { id: string }[]) {
+    const res = await api().post(`/api/v1/inventory/requests/${r.id}/approve`).set(auth(adminToken)).send({});
+    if (res.status !== 200) throw new Error(`approve failed ${res.status} ${JSON.stringify(res.body)}`);
+  }
+  return list.body.requests.length as number;
+}

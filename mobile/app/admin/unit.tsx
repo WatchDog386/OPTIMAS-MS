@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { isPending, toastPending } from '../../src/utils/stockApproval';
 import { useLocalSearchParams } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -46,7 +47,8 @@ export default function UnitTrace() {
   const reportLost = async () => {
     if (!unit) return;
     try {
-      await api('/inventory/report-lost', { body: { serialNumber: unit.serialNumber, note: lostNote } });
+      const r = await api('/inventory/report-lost', { body: { serialNumber: unit.serialNumber, note: lostNote } });
+      if (isPending(r)) toastPending(r);
       await lookup(unit.serialNumber);
     } catch (e) {
       toast.error('Failed', e instanceof ApiError ? e.message : 'Try again');
@@ -57,8 +59,9 @@ export default function UnitTrace() {
   const markInstalled = async () => {
     if (!unit) return;
     try {
-      await api(`/inventory/units/${encodeURIComponent(unit.serialNumber)}/mark-installed`, { body: { customerAccount: account.trim(), note: installNote.trim() } });
-      toast.success('Marked installed', `${unit.serialNumber} moved from In hand to Installed.`);
+      const r = await api(`/inventory/units/${encodeURIComponent(unit.serialNumber)}/mark-installed`, { body: { customerAccount: account.trim(), note: installNote.trim() } });
+      if (isPending(r)) toastPending(r);
+      else toast.success('Marked installed', `${unit.serialNumber} moved from In hand to Installed.`);
       setAccount('');
       setInstallNote('');
       await lookup(unit.serialNumber);

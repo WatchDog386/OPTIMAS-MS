@@ -5,12 +5,35 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { api, ApiError } from '../../src/api/client';
 import type { ApprovalSummary, AttendanceReview, JobReview, ProofPhoto } from '../../src/api/approvals';
 import { AuthImage, Avatar, Badge, Button, EmptyState, Glass, PageHeader, Reveal, Screen, SectionLead, Text, TileGrid } from '../../src/components';
+import { useAuth } from '../../src/store/auth';
 import { useApi } from '../../src/hooks/useApi';
 import { celebrate, confirmDialog, promptDialog, toast } from '../../src/store/feedback';
 import { colors, fonts, radius, space } from '../../src/theme';
 import { dateTime, duration, flagLabel, humanize, time } from '../../src/utils/format';
 
-type Tab = 'checkins' | 'checkouts' | 'jobs';
+type Tab = 'checkins' | 'checkouts' | 'jobs' | 'stock';
+/** A stock change waiting for an admin (or decided). */
+type StockReq = {
+  id: string;
+  type: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  summary: string;
+  createdAt: string;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+  requestedBy: { id: string; name: string; staffNo: string; role: string };
+  reviewedBy: { id: string; name: string } | null;
+};
+const STOCK_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
+  INSTALL: 'checkmark-done-outline',
+  MARK_INSTALLED: 'checkmark-done-outline',
+  RETURN: 'arrow-down-circle-outline',
+  RECOVER: 'arrow-undo-outline',
+  REPORT_LOST: 'warning-outline',
+  RECEIVE: 'download-outline',
+  ISSUE: 'arrow-up-circle-outline',
+  ADJUST: 'swap-vertical-outline',
+};
 type Show = 'PENDING' | 'DONE';
 const DRESS: Record<string, string> = { uniform: 'Uniform', idBadge: 'Staff ID', safetyBoots: 'Safety boots', groomed: 'Well groomed' };
 const hasFlags = (...p: (ProofPhoto | null | undefined)[]) => p.some((x) => (x?.flags.length ?? 0) > 0);
@@ -22,18 +45,21 @@ const hasFlags = (...p: (ProofPhoto | null | undefined)[]) => p.some((x) => (x?.
  */
 export default function Approvals() {
   const params = useLocalSearchParams<{ tab?: Tab }>();
-  const [tab, setTab] = useState<Tab>(params.tab === 'checkouts' || params.tab === 'jobs' ? params.tab : 'checkins');
+  const [tab, setTab] = useState<Tab>(params.tab === 'checkouts' || params.tab === 'jobs' || params.tab === 'stock' ? params.tab : 'checkins');
+  const isAdmin = useAuth((st) => st.user?.role === 'ADMIN');
   const [show, setShow] = useState<Show>('PENDING');
   const summary = useApi<ApprovalSummary>('/approvals/summary', { poll: 30_000 });
   const ins = useApi<{ records: AttendanceReview[] }>(tab === 'checkins' ? `/approvals/check-ins?status=${show}` : null);
   const outs = useApi<{ records: AttendanceReview[] }>(tab === 'checkouts' ? `/approvals/check-outs?status=${show}` : null);
   const jobs = useApi<{ tasks: JobReview[] }>(tab === 'jobs' ? `/approvals/jobs?status=${show}` : null);
+  const stock = useApi<{ requests: StockReq[] }>(tab === 'stock' ? `/inventory/requests?status=${show}` : null);
   const [busy, setBusy] = useState<string | null>(null);
 
   const reload = () => {
     summary.reload();
     if (tab === 'checkins') ins.reload();
     else if (tab === 'checkouts') outs.reload();
+    else if (tab === 'stock') stock.reload();
     else jobs.reload();
   };
 
@@ -59,7 +85,9 @@ export default function Approvals() {
       ? (ins.data?.records ?? []).filter((r) => !hasFlags(r.checkInPhoto)).map((r) => ({ kind: 'CHECK_IN' as const, id: r.id }))
       : tab === 'checkouts'
         ? (outs.data?.records ?? []).filter((r) => !hasFlags(r.checkOutPhoto)).map((r) => ({ kind: 'CHECK_OUT' as const, id: r.id }))
-        : (jobs.data?.tasks ?? []).filter((t) => !hasFlags(t.startPhoto, t.endPhoto)).map((t) => ({ kind: 'JOB' as const, id: t.id }));
+        : tab === 'stock'
+          ? []
+          : (jobs.data?.tasks ?? []).filter((t) => !hasFlags(t.startPhoto, t.endPhoto)).map((t) => ({ kind: 'JOB' as const, id: t.id }));
 
   const approveClean = async () => {
     const ok = await confirmDialog({ title: `Approve ${clean.length} without warnings?`, message: 'Items whose photos have a warning (no GPS, away from the office, taken offline…) are left for you to check one by one.', icon: 'checkmark-done-outline', confirmLabel: 'Approve all' });
@@ -77,8 +105,8 @@ export default function Approvals() {
   };
 
   const s = summary.data;
-  const loading = tab === 'checkins' ? ins.loading : tab === 'checkouts' ? outs.loading : jobs.loading;
-  const count = tab === 'checkins' ? ins.data?.records.length : tab === 'checkouts' ? outs.data?.records.length : jobs.data?.tasks.length;
+  const loading = tab === 'checkins' ? ins.loading : tab === 'checkouts' ? outs.loading : tab === 'stock' ? stock.loading : jobs.loading;
+  const count = tab === 'checkins' ? ins.data?.records.length : tab === 'checkouts' ? outs.data?.records.length : tab === 'stock' ? stock.data?.requests.length : jobs.data?.tasks.length;
 
   return (
     <Screen refreshing={summary.refreshing} onRefresh={reload}>
@@ -89,9 +117,11 @@ export default function Approvals() {
           { key: 'checkins', title: 'Check-ins', status: s?.checkIns ? `${s.checkIns} waiting` : 'All reviewed', icon: 'log-in-outline', badge: s?.checkIns, selected: tab === 'checkins', onPress: () => setTab('checkins') },
           { key: 'checkouts', title: 'Check-outs', status: s?.checkOuts ? `${s.checkOuts} waiting` : 'All reviewed', icon: 'log-out-outline', badge: s?.checkOuts, selected: tab === 'checkouts', onPress: () => setTab('checkouts') },
           { key: 'jobs', title: 'Jobs', status: s?.jobs ? `${s.jobs} to verify` : 'All verified', icon: 'briefcase-outline', badge: s?.jobs, selected: tab === 'jobs', onPress: () => setTab('jobs') },
+          { key: 'stock', title: 'Stock', status: s?.stock ? `${s.stock} to approve` : 'All approved', icon: 'cube-outline', badge: s?.stock, selected: tab === 'stock', onPress: () => setTab('stock') },
         ]}
+        columns={2}
       />
-      <SectionLead text={tab === 'jobs' ? 'Below are the jobs' : tab === 'checkins' ? 'Below are the check-ins' : 'Below are the check-outs'} accent={show === 'PENDING' ? 'waiting for you' : 'already reviewed'} />
+      <SectionLead text={tab === 'jobs' ? 'Below are the jobs' : tab === 'stock' ? 'Below are the stock changes' : tab === 'checkins' ? 'Below are the check-ins' : 'Below are the check-outs'} accent={show === 'PENDING' ? 'waiting for you' : 'already reviewed'} />
       <View style={styles.showRow}>
         {(['PENDING', 'DONE'] as Show[]).map((v) => (
           <Pressable key={v} onPress={() => setShow(v)} style={[styles.chip, show === v && styles.chipOn]} accessibilityRole="button" accessibilityState={{ selected: show === v }}>
@@ -175,6 +205,35 @@ export default function Approvals() {
                   />
                 ) : (
                   <Outcome status={r.checkOutReview ?? null} by={r.checkOutReviewedBy?.name} at={r.checkOutReviewedAt ?? null} note={r.checkOutNote ?? null} />
+                )}
+              </Glass>
+            </Reveal>
+          ))
+        : null}
+
+      {tab === 'stock'
+        ? stock.data?.requests.map((r, i) => (
+            <Reveal key={r.id} index={Math.min(i, 6)}>
+              <Glass strong style={styles.card}>
+                <Header name={r.requestedBy.name} sub={`${humanize(r.type)} · ${dateTime(r.createdAt)}`} userId={r.requestedBy.id} right={<Ionicons name={STOCK_ICON[r.type] ?? 'cube-outline'} size={22} color={colors.brand} />} />
+                <Text variant="title">{r.summary}</Text>
+                {show === 'PENDING' ? (
+                  isAdmin ? (
+                    <Actions
+                      busy={busy === r.id}
+                      onReject={async () => {
+                        const note = await promptDialog({ title: 'Not approve this?', message: 'Nothing moves. Tell them why; they will see this message.', icon: 'arrow-undo-outline', tone: 'danger', confirmLabel: 'Send back', input: { placeholder: 'Reason (required)', required: true } });
+                        if (note) await decide(r.id, () => api(`/inventory/requests/${r.id}/reject`, { body: { note } }), 'Sent back');
+                      }}
+                      onApprove={() => decide(r.id, () => api(`/inventory/requests/${r.id}/approve`, { body: {} }), 'Approved — stock updated')}
+                    />
+                  ) : (
+                    <Text variant="label" color={colors.textMuted}>
+                      Waiting for an admin to approve.
+                    </Text>
+                  )
+                ) : (
+                  <Outcome status={r.status === 'APPROVED' ? 'APPROVED' : 'REJECTED'} by={r.reviewedBy?.name} at={r.reviewedAt} note={r.reviewNote} />
                 )}
               </Glass>
             </Reveal>

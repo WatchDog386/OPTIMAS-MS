@@ -53,8 +53,8 @@ describe('role-based access', () => {
     expect((await api().patch(`/api/v1/users/${me.user.id}`).set(auth(admin)).send({ role: 'SUPERVISOR' })).status).toBe(400);
 
     const holder = await newTechnician(admin);
-    const { serials } = await receiveSerials(store, 'RTR-TP-C6', 1);
-    await api().post('/api/v1/inventory/issue').set(auth(store)).send({ userId: holder.user.id, serials });
+    const { serials } = await receiveSerials(admin, 'RTR-TP-C6', 1);
+    await api().post('/api/v1/inventory/issue').set(auth(admin)).send({ userId: holder.user.id, serials });
     const deact = await api().patch(`/api/v1/users/${holder.user.id}`).set(auth(admin)).send({ active: false });
     expect(deact.body.error.code).toBe('HOLDS_DEVICES');
 

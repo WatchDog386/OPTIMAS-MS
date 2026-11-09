@@ -9,7 +9,8 @@ import { ah } from '../../middleware/async';
 import { ROLES, me, requireRole } from '../../middleware/auth';
 import { parse } from '../../middleware/validate';
 import { consumePhoto, eventTime } from '../capture/capture.service';
-import { consumeBulk, installSerial } from '../inventory/inventory.service';
+import { consumeBulk, installSerial, requireHeldUnit } from '../inventory/inventory.service';
+import { fileRequest, tellAdmins } from '../inventory/stock-approval';
 import { notify, notifyRoles } from '../notifications/notifications.service';
 import { notifyCustomer } from '../customer/customer.service';
 import { audit } from '../../lib/audit';
@@ -437,7 +438,7 @@ tasksRouter.post(
     mustBeAssignee(task, userId);
     if (task.status !== 'IN_PROGRESS' || !task.startedAt) throw conflict('Start the task before completing it');
     if (task.type === 'INSTALLATION' && body.serials.length === 0) {
-      throw badRequest('Scan the serial number of the router/ONT installed for this customer', 'SERIAL_REQUIRED');
+      throw badRequest('Enter the serial number (SN) of the router/ONT installed for this customer', 'SERIAL_REQUIRED');
     }
     if (task.type === 'INSTALLATION' && !body.signature) {
       throw badRequest('Ask the customer to sign to confirm the installation', 'SIGNATURE_REQUIRED');
@@ -450,7 +451,18 @@ tasksRouter.post(
       await consumePhoto(tx, body.photoId, userId, 'TASK_END', task.id);
 
       for (const serial of body.serials) {
-        const unit = await installSerial(tx, userId, serial, { id: task.id, customerAccount: customerAccount ?? null });
+        // The device installed: an admin approves it before it leaves the technician's stock (an admin's own counts now)
+        const unit =
+          me(req).role === 'ADMIN'
+            ? await installSerial(tx, userId, serial, { id: task.id, customerAccount: customerAccount ?? null })
+            : await requireHeldUnit(tx, userId, serial);
+        if (me(req).role !== 'ADMIN') {
+          await fileRequest(tx, 'INSTALL', me(req), { serial: unit.serialNumber, customerAccount: customerAccount ?? null, taskId: task.id }, {
+            summary: `Install ${unit.serialNumber} (${unit.item.name}) at ${customerAccount ?? task.customerName} — job ${task.code}`,
+            serialUnitId: unit.id,
+            taskId: task.id,
+          });
+        }
         await tx.taskMaterial.create({
           data: { taskId: task.id, itemId: unit.itemId, serialUnitId: unit.id, quantity: 1, unitPrice: unit.item.unitPrice, amount: unit.item.unitPrice },
         });
@@ -480,6 +492,7 @@ tasksRouter.post(
         },
       });
     });
+    if (body.serials.length && me(req).role !== 'ADMIN') tellAdmins(me(req), `${body.serials.length} device(s) installed on job ${task.code} (${task.customerName}) — approve to move them to Installed`);
     void notifyCustomer(task, { title: 'Job completed', body: `"${task.title}" was completed by ${lead(task)}. Thank you for choosing Optimas.` });
     // The job report goes to the office: supervisors, admins and customer care
     void notifyRoles(['SUPERVISOR', 'ADMIN', 'CUSTOMER_CARE'], {

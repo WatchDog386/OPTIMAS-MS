@@ -18,6 +18,8 @@ interface MyStock {
   bulk: BulkHolding[];
   lastCount: StockCountResult | null;
   ageAlertDays: number;
+  /** This person's stock changes waiting for an admin. */
+  waiting?: { id: string; type: string; summary: string; createdAt: string }[];
 }
 
 export default function MyStock() {
@@ -108,10 +110,22 @@ export default function MyStock() {
         </>
       ) : null}
 
+      {data?.waiting?.length ? (
+        <>
+          <SectionHeader title="Waiting for admin approval" />
+          <Text variant="bodySm" color={colors.textMuted}>
+            Nothing moves until an admin approves. You will get a notification either way.
+          </Text>
+          {data.waiting.map((w) => (
+            <ListRow key={w.id} icon="hourglass-outline" iconTint={colors.warning} title={w.summary} subtitle={`Sent ${dateTime(w.createdAt)}`} right={<Badge label="Waiting" tone="warning" />} />
+          ))}
+        </>
+      ) : null}
+
       <SectionHeader title="Routers & ONTs in hand" />
       {data?.units.length ? (
         <Text variant="bodySm" color={colors.textMuted}>
-          Installed one and it is still here? Tap it to mark it installed.
+          Installed one and it is still here? Tap it, or use the button above and type its SN, to send it for approval.
         </Text>
       ) : null}
       {data?.units.length ? (
@@ -124,8 +138,8 @@ export default function MyStock() {
               iconTint={overdue ? colors.danger : colors.info}
               title={u.item.name}
               subtitle={`S/N ${u.serialNumber}`}
-              onPress={() => void markInstalled(u.serialNumber).then((ok) => (ok ? reload() : undefined))}
-              right={<Badge label={u.daysHeld ? `${u.daysHeld}d held` : 'Today'} tone={overdue ? 'danger' : 'info'} />}
+              onPress={(u as { awaitingApproval?: string | null }).awaitingApproval ? undefined : () => void markInstalled(u.serialNumber).then((ok) => (ok ? reload() : undefined))}
+              right={(u as { awaitingApproval?: string | null }).awaitingApproval ? <Badge label="Waiting approval" tone="warning" /> : <Badge label={u.daysHeld ? `${u.daysHeld}d held` : 'Today'} tone={overdue ? 'danger' : 'info'} />}
             />
           );
         })

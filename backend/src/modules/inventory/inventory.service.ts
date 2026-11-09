@@ -262,6 +262,15 @@ export function matchUnit<U extends { serialNumber: string; macAddress: string |
   return partial.length === 1 ? partial[0] : null;
 }
 
+/** The device in this person's hands that the serial typed or scanned means; refuses clearly otherwise. */
+export async function requireHeldUnit(tx: Tx, userId: string, serialNumber: string) {
+  const unit = await findHeldUnit(tx, userId, serialNumber);
+  if (unit) return unit;
+  const elsewhere = await tx.serialUnit.findFirst({ where: { serialNumber: { in: codeVariants(serialNumber) } } });
+  if (elsewhere) throw conflict(`${elsewhere.serialNumber} is not in your custody (${elsewhere.status.toLowerCase().replace('_', ' ')})`, 'NOT_IN_CUSTODY');
+  throw notFound(`Device ${readCode(serialNumber).serial} among your devices. Type the serial number (SN) exactly as on the sticker, or pick the device from your list`);
+}
+
 /** Marks one of this technician's devices installed at a customer (on a job, or recorded on its own). */
 export async function installSerial(
   tx: Tx,
@@ -269,12 +278,7 @@ export async function installSerial(
   serialNumber: string,
   task: { id: string | null; customerAccount: string | null },
 ) {
-  const unit = await findHeldUnit(tx, userId, serialNumber);
-  if (!unit) {
-    const elsewhere = await tx.serialUnit.findFirst({ where: { serialNumber: { in: codeVariants(serialNumber) } } });
-    if (elsewhere) throw conflict(`${elsewhere.serialNumber} is not in your custody (${elsewhere.status.toLowerCase().replace('_', ' ')})`, 'NOT_IN_CUSTODY');
-    throw notFound(`Device ${readCode(serialNumber).serial} among your devices. Scan the code marked SN, or pick the device from your list`);
-  }
+  const unit = await requireHeldUnit(tx, userId, serialNumber);
   // Taking a device out and installing it proves it was received: accept it on the way
   if (unit.status === 'IN_TRANSIT') {
     await tx.stockMovement.create({ data: { type: 'ACCEPT', itemId: unit.itemId, serialUnitId: unit.id, quantity: 1, toUserId: userId, actorId: userId } });

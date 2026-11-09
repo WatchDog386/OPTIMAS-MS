@@ -27,6 +27,7 @@ const TAB_OF: Record<string, Exclude<Tab, 'ALL'>> = {
   STOCK_ISSUED: 'STOCK',
   STOCK_COUNT_MISMATCH: 'STOCK',
   UNIT_LOST: 'STOCK',
+  STOCK_APPROVAL: 'STOCK',
   // Everything people do in the app (admins and supervisors)
   ACTIVITY: 'ACTIVITY',
 };
@@ -43,6 +44,7 @@ const TONE_OF: Record<string, Tone> = {
   CHECKOUT_REJECTED: 'danger',
   STOCK_COUNT_MISMATCH: 'danger',
   UNIT_LOST: 'danger',
+  STOCK_APPROVAL: 'warning',
   LATE_CHECK_IN: 'warning',
   PHOTO_FLAGGED: 'warning',
   SERVICE_REQUEST: 'warning',

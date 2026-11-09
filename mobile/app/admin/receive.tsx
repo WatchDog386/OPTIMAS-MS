@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { isPending, toastPending } from '../../src/utils/stockApproval';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -67,6 +68,10 @@ export default function Receive() {
           ? { itemId: item.id, serials: serials.map((serialNumber) => ({ serialNumber })), note: note || undefined }
           : { itemId: item.id, quantity: Number(quantity), note: note || undefined };
       const r = await api<{ received: number }>('/inventory/receive', { body });
+      if (isPending(r)) {
+        toastPending(r);
+        return goBack();
+      }
       if (item.tracking === 'SERIALIZED') {
         // Next: print a signed label for each device just received
         toast.success('Stock received', `${r.received} device(s) added. Print their labels and stick one on each.`);

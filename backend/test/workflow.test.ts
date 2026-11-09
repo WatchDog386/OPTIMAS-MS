@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { api, auth, checkIn, createTask, itemBySku, login, newTechnician, photoId, receiveSerials } from './helpers';
+import { api, approveAllStock, auth, checkIn, createTask, itemBySku, login, newTechnician, photoId, receiveSerials } from './helpers';
 
 describe('a technician’s day: check-in → job → completion → verification', () => {
   let admin: string;
@@ -11,7 +11,7 @@ describe('a technician’s day: check-in → job → completion → verification
 
   beforeAll(async () => {
     admin = (await login('FBI-ADM-001')).token;
-    store = (await login('FBI-STR-001')).token;
+    store = (await login('FBI-ADM-001')).token;
     sup = (await login('FBI-SUP-001')).token;
     tech = await newTechnician(admin);
     ({ serials } = await receiveSerials(store, 'RTR-HW-AX3', 2));
@@ -70,6 +70,9 @@ describe('a technician’s day: check-in → job → completion → verification
     const inbox = await api().get('/api/v1/notifications').set(auth(careToken));
     expect(inbox.body.notifications.some((n: { type: string; title: string }) => n.type === 'TASK_COMPLETED' && n.title.includes(task.code))).toBe(true);
 
+
+    // The installed router waits for the admin before it leaves the technician's stock
+    expect(await approveAllStock(admin)).toBeGreaterThanOrEqual(1);
 
     // a failed completion attempt must not have consumed stock
     const my = await api().get('/api/v1/inventory/my').set(auth(tech.token));

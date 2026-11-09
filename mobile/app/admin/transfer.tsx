@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { isPending, toastPending } from '../../src/utils/stockApproval';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { goBack } from '../../src/utils/nav';
@@ -52,7 +53,11 @@ export default function Transfer() {
     if (mode === 'materials' && (!itemId || !Number(quantity))) return toast.warning('Choose an item and quantity');
     setBusy(true);
     try {
-      await api(issuing ? '/inventory/issue' : '/inventory/return', { body });
+      const r = await api(issuing ? '/inventory/issue' : '/inventory/return', { body });
+      if (isPending(r)) {
+        toastPending(r);
+        return goBack();
+      }
       toast.success(
         issuing ? 'Stock issued' : 'Return recorded',
         issuing ? 'The technician must confirm receipt in their app before devices can be installed.' : 'Stock is back in the store ledger.',
