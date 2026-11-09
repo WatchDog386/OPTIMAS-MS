@@ -28,6 +28,7 @@ import { locationRouter } from './modules/location/location.routes';
 import { chatRouter } from './modules/chat/chat.routes';
 import { publicRouter } from './modules/public/public.routes';
 import { passkeyLoginRouter, passkeyRouter } from './modules/auth/passkey.routes';
+import { activityFeed } from './lib/activity';
 
 export function createApp() {
   const app = express();
@@ -84,6 +85,8 @@ export function createApp() {
     legacyHeaders: false,
     message: { error: { message: 'Too many sign-in attempts. Try again in 15 minutes.', code: 'RATE_LIMITED' } },
   });
+  // Every action taken in the app is told to the admins and supervisors (the activity feed)
+  api.use(activityFeed);
   api.use('/auth/login', loginLimit);
   // Fingerprint sign-in (no session yet): same limit as the password, then its own router before the signed-in one
   api.use('/auth/passkeys/login', loginLimit);

@@ -30,6 +30,7 @@ export const notificationStyle: Record<string, { icon: keyof typeof Ionicons.gly
   JOB_UPDATE: { icon: 'construct', tint: colors.success },
   CHAT_MESSAGE: { icon: 'chatbubble-ellipses', tint: colors.navy },
   APP_UPDATE: { icon: 'sparkles', tint: colors.success },
+  ACTIVITY: { icon: 'pulse', tint: colors.info },
 };
 
 /** Where tapping a notification (in the inbox or from a push) should take the user. */

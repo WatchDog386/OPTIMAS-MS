@@ -430,6 +430,8 @@ enum NotificationType {
   CHAT_MESSAGE
   /// A new version of the app went live
   APP_UPDATE
+  /// Something someone did in the app (the managers' activity feed)
+  ACTIVITY
 }
 
 model Notification {

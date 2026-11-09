@@ -11,7 +11,7 @@ import { useApi } from '../src/hooks/useApi';
 import { fonts, isDark, space } from '../src/theme';
 import { notificationStyle, openNotificationTarget, type AppNotification } from '../src/utils/notifications';
 
-type Tab = 'ALL' | 'JOBS' | 'ATTENDANCE' | 'STOCK';
+type Tab = 'ALL' | 'JOBS' | 'ATTENDANCE' | 'STOCK' | 'ACTIVITY';
 const TAB_OF: Record<string, Exclude<Tab, 'ALL'>> = {
   TASK_ASSIGNED: 'JOBS',
   TASK_COMPLETED: 'JOBS',
@@ -27,6 +27,8 @@ const TAB_OF: Record<string, Exclude<Tab, 'ALL'>> = {
   STOCK_ISSUED: 'STOCK',
   STOCK_COUNT_MISMATCH: 'STOCK',
   UNIT_LOST: 'STOCK',
+  // Everything people do in the app (admins and supervisors)
+  ACTIVITY: 'ACTIVITY',
 };
 
 /** SME's coloured round icon tiles: a soft tint with the icon in the strong colour. */
@@ -49,7 +51,7 @@ const TONE_OF: Record<string, Tone> = {
   JOB_UPDATE: 'success',
   APP_UPDATE: 'success',
 };
-const TAB_LABEL: Record<Tab, string> = { ALL: 'All', JOBS: 'Jobs', ATTENDANCE: 'Attendance', STOCK: 'Stock' };
+const TAB_LABEL: Record<Tab, string> = { ALL: 'All', JOBS: 'Jobs', ATTENDANCE: 'Attendance', STOCK: 'Stock', ACTIVITY: 'Activity' };
 
 /** "12:32 PM" today, otherwise "23/10/26". */
 function when(iso: string) {
@@ -87,7 +89,7 @@ export default function Notifications() {
 
   const all = useMemo(() => data?.notifications ?? [], [data]);
   // Tabs: All, then only the topics that have something
-  const tabs = useMemo(() => (['ALL', 'JOBS', 'ATTENDANCE', 'STOCK'] as Tab[]).filter((t) => t === 'ALL' || all.some((n) => TAB_OF[n.type] === t)), [all]);
+  const tabs = useMemo(() => (['ALL', 'ACTIVITY', 'JOBS', 'ATTENDANCE', 'STOCK'] as Tab[]).filter((t) => t === 'ALL' || all.some((n) => TAB_OF[n.type] === t)), [all]);
   const shown = tab === 'ALL' ? all : all.filter((n) => TAB_OF[n.type] === tab);
   const unreadIn = (t: Tab) => (t === 'ALL' ? all : all.filter((n) => TAB_OF[n.type] === t)).filter((n) => !n.readAt).length;
   const fresh = shown.filter((n) => !n.readAt);
