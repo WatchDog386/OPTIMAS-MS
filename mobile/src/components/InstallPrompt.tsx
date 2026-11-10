@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Image, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fonts, radius, space } from '../theme';
-import { installSteps, useInstallPrompt } from '../utils/install';
+import { installNow, isIosSafari, reopenedToInstall, useInstallPrompt } from '../utils/install';
+import { toast } from '../store/feedback';
 import { GlassCircle } from './Glass';
 import { Text } from './Text';
 
@@ -23,79 +24,70 @@ const snooze = () => {
   }
 };
 
+/** Runs the install and says the outcome in one line (no steps to follow). */
+async function runInstall() {
+  const r = await installNow();
+  if (r === 'installed') toast.success('Installing Optimas MS', 'It will appear on your home screen in a moment.');
+  else if (r === 'blocked')
+    toast.info(
+      'Install not offered here',
+      /iPhone|iPad|iPod/i.test(navigator.userAgent) ? (isIosSafari() ? 'Apple only allows it from Safari’s Share button → Add to Home Screen.' : 'On iPhone, open this page in Safari to install it.') : /Chrome\//.test(navigator.userAgent) && !/SamsungBrowser|; wv\)/.test(navigator.userAgent) ? 'Chrome has not offered it yet. Reload the page and tap Install again.' : 'This browser does not install apps. Open this page in Chrome.',
+    );
+}
+
 /** Round "install" button for top bars — only shown in a browser where installing is possible. */
 export function InstallButton({ round, stepsOnly }: { round?: boolean; stepsOnly?: boolean }) {
-  const { available, canInstall, install } = useInstallPrompt();
-  const [open, setOpen] = useState(false);
-  // `stepsOnly`: the page has its own one-tap Install button, so this one only shows where steps are needed
+  const { available, canInstall } = useInstallPrompt();
+  // `stepsOnly`: the page has its own one-tap Install button
   if (!available || (stepsOnly && canInstall)) return null;
-  // One tap installs where the browser allows it; otherwise the steps for this browser
-  const tap = async () => {
-    if (canInstall) await install();
-    else setOpen(true);
-  };
-  return (
-    <>
-      {round ? (
-        <GlassCircle onPress={tap} label="Install app" highlight>
-          <Ionicons name="download-outline" size={20} color={colors.onHighlight} />
-        </GlassCircle>
-      ) : (
-        <Pressable onPress={tap} style={({ pressed }) => [styles.installChip, pressed && { opacity: 0.85 }]} accessibilityRole="button" accessibilityLabel="Install">
-          <Ionicons name="download-outline" size={17} color={colors.onHighlight} />
-          <Text variant="bodySm" color={colors.onHighlight} fixedColor style={{ fontFamily: fonts.bold }}>
-            Install
-          </Text>
-        </Pressable>
-      )}
-      <InstallSheet visible={open} onClose={() => setOpen(false)} />
-    </>
+  const tap = () => void runInstall();
+  return round ? (
+    <GlassCircle onPress={tap} label="Install app" highlight>
+      <Ionicons name="download-outline" size={20} color={colors.onHighlight} />
+    </GlassCircle>
+  ) : (
+    <Pressable onPress={tap} style={({ pressed }) => [styles.installChip, pressed && { opacity: 0.85 }]} accessibilityRole="button" accessibilityLabel="Install">
+      <Ionicons name="download-outline" size={17} color={colors.onHighlight} />
+      <Text variant="bodySm" color={colors.onHighlight} fixedColor style={{ fontFamily: fonts.bold }}>
+        Install
+      </Text>
+    </Pressable>
   );
 }
 
-/** Opens the install sheet (or installs in one tap) from anywhere, e.g. a Profile tile. */
+/** Installs the app in one tap from anywhere (a dashboard button, a Profile card, the sign-in page). */
 export function useInstallAction() {
-  const { available, canInstall, install } = useInstallPrompt();
-  const [open, setOpen] = useState(false);
+  const { available } = useInstallPrompt();
   const [busy, setBusy] = useState(false);
   return {
-    /** Only true when tapping will install (see useInstallPrompt), so the button never dead-ends. */
+    /** Shown until the app is installed on this phone. */
     available,
     busy,
     start: async () => {
       if (busy) return;
-      // The phone has offered: its own install opens at once and the app installs like any Android app
-      if (canInstall) {
-        setBusy(true);
-        try {
-          await install();
-        } finally {
-          setBusy(false);
-        }
-        return;
+      setBusy(true);
+      try {
+        await runInstall();
+      } finally {
+        setBusy(false);
       }
-      // iPhone only: websites install there through Share → Add to Home Screen
-      setOpen(true);
     },
-    sheet: <InstallSheet visible={open} onClose={() => setOpen(false)} />,
+    /** Kept for pages that still place it; installing needs no sheet now. */
+    sheet: null,
   };
 }
 
 /** Full-width pill version for the sign-in page. */
 export function InstallPill() {
   const { available } = useInstallPrompt();
-  const [open, setOpen] = useState(false);
   if (!available) return null;
   return (
-    <>
-      <Pressable onPress={() => setOpen(true)} style={({ pressed }) => [styles.pill, pressed && { opacity: 0.85 }]} accessibilityRole="button">
-        <Ionicons name="download-outline" size={18} color={colors.onHighlight} />
-        <Text variant="title" color={colors.onHighlight} fixedColor>
-          Install the Optimas MS app
-        </Text>
-      </Pressable>
-      <InstallSheet visible={open} onClose={() => setOpen(false)} />
-    </>
+    <Pressable onPress={() => void runInstall()} style={({ pressed }) => [styles.pill, pressed && { opacity: 0.85 }]} accessibilityRole="button">
+      <Ionicons name="download-outline" size={18} color={colors.onHighlight} />
+      <Text variant="title" color={colors.onHighlight} fixedColor>
+        Install the Optimas MS app
+      </Text>
+    </Pressable>
   );
 }
 
@@ -109,7 +101,7 @@ export function InstallPrompt() {
     return () => clearTimeout(t);
   }, []);
   const phone = Platform.OS === 'web' && typeof window !== 'undefined' && window.matchMedia?.('(max-width: 1023px)').matches;
-  if (!available || !ready || closed || !phone || snoozed()) return null;
+  if (!available || closed || ((!ready || !phone || snoozed()) && !reopenedToInstall())) return null;
   return (
     <InstallSheet
       visible
@@ -122,7 +114,6 @@ export function InstallPrompt() {
 }
 
 function InstallSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
-  const { canInstall, install } = useInstallPrompt();
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} />
@@ -143,21 +134,6 @@ function InstallSheet({ visible, onClose }: { visible: boolean; onClose: () => v
             </Pressable>
           </View>
 
-          {!canInstall ? (
-            <View style={styles.steps}>
-              {installSteps().map((step, i) => (
-                <View key={i} style={styles.step}>
-                  <Text variant="bodySm" color={colors.highlight} fixedColor style={{ fontFamily: fonts.bold, width: 18 }}>
-                    {i + 1}.
-                  </Text>
-                  <Text variant="bodySm" color={colors.white} fixedColor style={{ flex: 1 }}>
-                    {step}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          ) : null}
-
           <View style={styles.actions}>
             <Pressable onPress={onClose} style={[styles.btn, styles.btnGhost]}>
               <Text variant="title" color={colors.white} fixedColor>
@@ -166,13 +142,13 @@ function InstallSheet({ visible, onClose }: { visible: boolean; onClose: () => v
             </Pressable>
             <Pressable
               onPress={async () => {
-                if (canInstall) await install();
                 onClose();
+                await runInstall();
               }}
               style={[styles.btn, styles.btnMain]}
             >
               <Text variant="title" color={colors.onHighlight} fixedColor style={{ fontFamily: fonts.bold }}>
-                {canInstall ? 'Install' : 'Got it'}
+                Install
               </Text>
             </Pressable>
           </View>

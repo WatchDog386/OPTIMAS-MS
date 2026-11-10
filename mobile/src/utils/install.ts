@@ -63,6 +63,62 @@ export function runningAsApp(): boolean {
   );
 }
 
+/** Waits up to `ms` for the browser to offer installing (it can come a moment after the page loads). */
+function offerWithin(ms: number): Promise<InstallEvent | null> {
+  if (deferred) return Promise.resolve(deferred);
+  return new Promise((resolve) => {
+    const done = () => {
+      listeners.delete(check);
+      clearTimeout(t);
+      resolve(deferred);
+    };
+    const check = () => {
+      if (deferred) done();
+    };
+    listeners.add(check);
+    const t = setTimeout(done, ms);
+  });
+}
+
+/**
+ * The Install button: installs the app straight away, with no steps to follow.
+ * - Chrome, Edge, Samsung Internet (and Chrome on a laptop): the phone's own Install opens at once.
+ * - Inside WhatsApp / Facebook / Instagram, or Firefox, on Android (which cannot install apps): the app
+ *   reopens in Chrome, where the Install comes up straight away.
+ * - iPhone and iPad: Apple lets no website install itself; resolves 'blocked' (only Safari's Share →
+ *   Add to Home Screen can do it).
+ */
+export async function installNow(): Promise<'installed' | 'dismissed' | 'reopened' | 'blocked'> {
+  if (!isWeb) return 'blocked';
+  const e = await offerWithin(2500);
+  if (e) {
+    try {
+      await e.prompt();
+    } catch {
+      return 'dismissed';
+    }
+    const { outcome } = await e.userChoice;
+    deferred = null;
+    (window as unknown as { __optimasInstall?: InstallEvent | null }).__optimasInstall = null;
+    emit();
+    return outcome === 'accepted' ? 'installed' : 'dismissed';
+  }
+  // A browser on Android that cannot install apps (inside WhatsApp & co, Firefox, Samsung without the
+  // offer): reopen in Chrome. Never from Chrome itself (or after a reopen), so it cannot go round in circles.
+  const kind = browserKind();
+  if (/Android/i.test(navigator.userAgent) && (kind === 'in-app' || kind === 'firefox' || kind === 'samsung') && !reopenedToInstall()) {
+    // Open this app in Chrome, which installs it; ?install=1 brings the Install up there at once
+    const url = new URL(window.location.href);
+    url.searchParams.set('install', '1');
+    window.location.href = `intent://${url.host}${url.pathname}${url.search}#Intent;scheme=${url.protocol.replace(':', '')};package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(url.toString())};end`;
+    return 'reopened';
+  }
+  return 'blocked';
+}
+
+/** The page was reopened in Chrome by the Install button: bring Install up again straight away. */
+export const reopenedToInstall = () => isWeb && new URLSearchParams(window.location.search).get('install') === '1';
+
 export const isIosSafari = () =>
   isWeb && /iPhone|iPad|iPod/i.test(navigator.userAgent) && !/CriOS|FxiOS|EdgiOS/i.test(navigator.userAgent);
 
@@ -97,9 +153,8 @@ export function useInstallPrompt() {
     /** iPhone Safari: install only via Share → Add to Home Screen. */
     needsIosSteps: ios && !deferred,
     /**
-     * Shown to everyone who opened the app in a browser and has not installed it: one tap installs where
-     * the phone offers it; on every other browser (Samsung, Firefox, iPhone, links opened inside WhatsApp,
-     * or Chrome after "Not now") the button shows that browser's steps. Hidden inside the installed app.
+     * Shown to everyone who opened the app in a browser and has not installed it; tapping installs it
+     * (see installNow). Hidden inside the installed app.
      */
     available: isWeb && !runningAsApp() && !installedHere(),
     install,
@@ -118,26 +173,6 @@ export function browserKind(): BrowserKind {
   if (/Firefox/i.test(ua)) return 'firefox';
   if (/Android/i.test(ua)) return 'chrome';
   return 'desktop';
-}
-
-/** Step-by-step install instructions for browsers that do not offer a one-tap install. */
-export function installSteps(kind: BrowserKind = browserKind()): string[] {
-  switch (kind) {
-    case 'in-app':
-      return ['This page is open inside another app (WhatsApp, Facebook…), which cannot install apps.', 'Tap ⋮ (or ⋯) at the top and choose "Open in Chrome" (iPhone: "Open in Safari").', 'Then tap Install app again.'];
-    case 'ios-safari':
-      return ['Tap the Share button at the bottom of Safari.', 'Scroll down and choose "Add to Home Screen".', 'Tap "Add". Optimas MS appears on your home screen.'];
-    case 'ios-other':
-      return ['Tap the Share button (in the address bar or menu).', 'Choose "Add to Home Screen" (if it is not there, open this page in Safari).', 'Tap "Add".'];
-    case 'samsung':
-      return ['Tap the menu ☰ at the bottom right.', 'Choose "Add page to", then "Home screen".', 'Tap "Add".'];
-    case 'firefox':
-      return ['Tap the menu ⋮.', 'Choose "Install" (or "Add to Home screen").', 'Tap "Add".'];
-    case 'chrome':
-      return ['Tap the menu ⋮ at the top right of Chrome.', 'Choose "Install app" (or "Add to Home screen").', 'Tap "Install".'];
-    default:
-      return ['Click the install icon at the right of the address bar (a screen with a down arrow).', 'Or open the browser menu and choose "Install Optimas MS".'];
-  }
 }
 
 /** Phone status bar colour at rest: the page's own colour, so the top of the screen is one even surface. */

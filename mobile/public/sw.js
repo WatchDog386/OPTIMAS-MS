@@ -14,6 +14,12 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Phones on older Chrome only offer to install an app whose worker answers page requests. Pages always
+// come straight from the server (nothing is cached), so installing works on those phones too.
+self.addEventListener('fetch', (event) => {
+  if (event.request.mode === 'navigate') event.respondWith(fetch(event.request));
+});
+
 // ── Push notifications (the server sends { title, body, type, data }) ──────────────────────────────
 self.addEventListener('push', (event) => {
   let msg = {};
