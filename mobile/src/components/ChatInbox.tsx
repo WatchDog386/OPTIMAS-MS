@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ConversationRow, Tick } from '../api/field';
 import { useApi } from '../hooks/useApi';
 import { homeFor, useAuth } from '../store/auth';
-import { colors, fonts, space } from '../theme';
+import { colors, fonts, space, isDark } from '../theme';
 import { openChatWith } from '../utils/chat';
 import { Avatar } from './Avatar';
 import { EmptyState } from './EmptyState';
@@ -85,7 +85,7 @@ export function ChatInbox({ tab }: { tab?: boolean }) {
             const on = filter === c.key;
             return (
               <Pressable key={c.key} onPress={() => setFilter(c.key)} style={[styles.chip, on && styles.chipOn]} accessibilityRole="tab" accessibilityState={{ selected: on }}>
-                <Text variant="bodySm" color={on ? CHIP_GREEN : colors.textMuted} style={{ fontFamily: on ? fonts.semibold : fonts.medium }}>
+                <Text variant="bodySm" color={on ? (isDark ? '#FFFFFF' : CHIP_GREEN) : colors.textMuted} fixedColor={on} style={{ fontFamily: on ? fonts.semibold : fonts.medium }}>
                   {c.label}
                   {c.n ? ` ${c.n}` : ''}
                 </Text>
@@ -194,13 +194,14 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, height: 48, fontFamily: fonts.regular, fontSize: 16, color: colors.text, outlineStyle: 'none' } as object,
   chips: { gap: 8, paddingVertical: 2 },
   chip: { height: 36, paddingHorizontal: 14, borderRadius: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, backgroundColor: colors.glassStrong },
-  chipOn: { backgroundColor: colors.brandSoft, borderColor: colors.brandSoft },
+  // The chosen filter: solid green with white lettering (the soft tint was too faint in dark mode)
+  chipOn: { backgroundColor: isDark ? '#2DA043' : colors.brandSoft, borderColor: isDark ? '#2DA043' : colors.brandSoft },
   row: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 11, paddingHorizontal: 2 },
   pressed: { opacity: 0.6 },
   name: { fontFamily: fonts.semibold, fontSize: 16 },
   line: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   count: { minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 6, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center', marginLeft: 4 },
-  groupIcon: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#8696A0', alignItems: 'center', justifyContent: 'center' },
+  groupIcon: { width: 52, height: 52, borderRadius: 26, backgroundColor: isDark ? '#2A3942' : '#8696A0', alignItems: 'center', justifyContent: 'center' },
   supportIcon: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.highlight, alignItems: 'center', justifyContent: 'center' },
   fab: {
     position: 'absolute',

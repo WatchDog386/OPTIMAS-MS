@@ -6,7 +6,7 @@ import type { Contact } from '../../src/api/field';
 import { Avatar, EmptyState, Input, PageHeader, Reveal, Screen, Text } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { useAuth } from '../../src/store/auth';
-import { colors, space } from '../../src/theme';
+import { colors, space, isDark } from '../../src/theme';
 import { openChatWith } from '../../src/utils/chat';
 import { humanize } from '../../src/utils/format';
 
@@ -106,6 +106,6 @@ export default function NewChat() {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: space.md, paddingHorizontal: 2 },
-  group: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#8696A0', alignItems: 'center', justifyContent: 'center' },
+  group: { width: 44, height: 44, borderRadius: 22, backgroundColor: isDark ? '#2A3942' : '#8696A0', alignItems: 'center', justifyContent: 'center' },
   support: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.highlight, alignItems: 'center', justifyContent: 'center' },
 });

@@ -45,7 +45,7 @@ if (typeof document !== 'undefined' && typeof MutationObserver !== 'undefined' &
       if (finished) return;
       finished = true;
       // Let the page render and start its data request (which keeps the loader up) before letting go
-      requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => usePageLoad.getState().done(id), 150)));
+      requestAnimationFrame(() => requestAnimationFrame(() => usePageLoad.getState().done(id)));
     };
     el.addEventListener('load', finish);
     el.addEventListener('error', finish);

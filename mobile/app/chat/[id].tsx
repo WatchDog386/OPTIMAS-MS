@@ -18,8 +18,8 @@ const POLL_MS = 3_000;
 
 /** WhatsApp's chat colours, light and dark. */
 const WA = isDark
-  ? { wallpaper: '#0B141A', mine: '#005C4B', theirs: '#202C33', ink: '#E9EDEF', meta: '#8696A0', notice: '#182229', noticeInk: '#FFD279', quoteBar: '#06CF9C' }
-  : { wallpaper: '#EFEAE2', mine: '#D9FDD3', theirs: '#FFFFFF', ink: '#111B21', meta: '#667781', notice: '#FFEECD', noticeInk: '#54656F', quoteBar: '#06CF9C' };
+  ? { wallpaper: '#0B141A', mine: '#005C4B', theirs: '#202C33', ink: '#E9EDEF', meta: '#8696A0', notice: '#182229', noticeInk: '#FFD279', quoteBar: '#06CF9C', bar: '#202C33', field: '#2A3942', day: '#182229', dayInk: '#8696A0', group: '#2A3942', quote: 'rgba(255,255,255,0.06)' }
+  : { wallpaper: '#EFEAE2', mine: '#D9FDD3', theirs: '#FFFFFF', ink: '#111B21', meta: '#667781', notice: '#FFEECD', noticeInk: '#54656F', quoteBar: '#06CF9C', bar: '#FFFFFF', field: '#FFFFFF', day: '#FFFFFF', dayInk: '#54656F', group: '#8696A0', quote: 'rgba(11,20,26,0.05)' };
 /** Sender names in groups get a steady colour each. */
 const NAME_COLOURS = ['#1FA855', '#A62C71', '#3762C9', '#C75F0E', '#7F66FF', '#0E8C8C', '#B5446E'];
 const nameColour = (id: string) => NAME_COLOURS[[...id].reduce((n, ch) => n + ch.charCodeAt(0), 0) % NAME_COLOURS.length];
@@ -326,30 +326,30 @@ function Bubble({ message: m, grouped, name, tick, animate, onReply }: { message
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.white },
+  root: { flex: 1, backgroundColor: WA.bar },
   center: { alignItems: 'center', justifyContent: 'center', gap: 14, padding: 28 },
-  head: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: space.md, paddingBottom: 10, backgroundColor: colors.white, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+  head: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: space.md, paddingBottom: 10, backgroundColor: WA.bar, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   back: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
   supportIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.highlight, alignItems: 'center', justifyContent: 'center' },
-  groupIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#8696A0', alignItems: 'center', justifyContent: 'center' },
-  jobsBar: { flexGrow: 0, backgroundColor: colors.white },
+  groupIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: WA.group, alignItems: 'center', justifyContent: 'center' },
+  jobsBar: { flexGrow: 0, backgroundColor: WA.bar },
   jobs: { gap: 8, paddingHorizontal: space.lg, paddingBottom: 8 },
   job: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, height: 32, borderRadius: 16, backgroundColor: colors.surfaceAlt, maxWidth: 280 },
   list: { paddingHorizontal: 14, paddingBottom: 12, paddingTop: 10, flexGrow: 1 },
   notice: { alignSelf: 'center', maxWidth: 360, backgroundColor: WA.notice, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 6 },
   empty: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40, paddingHorizontal: 30 },
-  day: { alignSelf: 'center', marginTop: 12, marginBottom: 4, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8, backgroundColor: colors.white, shadowColor: '#0B141A', shadowOpacity: 0.08, shadowRadius: 1, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
+  day: { alignSelf: 'center', marginTop: 12, marginBottom: 4, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8, backgroundColor: WA.day, shadowColor: '#0B141A', shadowOpacity: 0.08, shadowRadius: 1, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
   bubbleWrap: { width: '100%', paddingHorizontal: 6 },
   bubble: { maxWidth: '84%', minWidth: 80, paddingHorizontal: 9, paddingTop: 6, paddingBottom: 7, borderRadius: 8, shadowColor: '#0B141A', shadowOpacity: 0.08, shadowRadius: 1, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
   tailRight: { borderTopRightRadius: 0 },
   tailLeft: { borderTopLeftRadius: 0 },
   tail: { position: 'absolute', top: 0, width: 0, height: 0, borderTopWidth: 10, borderTopColor: 'transparent', borderBottomWidth: 0, borderLeftColor: 'transparent', borderRightColor: 'transparent' },
-  quote: { flexDirection: 'row', gap: 8, borderRadius: 6, overflow: 'hidden', backgroundColor: 'rgba(11,20,26,0.05)', marginBottom: 4 },
+  quote: { flexDirection: 'row', gap: 8, borderRadius: 6, overflow: 'hidden', backgroundColor: WA.quote, marginBottom: 4 },
   quoteLine: { width: 4, alignSelf: 'stretch', backgroundColor: WA.quoteBar, borderRadius: 2 },
   meta: { position: 'absolute', right: 8, bottom: 5, flexDirection: 'row', alignItems: 'center', gap: 3 },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, paddingHorizontal: 8, paddingTop: 6, backgroundColor: WA.wallpaper },
-  pill: { flex: 1, borderRadius: 24, backgroundColor: colors.white, paddingHorizontal: 6, overflow: 'hidden', shadowColor: '#0B141A', shadowOpacity: 0.06, shadowRadius: 1, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
-  replyBar: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6, padding: 6, borderRadius: 10, backgroundColor: 'rgba(11,20,26,0.05)' },
+  pill: { flex: 1, borderRadius: 24, backgroundColor: WA.field, paddingHorizontal: 6, overflow: 'hidden', shadowColor: '#0B141A', shadowOpacity: 0.06, shadowRadius: 1, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
+  replyBar: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6, padding: 6, borderRadius: 10, backgroundColor: WA.quote },
   input: { minHeight: 48, maxHeight: 130, paddingHorizontal: 12, paddingTop: 14, paddingBottom: 12, fontFamily: fonts.regular, fontSize: 16, color: WA.ink, outlineStyle: 'none' } as object,
   send: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center' },
 });
