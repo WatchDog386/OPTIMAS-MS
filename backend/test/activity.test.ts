@@ -19,7 +19,7 @@ describe('activity alerts: managers hear about everything people do', () => {
     const seen = await eventually(() => inbox(admin), (r) => mine(r).length >= want);
     const titles = mine(seen).map((x) => x.title);
     expect(titles.some((t) => /checked in$/.test(t))).toBe(record.status !== 'LATE');
-    const started = mine(seen).find((x) => x.title.includes(`started job ${task.code}`));
+    const started = mine(seen).find((x) => x.title.includes(`started task ${task.code}`));
     expect(started?.data?.taskId).toBe(task.id);
     // The supervisor who created the job hears about the technician too, but not about their own action
     const supInbox = await eventually(() => inbox(sup), (r) => mine(r).length >= want);
@@ -27,7 +27,7 @@ describe('activity alerts: managers hear about everything people do', () => {
     const adminInbox = (await inbox(admin)).body.notifications as N[];
     expect(supInbox.body.notifications.some((x: N) => x.type === 'ACTIVITY' && x.data?.actorId === supId)).toBe(false);
     // …while the admin is told the supervisor created it
-    expect(adminInbox.some((x) => x.type === 'ACTIVITY' && x.data?.actorId === supId && x.title.includes(`created job ${task.code}`))).toBe(true);
+    expect(adminInbox.some((x) => x.type === 'ACTIVITY' && x.data?.actorId === supId && x.title.includes(`created task ${task.code}`))).toBe(true);
     // Nobody is told about their own actions
     const techInbox = await inbox(tech.token);
     expect(techInbox.body.notifications.some((x: N) => x.type === 'ACTIVITY' && x.data?.actorId === tech.user.id)).toBe(false);

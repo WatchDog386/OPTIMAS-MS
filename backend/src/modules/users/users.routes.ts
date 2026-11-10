@@ -258,9 +258,9 @@ usersRouter.post(
     let account = body.customerAccount;
     if (body.taskId) {
       const task = await prisma.task.findUnique({ where: { id: body.taskId }, select: { id: true, code: true, assigneeId: true, customerAccount: true, status: true } });
-      if (!task) throw notFound('Job');
-      if (actor.role === 'TECHNICIAN' && task.assigneeId !== actor.id) throw forbidden('This job is not assigned to you');
-      if (task.customerAccount && account && task.customerAccount !== account) throw conflict(`This job belongs to account ${task.customerAccount}`, 'ACCOUNT_MISMATCH');
+      if (!task) throw notFound('Task');
+      if (actor.role === 'TECHNICIAN' && task.assigneeId !== actor.id) throw forbidden('This task is not assigned to you');
+      if (task.customerAccount && account && task.customerAccount !== account) throw conflict(`This task belongs to account ${task.customerAccount}`, 'ACCOUNT_MISMATCH');
       account = account ?? task.customerAccount ?? undefined;
     }
     if (account && (await prisma.user.findFirst({ where: { customerAccount: account, role: 'CUSTOMER' } }))) {
@@ -300,7 +300,7 @@ usersRouter.post(
     if (!user) throw conflict('Could not create an account number. Try again.');
     // Link the job to the new account so the customer sees the visit straight away
     if (body.taskId) await prisma.task.updateMany({ where: { id: body.taskId, customerAccount: null }, data: { customerAccount: user.customerAccount } });
-    await audit(actor.id, 'CUSTOMER_ONBOARDED', 'User', user.id, `Onboarded customer ${user.name} (${user.staffNo})${body.taskId ? ' on a job' : ''}`);
+    await audit(actor.id, 'CUSTOMER_ONBOARDED', 'User', user.id, `Onboarded customer ${user.name} (${user.staffNo})${body.taskId ? ' on a task' : ''}`);
     res.status(201).json({ user: publicUser(user), loginId: user.staffNo, temporaryPassword: temp });
   }),
 );

@@ -46,14 +46,14 @@ const ACTIVITY_LOOKS: [RegExp, Look][] = [
   [/office location/i, { icon: 'business', tone: 'info' }],
   [/reviewed a check-in photo/i, { icon: 'camera', tone: 'info' }],
   [/reviewed a check-out/i, { icon: 'log-out', tone: 'info' }],
-  [/created job/i, { icon: 'add-circle', tone: 'info' }],
-  [/updated job/i, { icon: 'create', tone: 'info' }],
-  [/moved job|to another technician/i, { icon: 'git-branch', tone: 'info' }],
-  [/cancelled job/i, { icon: 'close-circle', tone: 'danger' }],
-  [/sent back job/i, { icon: 'arrow-undo-circle', tone: 'danger' }],
-  [/verified job/i, { icon: 'shield-checkmark', tone: 'success' }],
-  [/started job/i, { icon: 'play-circle', tone: 'warning' }],
-  [/finished job/i, { icon: 'checkmark-done-circle', tone: 'success' }],
+  [/created (job|task)/i, { icon: 'add-circle', tone: 'info' }],
+  [/updated (job|task)/i, { icon: 'create', tone: 'info' }],
+  [/moved (job|task)|to another technician/i, { icon: 'git-branch', tone: 'info' }],
+  [/cancelled (job|task)/i, { icon: 'close-circle', tone: 'danger' }],
+  [/sent back (job|task)/i, { icon: 'arrow-undo-circle', tone: 'danger' }],
+  [/verified (job|task)/i, { icon: 'shield-checkmark', tone: 'success' }],
+  [/started (job|task)/i, { icon: 'play-circle', tone: 'warning' }],
+  [/finished (job|task)/i, { icon: 'checkmark-done-circle', tone: 'success' }],
   [/approved items in bulk/i, { icon: 'checkmark-done', tone: 'success' }],
   [/team/i, { icon: 'people', tone: 'info' }],
   [/added an account|onboarded a customer/i, { icon: 'person-add', tone: 'info' }],
@@ -140,6 +140,8 @@ export function notificationLook(n: { type: string; title: string; body?: string
       return { icon: 'chatbubble-ellipses', tone: 'chat' };
     case 'APP_UPDATE':
       return { icon: 'rocket', tone: 'success' };
+    case 'DAY_REPORT':
+      return { icon: 'document-text', tone: 'success' };
     default:
       return { icon: 'notifications', tone: 'neutral' };
   }
@@ -162,6 +164,7 @@ export function openNotificationTarget(type: string, data?: Record<string, unkno
   }
   if (type === 'CHAT_MESSAGE' && typeof data?.conversationId === 'string') return go(`/chat/${data.conversationId}`);
   if (role === 'CUSTOMER') return typeof data?.taskId === 'string' ? go(`/visit/${data.taskId}`) : go('/requests');
+  if (type === 'DAY_REPORT') return typeof data?.dayReportId === 'string' && (role === 'ADMIN' || role === 'SUPERVISOR') ? go(`/admin/day-report/${data.dayReportId}`) : go('/day-report');
   if (type === 'SERVICE_REQUEST') return go(role === 'CUSTOMER_CARE' ? '/care-requests' : '/admin/requests');
   if (typeof data?.taskId === 'string') return go(`/task/${data.taskId}`);
   if (type === 'STOCK_ISSUED') return go(role === 'TECHNICIAN' ? '/stock' : '/store');

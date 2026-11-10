@@ -179,7 +179,7 @@ chatRouter.get(
       const accounts = [...new Set(jobs.map((j) => j.customerAccount).filter((a): a is string => !!a))];
       const ids = [...new Set(jobs.map((j) => j.request?.customerId).filter((a): a is string => !!a))];
       const customers = await prisma.user.findMany({ where: { active: true, role: 'CUSTOMER', OR: [{ customerAccount: { in: accounts } }, { id: { in: ids } }], ...(q ? search : {}) }, select });
-      contacts = customers.map((c): Contact => ({ ...c, reason: `Customer · ${jobs.find((j) => j.customerAccount === c.customerAccount || j.request?.customerId === c.id)?.title ?? 'your job'}` })).concat(contacts);
+      contacts = customers.map((c): Contact => ({ ...c, reason: `Customer · ${jobs.find((j) => j.customerAccount === c.customerAccount || j.request?.customerId === c.id)?.title ?? 'your task'}` })).concat(contacts);
     }
     // The office can also find team groups to talk to a whole team about its job
     const groups = isSupportRole(user.role)
@@ -209,9 +209,9 @@ const openSchema = z.union([
 /** The person on the other side of a job: its technician, or the customer's app account. */
 async function personOnJob(taskId: string, side: 'customer' | 'technician') {
   const task = await prisma.task.findUnique({ where: { id: taskId }, select: { assigneeId: true, customerAccount: true, request: { select: { customerId: true } } } });
-  if (!task) throw notFound('Job');
+  if (!task) throw notFound('Task');
   if (side === 'technician') {
-    if (!task.assigneeId) throw notFound('A technician on this job');
+    if (!task.assigneeId) throw notFound('A technician on this task');
     return task.assigneeId;
   }
   const customer = task.request

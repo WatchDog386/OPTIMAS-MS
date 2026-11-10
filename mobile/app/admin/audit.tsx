@@ -57,7 +57,7 @@ export default function Audit() {
           { value: '', label: 'All' },
           { value: 'User', label: 'People' },
           { value: 'InventoryItem', label: 'Stock' },
-          { value: 'Task', label: 'Jobs' },
+          { value: 'Task', label: 'Tasks' },
           { value: 'ServiceRequest', label: 'Requests' },
         ]}
         value={entity}

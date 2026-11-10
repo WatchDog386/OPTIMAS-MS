@@ -11,7 +11,7 @@ import { openChatWith } from '../../src/utils/chat';
 import { dateTime, firstName, humanize } from '../../src/utils/format';
 
 const STATE: Record<MapState, { label: string; color: string; tone: 'success' | 'warning' | 'neutral' }> = {
-  ON_JOB: { label: 'On a job', color: colors.navy, tone: 'warning' },
+  ON_JOB: { label: 'On a task', color: colors.navy, tone: 'warning' },
   AVAILABLE: { label: 'Available', color: colors.success, tone: 'success' },
   OFFLINE: { label: 'Offline', color: '#9AA39E', tone: 'neutral' },
 };
@@ -59,13 +59,13 @@ export default function LiveMapScreen() {
 
   return (
     <Screen refreshing={refreshing} onRefresh={refresh}>
-      <ScreenHeader title="Live map" subtitle="Technicians, jobs and requests" right={<LiveBadge updatedAt={updatedAt} />} />
+      <ScreenHeader title="Live map" subtitle="Technicians, tasks and requests" right={<LiveBadge updatedAt={updatedAt} />} />
 
       <Segmented<Layer>
         options={[
           { value: 'ALL', label: 'Everything' },
           { value: 'PEOPLE', label: `Team · ${staff.length}` },
-          { value: 'JOBS', label: `Jobs · ${jobs.length}` },
+          { value: 'JOBS', label: `Tasks · ${jobs.length}` },
           { value: 'REQUESTS', label: `Requests · ${requests.length}` },
         ]}
         value={layer}
@@ -185,7 +185,7 @@ export default function LiveMapScreen() {
             <View style={{ flex: 1 }}>
               <Text variant="title">{firstName(s.user.name)}</Text>
               <Text variant="label" color={colors.textMuted} numberOfLines={1}>
-                {s.currentTask ? `${s.currentTask.code} · ${s.currentTask.title}` : s.state === 'OFFLINE' ? 'Not checked in' : 'Free for the next job'}
+                {s.currentTask ? `${s.currentTask.code} · ${s.currentTask.title}` : s.state === 'OFFLINE' ? 'Not checked in' : 'Free for the next task'}
               </Text>
             </View>
             {s.live ? (
@@ -229,7 +229,7 @@ export default function LiveMapScreen() {
       ) : null}
 
       <Text variant="h2" style={{ marginLeft: 4 }}>
-        Jobs waiting
+        Tasks waiting
       </Text>
       <View>
         {jobs.map((j) => (

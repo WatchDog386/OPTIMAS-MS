@@ -9,7 +9,7 @@ export default function CareProfile() {
     <SmeProfilePage
       tools={[
         { key: 'alerts', icon: 'notifications-outline', title: 'Notifications', sub: 'Alerts and activity', onPress: () => router.push('/notifications'), count: unread.data?.unread },
-        { key: 'search', icon: 'search', title: 'Search', sub: 'Jobs and customers', onPress: () => router.push('/search') },
+        { key: 'search', icon: 'search', title: 'Search', sub: 'Tasks and customers', onPress: () => router.push('/search') },
       ]}
     />
   );

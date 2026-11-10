@@ -27,7 +27,7 @@ export default function Terms() {
     {
       title: 'Using the app honestly',
       bullets: [
-        'Check-in, check-out and job photos must be real photos taken at that moment with the in-app camera, at the place they claim to show.',
+        'Check-in, check-out and task photos must be real photos taken at that moment with the in-app camera, at the place they claim to show.',
         'Do not try to fake your location or the phone’s clock, alter photos, or record work, devices or payments that did not happen.',
         'Only confirm receipt of devices and materials you physically have.',
         'Do not try to get into parts of the app or data your role does not allow, interfere with the service, or copy other people’s personal data out of the app.',

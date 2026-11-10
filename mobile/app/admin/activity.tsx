@@ -77,7 +77,7 @@ export default function ActivityScreen() {
 
       {data ? (
         <Glass strong style={styles.summary}>
-          <Stat value={String(data.summary.jobsDone)} label="Jobs done" />
+          <Stat value={String(data.summary.jobsDone)} label="Tasks done" />
           <Stat value={data.summary.minutesWorked != null ? duration(data.summary.minutesWorked) : data.summary.checkedIn ? 'On shift' : '—'} label="Worked" />
           <Stat value={String(data.summary.photos)} label="Photos" />
           <Stat value={String(data.summary.flags)} label="Warnings" alert={data.summary.flags > 0} />

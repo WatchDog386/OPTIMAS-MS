@@ -50,9 +50,9 @@ const helpersOf = (task: Crewed) => crewOf(task).filter((id) => id !== task.assi
 const lead = (task: { assignee: { name: string } | null }) => task.assignee?.name ?? 'Not assigned';
 /** Only the assignee (the team leader on a team job) may start or report the job. */
 function mustBeAssignee(task: { assigneeId: string | null; assignee: { name: string } | null; team?: { name: string; members: { userId: string }[] } | null }, userId: string) {
-  if (!task.assigneeId) throw forbidden('This job has not been given to a technician yet');
+  if (!task.assigneeId) throw forbidden('This task has not been given to a technician yet');
   if (task.assigneeId === userId) return;
-  if (task.team?.members.some((m) => m.userId === userId)) throw forbidden(`${lead(task)} leads ${task.team.name} and files the report for this job`);
+  if (task.team?.members.some((m) => m.userId === userId)) throw forbidden(`${lead(task)} leads ${task.team.name} and files the report for this task`);
   throw forbidden('This task is not assigned to you');
 }
 const onCrew = (task: Parameters<typeof crewOf>[0], userId: string) => crewOf(task).includes(userId);
@@ -61,7 +61,7 @@ const newCode = () => {
   const d = new Date();
   const ymd = `${String(d.getFullYear()).slice(2)}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
   // 6 characters: 16 million codes a day, so two jobs practically never collide (and a clash is retried)
-  return `JOB-${ymd}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+  return `TSK-${ymd}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 };
 
 async function loadTask(id: string) {
@@ -159,7 +159,7 @@ function announce(task: { id: string; title: string; priority: string; customerN
   const urgent = task.priority === 'URGENT' ? 'URGENT ' : '';
   void notify([task.assigneeId], {
     type: 'TASK_ASSIGNED',
-    title: `${prefix} ${urgent}job: ${task.title}`,
+    title: `${prefix} ${urgent}task: ${task.title}`,
     body: `${task.team ? `You lead ${task.team.name} and file the report · ` : ''}${task.customerName} · ${task.address}`,
     data: { taskId: task.id },
   });
@@ -185,7 +185,7 @@ tasksRouter.post(
     if (body.requestId) {
       const request = await prisma.serviceRequest.findUnique({ where: { id: body.requestId }, include: { task: true } });
       if (!request) throw badRequest('Service request not found');
-      if (request.status === 'CLOSED' || request.task) throw conflict('This request already has a job or was closed');
+      if (request.status === 'CLOSED' || request.task) throw conflict('This request already has a task or was closed');
       // The customer's phone said where they are: use it unless the manager pinned the job themselves
       if (body.lat == null && request.lat != null && request.lng != null) Object.assign(body, { lat: request.lat, lng: request.lng });
     }
@@ -242,7 +242,7 @@ tasksRouter.patch(
         void notifyCustomer(updated, { title: updated.team ? 'A team has been assigned' : 'A technician has been assigned', body: `${updated.team ? `${updated.team.name}, led by ${lead(updated)},` : lead(updated)} will handle "${updated.title}".` });
       announce(updated);
       const dropped = crewOf(task).filter((id) => !crewOf(updated).includes(id));
-      if (dropped.length) void notify(dropped, { type: 'TASK_CANCELLED', title: `${task.code} reassigned`, body: 'This job was moved to another technician.', data: { taskId: task.id } });
+      if (dropped.length) void notify(dropped, { type: 'TASK_CANCELLED', title: `${task.code} reassigned`, body: 'This task was moved to another technician.', data: { taskId: task.id } });
     }
     res.json({ task: updated });
   }),
@@ -318,23 +318,23 @@ tasksRouter.post(
   ah(async (req, res) => {
     const body = parse(z.object({ technicianId: z.string().min(1), note: z.string().trim().max(300).optional() }), req.body);
     const task = await loadTask(req.params.id);
-    if (task.status !== 'ASSIGNED' && task.status !== 'OPEN') throw conflict('Only jobs that have not started can be forwarded', 'NOT_FORWARDABLE');
-    if (body.technicianId === task.assigneeId) throw badRequest(`${lead(task)} already has this job`);
+    if (task.status !== 'ASSIGNED' && task.status !== 'OPEN') throw conflict('Only tasks that have not started can be forwarded', 'NOT_FORWARDABLE');
+    if (body.technicianId === task.assigneeId) throw badRequest(`${lead(task)} already has this task`);
     const tech = await prisma.user.findUnique({ where: { id: body.technicianId } });
-    if (!tech?.active || tech.role !== 'TECHNICIAN') throw badRequest('Jobs can only go to active technicians');
+    if (!tech?.active || tech.role !== 'TECHNICIAN') throw badRequest('Tasks can only go to active technicians');
     // Guarded so two managers forwarding at once cannot both win
     // Forwarding gives the job to one technician, so a team job stops being a team job
     const { count } = await prisma.task.updateMany({ where: { id: task.id, status: task.status, assigneeId: task.assigneeId }, data: { assigneeId: tech.id, teamId: null, status: 'ASSIGNED' } });
-    if (!count) throw conflict('This job changed while you were looking. Refresh and try again.', 'STALE');
+    if (!count) throw conflict('This task changed while you were looking. Refresh and try again.', 'STALE');
     const updated = await loadTask(task.id);
     await audit(me(req).id, 'TASK_FORWARDED', 'Task', task.id, `Forwarded ${task.code} from ${lead(task)} to ${tech.name}${body.note ? `: ${body.note}` : ''}`);
     void notify([tech.id], {
       type: 'TASK_ASSIGNED',
-      title: `Job forwarded to you: ${task.title}`,
+      title: `Task forwarded to you: ${task.title}`,
       body: `${task.customerName} · ${task.address}${body.note ? ` — ${body.note}` : ''}`,
       data: { taskId: task.id },
     });
-    void notify(crewOf(task).filter((id) => id !== tech.id), { type: 'TASK_CANCELLED', title: `${task.code} moved to ${tech.name}`, body: 'A closer technician will handle this job.', data: { taskId: task.id } });
+    void notify(crewOf(task).filter((id) => id !== tech.id), { type: 'TASK_CANCELLED', title: `${task.code} moved to ${tech.name}`, body: 'A closer technician will handle this task.', data: { taskId: task.id } });
     void notifyCustomer(updated, { title: 'Your technician has changed', body: `${tech.name} is now handling "${task.title}".` });
     res.json({ task: updated });
   }),
@@ -411,7 +411,7 @@ tasksRouter.post(
       await tx.task.update({ where: { id: task.id }, data: { status: 'IN_PROGRESS', startedAt, startPhotoId: photoId } });
     });
     void notifyCustomer(task, { title: 'Your technician has started', body: `${task.team ? `${task.team.name}, led by ${lead(task)}, is` : `${lead(task)} is`} now working on "${task.title}".` });
-    if (helpersOf(task).length) void notify(helpersOf(task), { type: 'JOB_UPDATE', title: `${task.code} started`, body: `${lead(task)} started the job for ${task.team!.name}.`, data: { taskId: task.id } });
+    if (helpersOf(task).length) void notify(helpersOf(task), { type: 'JOB_UPDATE', title: `${task.code} started`, body: `${lead(task)} started the task for ${task.team!.name}.`, data: { taskId: task.id } });
     res.json({ task: await loadTask(task.id) });
   }),
 );
@@ -421,6 +421,11 @@ const completeSchema = z.object({
   notes: z.string().trim().min(5, 'Describe the work done').max(2000),
   customerAccount: z.string().trim().optional(),
   amountCollected: z.number().int().min(0).optional(),
+  /** The task report: router signal as read on site, house number, drop cable used (m), FAT already there */
+  signal: z.string().trim().max(20).optional(),
+  houseNo: z.string().trim().max(40).optional(),
+  dropCableM: z.number().min(0).max(5000).optional(),
+  fatPreinstalled: z.boolean().optional(),
   serials: z.array(z.string().trim().min(1)).default([]),
   materials: z
     .array(z.object({ itemId: z.string().min(1), quantity: z.number().positive(), unitPrice: z.number().int().min(0).optional() }))
@@ -463,7 +468,7 @@ tasksRouter.post(
             : await requireHeldUnit(tx, userId, serial);
         if (me(req).role !== 'ADMIN') {
           await fileRequest(tx, 'INSTALL', me(req), { serial: unit.serialNumber, customerAccount: customerAccount ?? null, taskId: task.id }, {
-            summary: `Install ${unit.serialNumber} (${unit.item.name}) at ${customerAccount ?? task.customerName} — job ${task.code}`,
+            summary: `Install ${unit.serialNumber} (${unit.item.name}) at ${customerAccount ?? task.customerName} — task ${task.code}`,
             serialUnitId: unit.id,
             taskId: task.id,
           });
@@ -490,6 +495,10 @@ tasksRouter.post(
           durationMinutes: minutesBetween(task.startedAt!, endedAt),
           completionNotes: body.notes,
           amountCollected: body.amountCollected,
+          signal: body.signal || undefined,
+          houseNo: body.houseNo || undefined,
+          dropCableM: body.dropCableM,
+          fatPreinstalled: body.fatPreinstalled,
           customerAccount,
           customerSignature: body.signature?.path,
           signedByName: body.signature?.signedBy,
@@ -497,8 +506,8 @@ tasksRouter.post(
         },
       });
     });
-    if (body.serials.length && me(req).role !== 'ADMIN') tellAdmins(me(req), `${body.serials.length} device(s) installed on job ${task.code} (${task.customerName}) — approve to move them to Installed`);
-    void notifyCustomer(task, { title: 'Job completed', body: `"${task.title}" was completed by ${lead(task)}. Thank you for choosing Optimas.` });
+    if (body.serials.length && me(req).role !== 'ADMIN') tellAdmins(me(req), `${body.serials.length} device(s) installed on task ${task.code} (${task.customerName}) — approve to move them to Installed`);
+    void notifyCustomer(task, { title: 'Task completed', body: `"${task.title}" was completed by ${lead(task)}. Thank you for choosing Optimas.` });
     // The job report goes to the office: supervisors, admins and customer care
     void notifyRoles(['SUPERVISOR', 'ADMIN', 'CUSTOMER_CARE'], {
       type: 'TASK_COMPLETED',

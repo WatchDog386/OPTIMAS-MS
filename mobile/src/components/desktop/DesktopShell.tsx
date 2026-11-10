@@ -27,7 +27,7 @@ function navFor(role: Role, open: { requests?: number; approvals?: number }): { 
       groups: [
         { items: [{ label: 'Home', icon: 'home-outline', href: '/care' }] },
         { title: 'Customers', items: [{ label: 'Support chats', icon: 'chatbubbles-outline', href: '/support' }, { label: 'Requests', icon: 'megaphone-outline', href: '/care-requests', badge: open.requests }, { label: 'New customer', icon: 'person-add-outline', href: '/admin/user-new?role=CUSTOMER' }] },
-        { title: 'Jobs', items: [{ label: 'New job', icon: 'add-circle-outline', href: '/admin/task-new' }, { label: 'Jobs', icon: 'briefcase-outline', href: '/care-jobs' }, { label: 'Who is in', icon: 'people-outline', href: '/team-today' }] },
+        { title: 'Tasks', items: [{ label: 'New task', icon: 'add-circle-outline', href: '/admin/task-new' }, { label: 'Tasks', icon: 'briefcase-outline', href: '/care-jobs' }, { label: 'Who is in', icon: 'people-outline', href: '/team-today' }] },
       ],
       bottom: [bell, { label: 'Profile', icon: 'person-circle-outline', href: '/care-profile' }],
     };
@@ -35,7 +35,7 @@ function navFor(role: Role, open: { requests?: number; approvals?: number }): { 
     return {
       groups: [
         { items: [{ label: 'Home', icon: 'home-outline', href: '/home' }] },
-        { title: 'Work', items: [{ label: 'Jobs', icon: 'briefcase-outline', href: '/jobs' }, { label: 'My stock', icon: 'cube-outline', href: '/stock' }, { label: 'Chats', icon: 'chatbubble-ellipses-outline', href: '/messages' }] },
+        { title: 'Work', items: [{ label: 'Tasks', icon: 'briefcase-outline', href: '/jobs' }, { label: 'My stock', icon: 'cube-outline', href: '/stock' }, { label: 'Chats', icon: 'chatbubble-ellipses-outline', href: '/messages' }] },
       ],
       bottom: [bell, { label: 'Profile', icon: 'person-circle-outline', href: '/profile' }],
     };
@@ -50,7 +50,7 @@ function navFor(role: Role, open: { requests?: number; approvals?: number }): { 
     {
       title: 'Operations',
       items: [
-        { label: 'Jobs', icon: 'briefcase-outline', href: '/board' },
+        { label: 'Tasks', icon: 'briefcase-outline', href: '/board' },
         ...(managers
           ? [
               { label: 'Requests', icon: 'megaphone-outline' as Icon, href: '/admin/requests', badge: open.requests },

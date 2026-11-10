@@ -178,7 +178,7 @@ export default function CheckIn() {
           {custody?.tasksInProgress ? (
             <Card style={{ borderWidth: 1, borderColor: colors.warning }}>
               <Text variant="title" color={colors.warning}>
-                You have a job still in progress
+                You have a task still in progress
               </Text>
               <Text variant="bodySm" color={colors.textMuted}>
                 Complete it before leaving, or inform your supervisor.

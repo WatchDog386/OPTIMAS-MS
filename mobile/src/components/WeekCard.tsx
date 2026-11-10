@@ -12,7 +12,7 @@ import { Text } from './Text';
 const LIME = '#8DC63F';
 
 export function WeekCard({
-  title = 'Jobs done this week',
+  title = 'Tasks done this week',
   owner,
   data,
   actions,
@@ -52,7 +52,7 @@ export function WeekCard({
 
         <View style={styles.middle}>
           <Text variant="display" color="#FFFFFF" fixedColor style={{ fontFamily: fonts.semibold, fontSize: 24, lineHeight: 30 }}>
-            {total} {total === 1 ? 'job' : 'jobs'}
+            {total} {total === 1 ? 'task' : 'tasks'}
           </Text>
           <View style={styles.bars} accessibilityLabel={data.map((d) => `${d.label} ${d.value}`).join(', ')}>
             {data.map((d, i) => (

@@ -12,7 +12,7 @@ export async function openChatWith(target: Target) {
     router.push(`/chat/${conversation.id}`);
   } catch (e) {
     const msg = e instanceof ApiError ? e.message : 'Try again';
-    if (e instanceof ApiError && e.status === 404 && 'taskId' in target) toast.info('No app account yet', 'This customer has no Optimas app account. Onboard them from the job to chat.');
+    if (e instanceof ApiError && e.status === 404 && 'taskId' in target) toast.info('No app account yet', 'This customer has no Optimas app account. Onboard them from the task to chat.');
     else toast.error('Could not open the chat', msg);
   }
 }

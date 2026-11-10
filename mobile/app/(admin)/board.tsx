@@ -22,10 +22,10 @@ export default function AdminJobs() {
 
   return (
     <Screen refreshing={refreshing} onRefresh={refresh}>
-      <PageHeader title="Jobs" right={canCreate ? <HeaderButton icon="add" label="New job" primary onPress={() => router.push('/admin/task-new')} /> : undefined} />
+      <PageHeader title="Tasks" right={canCreate ? <HeaderButton icon="add" label="New task" primary onPress={() => router.push('/admin/task-new')} /> : undefined} />
       <Segmented options={FILTERS} value={filter} onChange={setFilter} />
       {data?.tasks.length ? <TaskList tasks={data.tasks} showAssignee /> : null}
-      {!loading && !data?.tasks.length ? <EmptyState icon="briefcase-outline" title={earlierShown ? 'No jobs' : 'No jobs today'} message={earlierShown ? 'Nothing matches this filter.' : 'Only jobs created today are listed here.'} /> : null}
+      {!loading && !data?.tasks.length ? <EmptyState icon="briefcase-outline" title={earlierShown ? 'No tasks' : 'No tasks today'} message={earlierShown ? 'Nothing matches this filter.' : 'Only tasks created today are listed here.'} /> : null}
       <EarlierJobs count={earlier} onPress={showEarlier} />
     </Screen>
   );

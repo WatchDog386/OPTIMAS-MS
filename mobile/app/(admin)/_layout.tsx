@@ -16,7 +16,7 @@ export default function AdminLayout() {
   return (
     <Tabs screenOptions={tabScreenOptions} tabBar={(props) => <FloatingTabBar {...props} />}>
       <Tabs.Screen name="team" options={{ title: 'Team', tabBarIcon: tabIcon('people-outline', 'people'), href: storeOnly ? null : undefined }} />
-      <Tabs.Screen name="board" options={{ title: 'Jobs', tabBarIcon: tabIcon('briefcase-outline', 'briefcase') }} />
+      <Tabs.Screen name="board" options={{ title: 'Tasks', tabBarIcon: tabIcon('briefcase-outline', 'briefcase') }} />
       <Tabs.Screen name="overview" options={{ title: 'Overview', tabBarIcon: tabIcon('grid-outline', 'grid') }} />
       <Tabs.Screen name="store" options={{ title: 'Store', tabBarIcon: tabIcon('cube-outline', 'cube') }} />
       <Tabs.Screen name="more" options={{ title: 'Profile', tabBarIcon: tabIcon('person-circle-outline', 'person-circle') }} />

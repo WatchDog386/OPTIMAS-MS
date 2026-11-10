@@ -666,7 +666,7 @@ inventoryRouter.post(
         else verdict = { tone: 'danger', title: 'Not yours', detail: `This device was issued to ${unit.holder?.name ?? 'another technician'}. Do not install it; return it to them or to the store.` };
         break;
       case 'INSTALLED':
-        verdict = { tone: 'info', title: `Installed at ${unit.customerAccount ?? (staffView ? unit.installLocation : null) ?? 'a customer'}`, detail: `Installed${unit.installedAt ? ` on ${fmt(unit.installedAt)}` : ''}${unit.task ? ` on job ${unit.task.code}` : ''}.` };
+        verdict = { tone: 'info', title: `Installed at ${unit.customerAccount ?? (staffView ? unit.installLocation : null) ?? 'a customer'}`, detail: `Installed${unit.installedAt ? ` on ${fmt(unit.installedAt)}` : ''}${unit.task ? ` on task ${unit.task.code}` : ''}.` };
         break;
       case 'FAULTY':
         verdict = { tone: 'warning', title: 'Marked faulty', detail: 'This device came back faulty. It should not be issued or installed.' };
@@ -721,7 +721,7 @@ inventoryRouter.post(
         },
         orderBy: { createdAt: 'desc' },
       });
-      if (!job) throw forbidden('You can only collect a device from a customer you have a current or recent job for');
+      if (!job) throw forbidden('You can only collect a device from a customer you have a current or recent task for');
       taskId = job.id;
     }
     const out = await gate(user, 'RECOVER', { unitId: unit.id, serial, storeSide, taskId, condition: b.condition, reason: b.reason }, { summary: `Collect ${serial} (${unit.item.name}) from ${unit.customerAccount ?? 'a customer'} · ${b.condition === 'GOOD' ? 'working' : 'faulty'} — ${b.reason}`, serialUnitId: unit.id, taskId });

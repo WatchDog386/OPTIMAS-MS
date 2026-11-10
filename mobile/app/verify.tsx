@@ -115,7 +115,7 @@ export default function Verify() {
               {u.issued ? <Row label="Issued" value={`by ${u.issued.by} · ${dateTime(u.issued.at)}`} /> : null}
               {u.customerAccount ? <Row label="Customer" value={u.customerAccount} /> : null}
               {u.installedAt ? <Row label="Installed" value={dateTime(u.installedAt)} /> : null}
-              {u.task ? <Button label={`Open job ${u.task.code}`} icon="briefcase-outline" variant="secondary" onPress={() => router.push(`/task/${u.task!.id}`)} /> : null}
+              {u.task ? <Button label={`Open task ${u.task.code}`} icon="briefcase-outline" variant="secondary" onPress={() => router.push(`/task/${u.task!.id}`)} /> : null}
               {isManager(role) ? <Button label="Full history" icon="time-outline" variant="secondary" onPress={() => router.push(`/admin/unit?serial=${encodeURIComponent(u.serial)}`)} /> : null}
             </Glass>
           ) : null}

@@ -87,7 +87,7 @@ customerRouter.get(
       where: { id: req.params.id, OR: [{ customerAccount: user.customerAccount ?? '__none__' }, { request: { customerId: user.id } }] },
       select: { ...jobSelect, completionNotes: true, materials: { select: { quantity: true, item: { select: { name: true, unit: true } }, unit: { select: { serialNumber: true } } } } },
     });
-    if (!job) throw notFound('Job');
+    if (!job) throw notFound('Task');
     res.json({ job });
   }),
 );
@@ -172,7 +172,7 @@ customerRouter.post(
       where: { id: req.params.id, OR: [{ customerAccount: user.customerAccount ?? '__none__' }, { request: { customerId: user.id } }] },
       select: { id: true, code: true, status: true, ratedAt: true, assigneeId: true },
     });
-    if (!job) throw notFound('Job');
+    if (!job) throw notFound('Task');
     if (job.status !== 'COMPLETED' && job.status !== 'VERIFIED') throw conflict('You can rate a visit once the work is finished', 'NOT_FINISHED');
     // Guarded update so a double tap cannot rate twice
     const { count } = await prisma.task.updateMany({

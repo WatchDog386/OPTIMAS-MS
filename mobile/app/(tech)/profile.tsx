@@ -17,15 +17,16 @@ export default function Profile() {
   return (
     <SmeProfilePage
       tools={[
-        { key: 'alerts', icon: 'notifications-outline', title: 'Notifications', sub: 'Jobs, stock and approvals', onPress: () => router.push('/notifications'), count: unread.data?.unread },
-        { key: 'search', icon: 'search', title: 'Search', sub: 'My jobs and devices', onPress: () => router.push('/search') },
+        { key: 'day-report', icon: 'document-text-outline', title: 'Daily report', sub: 'Send the office today’s tasks (team leaders for the team)', onPress: () => router.push('/day-report') },
+        { key: 'alerts', icon: 'notifications-outline', title: 'Notifications', sub: 'Tasks, stock and approvals', onPress: () => router.push('/notifications'), count: unread.data?.unread },
+        { key: 'search', icon: 'search', title: 'Search', sub: 'My tasks and devices', onPress: () => router.push('/search') },
       ]}
     >
       <SmeSection title="This month">
         <View style={styles.stats}>
           <Stat value={s?.daysPresent} label="Days present" />
           <Stat value={s?.lateDays} label="Late arrivals" />
-          <Stat value={s?.completedThisMonth} label="Jobs done" />
+          <Stat value={s?.completedThisMonth} label="Tasks done" />
         </View>
       </SmeSection>
       {history.data?.records.length ? (

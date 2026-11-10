@@ -119,7 +119,7 @@ export default function UnitTrace() {
               <View style={{ flex: 1, paddingBottom: space.lg }}>
                 <Text variant="title">{humanize(m.type)}</Text>
                 <Text variant="bodySm" color={colors.textMuted}>
-                  {[m.fromUser && `from ${m.fromUser.name}`, m.toUser && `to ${m.toUser.name}`, m.task && `job ${m.task.code}`].filter(Boolean).join(' · ') || `by ${m.actor.name}`}
+                  {[m.fromUser && `from ${m.fromUser.name}`, m.toUser && `to ${m.toUser.name}`, m.task && `task ${m.task.code}`].filter(Boolean).join(' · ') || `by ${m.actor.name}`}
                 </Text>
                 {m.note ? (
                   <Text variant="bodySm" color={colors.textDim}>

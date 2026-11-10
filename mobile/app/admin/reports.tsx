@@ -13,7 +13,7 @@ const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
 const REPORTS: { key: string; icon: keyof typeof Ionicons.glyphMap; tone: CardTone; title: string; desc: string; dated: boolean }[] = [
   { key: 'attendance', icon: 'calendar', tone: 'teal', title: 'Attendance & hours', desc: 'Check-in/out, lateness, hours worked and dress-code results, with a payroll summary per person.', dated: true },
-  { key: 'jobs', icon: 'briefcase', tone: 'graphite', title: 'Jobs & materials', desc: 'Every job with durations, devices installed, materials, cash collected and customer sign-off.', dated: true },
+  { key: 'jobs', icon: 'briefcase', tone: 'graphite', title: 'Tasks & materials', desc: 'Every task with durations, devices installed, materials, cash collected and customer sign-off.', dated: true },
   { key: 'reconciliation', icon: 'git-compare', tone: 'green', title: 'Stock reconciliation', desc: 'Issued vs installed vs returned per technician, and where every serialised device is now.', dated: false },
 ];
 

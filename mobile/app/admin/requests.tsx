@@ -77,7 +77,7 @@ export default function Requests() {
           <Text variant="body">{r.description}</Text>
           {r.task ? (
             <Text variant="bodySm">
-              Job <Text variant="bodySm" style={{ fontFamily: fonts.semibold }}>{r.task.code}</Text> · {r.task.assignee?.name} · {humanize(r.task.status)}
+              Task <Text variant="bodySm" style={{ fontFamily: fonts.semibold }}>{r.task.code}</Text> · {r.task.assignee?.name} · {humanize(r.task.status)}
             </Text>
           ) : null}
           {r.closedNote ? (

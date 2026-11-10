@@ -68,7 +68,7 @@ export default function Install() {
 
   return (
     <Screen footer={<Button label="Send for approval" icon="send" size="lg" loading={busy} disabled={!ready || busy} onPress={submit} />}>
-      <ScreenHeader title="Install a device" subtitle="No job needed · an admin approves it" />
+      <ScreenHeader title="Install a device" subtitle="No task needed · an admin approves it" />
 
       <Glass strong style={{ gap: space.md }}>
         <Text variant="label" color={colors.textMuted}>
@@ -136,7 +136,7 @@ export default function Install() {
         <Text variant="label" color={colors.textMuted}>
           Comments for the admin
         </Text>
-        <Input label="Comments" multiline value={note} onChangeText={setNote} placeholder="e.g. New connection, no job in the app. Configured Wi-Fi, customer tested internet." />
+        <Input label="Comments" multiline value={note} onChangeText={setNote} placeholder="e.g. New connection, no task in the app. Configured Wi-Fi, customer tested internet." />
       </Glass>
     </Screen>
   );

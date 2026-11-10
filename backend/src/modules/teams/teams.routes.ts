@@ -77,7 +77,7 @@ teamsRouter.delete(
     const team = await prisma.team.findUnique({ where: { id: req.params.id } });
     if (!team) throw notFound('Team');
     const open = await prisma.task.count({ where: { teamId: team.id, status: { in: ['ASSIGNED', 'IN_PROGRESS'] } } });
-    if (open) throw conflict(`${team.name} still has ${open} open ${open === 1 ? 'job' : 'jobs'}. Finish or reassign them first.`, 'TEAM_BUSY');
+    if (open) throw conflict(`${team.name} still has ${open} open ${open === 1 ? 'task' : 'tasks'}. Finish or reassign them first.`, 'TEAM_BUSY');
     await prisma.team.delete({ where: { id: team.id } });
     await audit(me(req).id, 'TEAM_DELETED', 'Team', team.id, `Removed team ${team.name}`);
     res.status(204).end();

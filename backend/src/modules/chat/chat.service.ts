@@ -50,7 +50,7 @@ export async function chatBlockedReason(a: Person, b: Person): Promise<string | 
   const customer = aCust ? a : b;
   if (isSupportRole(staff.role)) return null;
   if (staff.role === 'TECHNICIAN' && (await linkingJobs(staff.id, customer.id)).length) return null;
-  return staff.role === 'TECHNICIAN' ? 'You can only message customers you have a current or recent job for' : 'Customers can message the office or their technician';
+  return staff.role === 'TECHNICIAN' ? 'You can only message customers you have a current or recent task for' : 'Customers can message the office or their technician';
 }
 
 export const pairKey = (a: string, b: string) => [a, b].sort().join(':');

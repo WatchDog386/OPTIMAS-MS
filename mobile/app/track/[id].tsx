@@ -52,8 +52,8 @@ export default function TrackJob() {
     return (
       <Screen>
         <ScreenHeader title={data.job.code} subtitle={data.job.customerName} />
-        <EmptyState icon="time-outline" title="Not assigned yet" message="Assign this job to a technician or team to follow them on the map." />
-        <Button label="Open the job" icon="briefcase-outline" onPress={() => router.replace(`/task/${data.job.id}`)} />
+        <EmptyState icon="time-outline" title="Not assigned yet" message="Assign this task to a technician or team to follow them on the map." />
+        <Button label="Open the task" icon="briefcase-outline" onPress={() => router.replace(`/task/${data.job.id}`)} />
       </Screen>
     );
   }

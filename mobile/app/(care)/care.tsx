@@ -77,8 +77,8 @@ export default function CareHome() {
       </View>
 
       <View style={{ flexDirection: 'row', gap: 10 }}>
-        <Button label="New job" icon="add-circle-outline" style={{ flex: 1 }} onPress={() => router.push('/admin/task-new')} />
-        <Button label="Jobs" icon="briefcase-outline" variant="outline" style={{ flex: 1 }} onPress={() => router.push('/care-jobs')} />
+        <Button label="New task" icon="add-circle-outline" style={{ flex: 1 }} onPress={() => router.push('/admin/task-new')} />
+        <Button label="Tasks" icon="briefcase-outline" variant="outline" style={{ flex: 1 }} onPress={() => router.push('/care-jobs')} />
       </View>
 
       <TileGrid
@@ -86,9 +86,9 @@ export default function CareHome() {
         items={[
           { key: 'chats', title: 'Support chats', status: unread ? `${unread} waiting for a reply` : 'All answered', icon: 'chatbubbles-outline', badge: unread, onPress: () => router.push('/support') },
           { key: 'req', title: 'Customer requests', status: openRequests ? `${openRequests} new` : 'None new', icon: 'megaphone-outline', badge: openRequests, onPress: () => router.push('/care-requests') },
-          { key: 'assign', title: 'Jobs to assign', status: waitingJobs ? `${waitingJobs} waiting for a technician` : 'Nothing waiting', icon: 'time-outline', badge: waitingJobs, onPress: () => router.push('/care-jobs') },
+          { key: 'assign', title: 'Tasks to assign', status: waitingJobs ? `${waitingJobs} waiting for a technician` : 'Nothing waiting', icon: 'time-outline', badge: waitingJobs, onPress: () => router.push('/care-jobs') },
           { key: 'in', title: 'Who is in', status: `${techsIn} technicians in · ${techsOut} not in`, icon: 'people-outline', onPress: () => router.push('/team-today') },
-          { key: 'jobs', title: 'Jobs today', status: `${jobs.data?.tasks.length ?? 0} open · ${onRoad} in progress`, icon: 'navigate-outline', onPress: () => router.push('/care-jobs') },
+          { key: 'jobs', title: 'Tasks today', status: `${jobs.data?.tasks.length ?? 0} open · ${onRoad} in progress`, icon: 'navigate-outline', onPress: () => router.push('/care-jobs') },
           { key: 'new', title: 'New customer login', status: 'Make an account and send it', icon: 'person-add-outline', onPress: () => router.push('/admin/user-new?role=CUSTOMER') },
         ]}
       />

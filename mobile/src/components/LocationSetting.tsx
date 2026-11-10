@@ -29,7 +29,7 @@ export function useLocationSetting() {
     on,
     busy,
     toggle,
-    sub: user.role === 'TECHNICIAN' ? 'For directions, tracking and the nearest jobs (only while the app is open)' : 'So technicians can find your premises',
+    sub: user.role === 'TECHNICIAN' ? 'For directions, tracking and the nearest tasks (only while the app is open)' : 'So technicians can find your premises',
   };
 }
 
@@ -44,7 +44,7 @@ export function LocationSetting() {
       icon="location-outline"
       iconTint={colors.text}
       title="Share my location"
-      subtitle={user.role === 'TECHNICIAN' ? 'For directions, tracking and the nearest jobs (only while the app is open)' : 'So technicians can find your premises'}
+      subtitle={user.role === 'TECHNICIAN' ? 'For directions, tracking and the nearest tasks (only while the app is open)' : 'So technicians can find your premises'}
       onPress={busy ? undefined : toggle}
       chevron={false}
       right={

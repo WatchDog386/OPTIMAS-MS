@@ -38,7 +38,7 @@ export default function CareJobs() {
         toAssign.refresh();
       }}
     >
-      <PageHeader title="Jobs" right={<HeaderButton icon="add" label="New job" primary onPress={() => router.push('/admin/task-new')} />} />
+      <PageHeader title="Tasks" right={<HeaderButton icon="add" label="New task" primary onPress={() => router.push('/admin/task-new')} />} />
       <Segmented
         options={[
           { value: 'assign', label: waiting ? `To assign · ${waiting}` : 'To assign' },
@@ -52,8 +52,8 @@ export default function CareJobs() {
       {!loading && !tasks.length ? (
         <EmptyState
           icon="briefcase-outline"
-          title={show === 'assign' ? 'Nothing to assign' : 'No jobs here'}
-          message={show === 'assign' ? 'Jobs saved with Create job wait here until you give them to a technician or team.' : "Tap New job to log a customer's issue and send it to a technician."}
+          title={show === 'assign' ? 'Nothing to assign' : 'No tasks here'}
+          message={show === 'assign' ? 'Tasks saved with Create task wait here until you give them to a technician or team.' : "Tap New task to log a customer's issue and send it to a technician."}
         />
       ) : null}
       {tasks.map((t, i) => (
@@ -79,7 +79,7 @@ export default function CareJobs() {
       <EarlierJobs count={earlier} onPress={showEarlier} />
       {show === 'done' && tasks.length ? (
         <Text variant="label" color={colors.textMuted} align="center">
-          Open a job to read the technician’s report.
+          Open a task to read the technician’s report.
         </Text>
       ) : null}
     </Screen>

@@ -116,12 +116,12 @@ export default function Approvals() {
         items={[
           { key: 'checkins', title: 'Check-ins', status: s?.checkIns ? `${s.checkIns} waiting` : 'All reviewed', icon: 'log-in-outline', badge: s?.checkIns, selected: tab === 'checkins', onPress: () => setTab('checkins') },
           { key: 'checkouts', title: 'Check-outs', status: s?.checkOuts ? `${s.checkOuts} waiting` : 'All reviewed', icon: 'log-out-outline', badge: s?.checkOuts, selected: tab === 'checkouts', onPress: () => setTab('checkouts') },
-          { key: 'jobs', title: 'Jobs', status: s?.jobs ? `${s.jobs} to verify` : 'All verified', icon: 'briefcase-outline', badge: s?.jobs, selected: tab === 'jobs', onPress: () => setTab('jobs') },
+          { key: 'jobs', title: 'Tasks', status: s?.jobs ? `${s.jobs} to verify` : 'All verified', icon: 'briefcase-outline', badge: s?.jobs, selected: tab === 'jobs', onPress: () => setTab('jobs') },
           { key: 'stock', title: 'Stock', status: s?.stock ? `${s.stock} to approve` : 'All approved', icon: 'cube-outline', badge: s?.stock, selected: tab === 'stock', onPress: () => setTab('stock') },
         ]}
         columns={2}
       />
-      <SectionLead text={tab === 'jobs' ? 'Below are the jobs' : tab === 'stock' ? 'Below are the stock changes' : tab === 'checkins' ? 'Below are the check-ins' : 'Below are the check-outs'} accent={show === 'PENDING' ? 'waiting for you' : 'already reviewed'} />
+      <SectionLead text={tab === 'jobs' ? 'Below are the tasks' : tab === 'stock' ? 'Below are the stock changes' : tab === 'checkins' ? 'Below are the check-ins' : 'Below are the check-outs'} accent={show === 'PENDING' ? 'waiting for you' : 'already reviewed'} />
       <View style={styles.showRow}>
         {(['PENDING', 'DONE'] as Show[]).map((v) => (
           <Pressable key={v} onPress={() => setShow(v)} style={[styles.chip, show === v && styles.chipOn]} accessibilityRole="button" accessibilityState={{ selected: show === v }}>

@@ -29,7 +29,7 @@ export default function Requests() {
           </Text>
           {r.task?.assignee ? (
             <Text variant="bodySm">
-              Technician: <Text variant="bodySm" style={{ fontFamily: fonts.semibold }}>{r.task.assignee.name}</Text> · job {r.task.code}
+              Technician: <Text variant="bodySm" style={{ fontFamily: fonts.semibold }}>{r.task.assignee.name}</Text> · task {r.task.code}
             </Text>
           ) : null}
           {r.closedNote ? (

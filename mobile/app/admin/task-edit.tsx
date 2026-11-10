@@ -42,7 +42,7 @@ export default function TaskEdit() {
       <Screen>
         <ScreenHeader title="Cannot edit" subtitle={`${t.code} has already started`} />
         <Text variant="body" color={colors.textMuted}>
-          Only jobs that have not started can be edited or reassigned.
+          Only tasks that have not started can be edited or reassigned.
         </Text>
       </Screen>
     );
@@ -60,7 +60,7 @@ export default function TaskEdit() {
     try {
       const body = { ...Object.fromEntries(Object.entries({ ...form, priority }).filter(([, v]) => v !== '')), ...(moved ? assignmentBody(assign) : {}) };
       await api(`/tasks/${t.id}`, { method: 'PATCH', body });
-      toast.success('Job updated', moved ? 'Everyone affected has been notified.' : undefined);
+      toast.success('Task updated', moved ? 'Everyone affected has been notified.' : undefined);
       goBack();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not save');
@@ -70,8 +70,8 @@ export default function TaskEdit() {
   };
 
   return (
-    <Screen footer={<Button label={t.status === 'OPEN' ? 'Assign job' : 'Save job'} icon={t.status === 'OPEN' ? 'send' : 'checkmark'} size="lg" loading={busy} onPress={save} />}>
-      <ScreenHeader title={t.status === 'OPEN' ? `Assign ${t.code}` : `Edit ${t.code}`} subtitle={t.status === 'OPEN' ? 'Choose who takes this job · they are notified' : 'Change details or reassign'} />
+    <Screen footer={<Button label={t.status === 'OPEN' ? 'Assign task' : 'Save task'} icon={t.status === 'OPEN' ? 'send' : 'checkmark'} size="lg" loading={busy} onPress={save} />}>
+      <ScreenHeader title={t.status === 'OPEN' ? `Assign ${t.code}` : `Edit ${t.code}`} subtitle={t.status === 'OPEN' ? 'Choose who takes this task · they are notified' : 'Change details or reassign'} />
       <SectionHeader title="Assign to" />
       <AssignPicker value={assign} onChange={setAssign} allowNewTeam={!care} />
       <Text variant="label" color={colors.textMuted}>

@@ -9,7 +9,7 @@ export function EarlierJobs({ count, onPress }: { count: number; onPress: () => 
   return (
     <Pressable onPress={onPress} accessibilityRole="button" style={styles.link}>
       <Text variant="label" color={SME.fg3} fixedColor style={{ fontFamily: fonts.medium, fontSize: 13 }}>
-        Show earlier jobs ({count})
+        Show earlier tasks ({count})
       </Text>
     </Pressable>
   );

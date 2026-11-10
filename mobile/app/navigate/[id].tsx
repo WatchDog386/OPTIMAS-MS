@@ -180,7 +180,7 @@ export default function Navigate() {
       <View style={[styles.root, styles.center, { paddingTop: insets.top + 20 }]}>
         <Ionicons name="location-outline" size={44} color={colors.textMuted} />
         <Text variant="h2" align="center">
-          This job has no map pin yet
+          This task has no map pin yet
         </Text>
         <Text variant="bodySm" color={colors.textMuted} align="center">
           {task.address}. Ask the office to pin the location, or call the customer for directions.
@@ -242,7 +242,7 @@ export default function Navigate() {
               <Text variant="bodySm" color={colors.textMuted}>
                 {task.customerName} · {task.address}
               </Text>
-              <Button label={task.status === 'ASSIGNED' ? 'Open the job to start' : 'Open the job'} icon="briefcase" onPress={() => router.replace(`/task/${task.id}`)} />
+              <Button label={task.status === 'ASSIGNED' ? 'Open the task to start' : 'Open the task'} icon="briefcase" onPress={() => router.replace(`/task/${task.id}`)} />
             </>
           ) : (
             <>

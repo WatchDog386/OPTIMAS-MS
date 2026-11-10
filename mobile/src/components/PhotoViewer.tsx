@@ -115,7 +115,7 @@ function Viewer({ id, title, subtitle }: { id: string; title?: string; subtitle?
             {info.usedFor?.kind === 'TASK' ? (
               <Row
                 icon="briefcase-outline"
-                label="Job"
+                label="Task"
                 value={`${info.usedFor.code} · ${info.usedFor.title}`}
                 action={{
                   label: 'Open',

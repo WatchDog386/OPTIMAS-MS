@@ -34,7 +34,7 @@ export default function LeaderboardScreen() {
       />
 
       <Glass strong style={styles.summary}>
-        <Summary value={String(totalJobs)} label="Jobs done" />
+        <Summary value={String(totalJobs)} label="Tasks done" />
         <View style={styles.divider} />
         <Summary value={teamRating ? teamRating.toFixed(1) : '–'} label="Team rating" icon="star" />
         <View style={styles.divider} />
@@ -55,7 +55,7 @@ export default function LeaderboardScreen() {
                     {firstName(l.user.name)}
                   </Text>
                   <Text variant="label" color={colors.textMuted}>
-                    {l.jobs} jobs
+                    {l.jobs} tasks
                   </Text>
                   <View style={[styles.block, { height: heights[place], backgroundColor: place === 0 ? colors.highlight : colors.surfaceAlt }]}>
                     <Text variant="h1" style={{ fontFamily: fonts.bold, fontSize: 22 }}>
@@ -107,7 +107,7 @@ export default function LeaderboardScreen() {
         ))}
       </Glass>
       <Text variant="label" color={colors.textDim} style={{ textAlign: 'center' }}>
-        Score = 10 per job + 8 × customer rating + 2 per day present − 3 per late arrival.
+        Score = 10 per task + 8 × customer rating + 2 per day present − 3 per late arrival.
       </Text>
     </Screen>
   );

@@ -76,7 +76,7 @@ const TECHNICIAN: Topic[] = [
     steps: [
       'Use your staff number (for example FBI-TEC-001) and the one-time password from your supervisor.',
       'Choose your own password at the first sign-in. Never share it: everything done in the app is recorded under your name.',
-      'Say Allow when the app asks for location and camera; both are needed for check-in, jobs and directions.',
+      'Say Allow when the app asks for location and camera; both are needed for check-in, tasks and directions.',
     ],
   },
   {
@@ -90,12 +90,12 @@ const TECHNICIAN: Topic[] = [
   },
   {
     icon: 'briefcase-outline',
-    title: 'Doing a job',
+    title: 'Doing a task',
     steps: [
-      'Open the job from Jobs and tap Directions for turn-by-turn navigation inside the app.',
-      'At the customer: Start job (takes a "before" photo).',
-      'When done: Complete job. Take the "after" photo, scan the router/ONT serial for installations, add materials used, and get the customer to sign.',
-      'Your supervisor verifies the job, or sends it back with a note.',
+      'Open the task from Tasks and tap Directions for turn-by-turn navigation inside the app.',
+      'At the customer: Start task (takes a "before" photo).',
+      'When done: Complete task. Take the "after" photo, scan the router/ONT serial for installations, add materials used, and get the customer to sign.',
+      'Your supervisor verifies the task, or sends it back with a note.',
     ],
   },
   {
@@ -105,15 +105,15 @@ const TECHNICIAN: Topic[] = [
       'Scanning a router or ONT: point the camera at the barcode marked SN (not PROD ID or MAC; the app tells you if you aim at those). If it will not read, tap "Use phone camera" and take a sharp photo of the sticker.',
       'Every router and ONT has an Optimas label with a QR code. When devices are issued to you, open My stock and tap "Scan to confirm": only the devices issued to you are accepted.',
       'My stock → Check a device tells you if a device is genuine and whether it is the one issued to you. Never install a device that shows "Not yours" or "Fake label".',
-      'Taking a router back from a customer (relocation, disconnection, swap)? Open the job and tap "Collect a device from this customer", then hand it to the store.',
+      'Taking a router back from a customer (relocation, disconnection, swap)? Open the task and tap "Collect a device from this customer", then hand it to the store.',
     ],
   },
   {
     icon: 'people-outline',
-    title: 'Team jobs',
+    title: 'Team tasks',
     steps: [
-      'A job can go to a team. Everyone in the team sees it in their jobs and gets its alerts.',
-      'The team leader (marked with a star) starts the job and files the report for everyone. The others help on site.',
+      'A task can go to a team. Everyone in the team sees it in their tasks and gets its alerts.',
+      'The team leader (marked with a star) starts the task and files the report for everyone. The others help on site.',
       'Each team has its own group in Chats.',
     ],
   },
@@ -129,7 +129,7 @@ const TECHNICIAN: Topic[] = [
     icon: 'person-add-outline',
     title: 'Onboarding a customer',
     steps: [
-      'On the installation job, tap Onboard customer (or Home → Onboard customer).',
+      'On the installation task, tap Onboard customer (or Home → Onboard customer).',
       'Check the name, phone and address, stand at the premises so the location pin is right, then Create customer account.',
       'Share the sign-in details with the customer straight away: the one-time password is shown only once.',
     ],
@@ -145,14 +145,14 @@ const TECHNICIAN: Topic[] = [
   {
     icon: 'cloud-offline-outline',
     title: 'No network',
-    steps: ['Check-ins and job steps done without signal are saved on the phone and sent automatically when you are back online. Keep the app installed and signed in until they are sent.'],
+    steps: ['Check-ins and task steps done without signal are saved on the phone and sent automatically when you are back online. Keep the app installed and signed in until they are sent.'],
   },
   {
     icon: 'location-outline',
     title: 'Location',
     steps: [
       'Your position is shared only while the Optimas app is open, and only if you allowed it.',
-      'It is used for directions, sending you the nearest jobs, and showing customers you are on the way. You can turn it off in Profile.',
+      'It is used for directions, sending you the nearest tasks, and showing customers you are on the way. You can turn it off in Profile.',
     ],
   },
   {

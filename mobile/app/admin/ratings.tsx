@@ -75,7 +75,7 @@ export default function RatingsScreen() {
         <Glass strong style={{ alignItems: 'center', gap: 6 }}>
           <Ionicons name="star-outline" size={28} color={colors.textDim} />
           <Text variant="bodySm" color={colors.textMuted} align="center">
-            No ratings yet. Customers can rate a visit from their app once the job is completed.
+            No ratings yet. Customers can rate a visit from their app once the task is completed.
           </Text>
         </Glass>
       ) : null}

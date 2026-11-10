@@ -30,6 +30,7 @@ const TAB_OF: Record<string, Exclude<Tab, 'ALL'>> = {
   STOCK_COUNT_MISMATCH: 'STOCK',
   UNIT_LOST: 'STOCK',
   STOCK_APPROVAL: 'STOCK',
+  DAY_REPORT: 'JOBS',
   // Everything people do in the app (admins and supervisors)
   ACTIVITY: 'ACTIVITY',
 };
@@ -52,7 +53,7 @@ const TONE: Record<NoteTone, { bg: string; fg: string }> = isDark
       chat: { bg: '#ECE6FB', fg: '#6D28D9' },
       neutral: { bg: '#F1F3F2', fg: '#52525B' },
     };
-const TAB_LABEL: Record<Tab, string> = { ALL: 'All', JOBS: 'Jobs', ATTENDANCE: 'Attendance', STOCK: 'Stock', ACTIVITY: 'Activity' };
+const TAB_LABEL: Record<Tab, string> = { ALL: 'All', JOBS: 'Tasks', ATTENDANCE: 'Attendance', STOCK: 'Stock', ACTIVITY: 'Activity' };
 
 /** "12:32 PM" today, otherwise "23/10/26". */
 function when(iso: string) {
@@ -157,7 +158,7 @@ export default function Notifications() {
               Get alerts when the app is closed
             </Text>
             <Text variant="bodySm" color={SME.fg3} fixedColor style={{ fontSize: 13 }}>
-              Job assignments, approvals and stock alerts will appear on this phone like any other app.
+              Task assignments, approvals and stock alerts will appear on this phone like any other app.
             </Text>
             <Button label="Turn on alerts" icon="notifications" onPress={turnOn} />
           </View>

@@ -30,8 +30,8 @@ export default function Privacy() {
       bullets: [
         'Account details: name, staff or account number, role, phone, e-mail, region and (customers) the premises address. Passwords are stored only in scrambled (hashed) form; nobody at Optimas can read them.',
         'Staff attendance: check-in and check-out times, the photo taken with the in-app camera at each, the uniform checklist, and the phone’s GPS position and clock at that moment.',
-        'Work records: jobs, before and after photos (with GPS position and time), devices and materials used, serial numbers, the customer’s signature on installations, payments collected and notes.',
-        'Location while the app is open (only if you allow it): technicians’ positions to show where they are, give directions and find the nearest technician for a job; customers’ positions to pin their premises. We never collect location while the app is closed.',
+        'Work records: tasks, before and after photos (with GPS position and time), devices and materials used, serial numbers, the customer’s signature on installations, payments collected and notes.',
+        'Location while the app is open (only if you allow it): technicians’ positions to show where they are, give directions and find the nearest technician for a task; customers’ positions to pin their premises. We never collect location while the app is closed.',
         'Messages sent in the app’s chat, customer service requests and visit ratings.',
         'Device details needed to send notifications (a notification address issued by your phone or browser) and basic technical logs (time, address of the request, errors) used to keep the service secure.',
       ],
@@ -39,19 +39,19 @@ export default function Privacy() {
     {
       title: 'Why we use it, and on what legal basis',
       bullets: [
-        'To run the work you do with us: attendance, jobs, stock, visits and support (performance of the employment or service contract).',
+        'To run the work you do with us: attendance, tasks, stock, visits and support (performance of the employment or service contract).',
         'To prove work was really done and prevent fraud or loss of company equipment: camera-only photos, GPS position and device time (our legitimate interest in accountable field work and stock).',
         'To keep employment, tax and accounting records the law requires (legal obligation).',
         'Live location sharing and notifications: only with your consent, which you can withdraw at any time in Profile (staff) or Account (customers) and in your phone or browser settings.',
-        'We do not sell personal data, use it for advertising, or make decisions about you by automated means alone. Late arrivals, photo flags and job reviews are always looked at by a person.',
+        'We do not sell personal data, use it for advertising, or make decisions about you by automated means alone. Late arrivals, photo flags and task reviews are always looked at by a person.',
       ],
     },
     {
       title: 'Who can see it',
       bullets: [
-        'Inside Optimas, people see only what their job needs: supervisors and administrators see staff attendance, photos and locations; the store sees stock and job photos (not staff check-in photos); technicians see their own records and the customers on their own jobs.',
+        'Inside Optimas, people see only what their task needs: supervisors and administrators see staff attendance, photos and locations; the store sees stock and task photos (not staff check-in photos); technicians see their own records and the customers on their own tasks.',
         'Customers see their own account, their visits and the name, phone and live position of the technician coming to them (only while that visit is under way).',
-        'Service providers that help run the app, under confidentiality: our server and backup hosting; map images from OpenStreetMap (your device asks it for the map of the area on screen); road directions (OSRM) and address look-up (Nominatim), which receive coordinates or a job address without names; and the push services of Google, Apple, Mozilla or Microsoft, which carry notifications to your device.',
+        'Service providers that help run the app, under confidentiality: our server and backup hosting; map images from OpenStreetMap (your device asks it for the map of the area on screen); road directions (OSRM) and address look-up (Nominatim), which receive coordinates or a task address without names; and the push services of Google, Apple, Mozilla or Microsoft, which carry notifications to your device.',
         'Authorities, only when the law requires it.',
       ],
     },
@@ -66,8 +66,8 @@ export default function Privacy() {
       bullets: [
         `Location trail (where a technician has driven): ${r.locationTrailDays} days. The last known position is kept until replaced or until you turn location off, which deletes it.`,
         `In-app notifications: ${r.notificationDays} days.`,
-        `Photos taken but never used for a check-in or job: ${r.unusedPhotoDays} day.`,
-        'Attendance, job and stock records and their photos: for as long as needed for the employment or customer relationship and for legal, tax and accounting purposes, then deleted or anonymised.',
+        `Photos taken but never used for a check-in or task: ${r.unusedPhotoDays} day.`,
+        'Attendance, task and stock records and their photos: for as long as needed for the employment or customer relationship and for legal, tax and accounting purposes, then deleted or anonymised.',
         'Backups: kept for up to 60 days, then overwritten.',
       ],
     },

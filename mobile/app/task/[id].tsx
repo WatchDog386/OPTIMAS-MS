@@ -55,10 +55,10 @@ export default function TaskDetail() {
   };
   const verify = async (decision: 'VERIFIED' | 'REJECTED') => {
     const ok = await run(() => api(`/tasks/${task.id}/verify`, { body: { decision, note: note || undefined } }));
-    if (ok && decision === 'VERIFIED') celebrate('Job verified', `${task.code} is closed.`);
+    if (ok && decision === 'VERIFIED') celebrate('Task verified', `${task.code} is closed.`);
   };
   const cancel = async () => {
-    if (await confirmAction('Cancel job', 'This job will be cancelled for the technician.', 'Cancel job')) {
+    if (await confirmAction('Cancel task', 'This task will be cancelled for the technician.', 'Cancel task')) {
       await run(() => api(`/tasks/${task.id}/cancel`, { body: {} }));
     }
   };
@@ -69,9 +69,9 @@ export default function TaskDetail() {
 
   const footer =
     mine && task.status === 'ASSIGNED' ? (
-      <Button label="Start job · take photo" icon="camera" size="lg" loading={busy} onPress={start} />
+      <Button label="Start task · take photo" icon="camera" size="lg" loading={busy} onPress={start} />
     ) : mine && task.status === 'IN_PROGRESS' ? (
-      <Button label="Complete job" icon="checkmark-done" size="lg" onPress={() => router.push(`/task/complete?id=${task.id}`)} />
+      <Button label="Complete task" icon="checkmark-done" size="lg" onPress={() => router.push(`/task/complete?id=${task.id}`)} />
     ) : manager && task.status === 'COMPLETED' ? (
       <View style={{ gap: space.sm }}>
         <Input placeholder="Note (required to reject)" value={note} onChangeText={setNote} />
@@ -102,7 +102,7 @@ export default function TaskDetail() {
         <Button label="Edit / reassign" icon="create-outline" onPress={() => router.push(`/admin/task-edit?id=${task.id}`)} style={{ flex: 1.4 }} />
       </View>
     ) : manager && task.status === 'IN_PROGRESS' ? (
-      <Button label="Cancel job" variant="danger" icon="close-circle-outline" loading={busy} onPress={cancel} />
+      <Button label="Cancel task" variant="danger" icon="close-circle-outline" loading={busy} onPress={cancel} />
     ) : helper && open ? (
       <View style={styles.leadNote}>
         <Ionicons name="star" size={18} color={colors.brand} />
@@ -247,6 +247,19 @@ export default function TaskDetail() {
         </>
       ) : null}
 
+      {task.status === 'COMPLETED' || task.status === 'VERIFIED' || task.status === 'REJECTED' ? (
+        <>
+          <SectionHeader title="Task report" />
+          <Card style={[styles.flat, { gap: 10 }]}>
+            <Fact label="Location" value={`${task.address}${task.houseNo ? ` · House ${task.houseNo}` : ''}`} />
+            <Fact label="Signal" value={task.signal || '—'} />
+            <Fact label="Client paid" value={task.amountCollected ? kes(task.amountCollected) : 'Nothing'} />
+            <Fact label="Drop cable" value={task.dropCableM != null ? `${task.dropCableM} m` : '—'} />
+            <Fact label="FAT pre-installed" value={task.fatPreinstalled == null ? '—' : task.fatPreinstalled ? 'Yes' : 'No'} />
+          </Card>
+        </>
+      ) : null}
+
       {task.materials?.length ? (
         <>
           <SectionHeader title="Materials used" />
@@ -337,7 +350,20 @@ export default function TaskDetail() {
   );
 }
 
-/** The job's state in words, as it stands now. */
+function Fact({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.row}>
+      <Text variant="bodySm" color={colors.textMuted}>
+        {label}
+      </Text>
+      <Text variant="title" style={{ flexShrink: 1, textAlign: 'right' }}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+/** The task's state in words, as it stands now. */
 function stateText(t: Task) {
   const who = t.team ? t.team.name : t.assignee?.name;
   switch (t.status) {

@@ -131,8 +131,8 @@ exportsRouter.get(
       },
     });
     const wb = new ExcelJS.Workbook();
-    const ws = sheet(wb, 'Jobs', [
-      { header: 'Job', key: 'code', width: 18 },
+    const ws = sheet(wb, 'Tasks', [
+      { header: 'Task', key: 'code', width: 18 },
       { header: 'Created', key: 'created', width: 17 },
       { header: 'Type', key: 'type', width: 13 },
       { header: 'Priority', key: 'priority', width: 10 },
@@ -151,7 +151,7 @@ exportsRouter.get(
       { header: 'Verified by', key: 'verifier', width: 18 },
     ]);
     const lines = sheet(wb, 'Materials', [
-      { header: 'Job', key: 'code', width: 18 },
+      { header: 'Task', key: 'code', width: 18 },
       { header: 'Technician', key: 'tech', width: 20 },
       { header: 'Item', key: 'item', width: 30 },
       { header: 'Serial', key: 'serial', width: 16 },
@@ -241,7 +241,7 @@ exportsRouter.get(
       { header: 'Holder', key: 'holder', width: 20 },
       { header: 'Held since', key: 'since', width: 12 },
       { header: 'Customer account', key: 'account', width: 18 },
-      { header: 'Job', key: 'job', width: 18 },
+      { header: 'Task', key: 'job', width: 18 },
     ]);
     for (const u of units) {
       devices.addRow({

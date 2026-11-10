@@ -97,7 +97,7 @@ export default function NewChat() {
       ) : null}
       {role === 'TECHNICIAN' ? (
         <Text variant="label" color={colors.textDim} align="center">
-          Customers appear here while you have a job for them (and for two weeks after).
+          Customers appear here while you have a task for them (and for two weeks after).
         </Text>
       ) : null}
     </Screen>

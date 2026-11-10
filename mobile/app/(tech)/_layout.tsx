@@ -13,7 +13,7 @@ export default function TechLayout() {
   if (user.role === 'CUSTOMER') return <Redirect href="/portal" />;
   return (
     <Tabs screenOptions={tabScreenOptions} tabBar={(props) => <FloatingTabBar {...props} />}>
-      <Tabs.Screen name="jobs" options={{ title: 'Jobs', tabBarIcon: tabIcon('briefcase-outline', 'briefcase') }} />
+      <Tabs.Screen name="jobs" options={{ title: 'Tasks', tabBarIcon: tabIcon('briefcase-outline', 'briefcase') }} />
       <Tabs.Screen name="stock" options={{ title: 'My stock', tabBarIcon: tabIcon('cube-outline', 'cube') }} />
       <Tabs.Screen name="home" options={{ title: 'Home', tabBarIcon: tabIcon('flash-outline', 'flash') }} />
       <Tabs.Screen name="messages" options={{ title: 'Chats', tabBarIcon: tabIcon('chatbubble-ellipses-outline', 'chatbubble-ellipses') }} />

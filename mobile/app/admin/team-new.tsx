@@ -36,7 +36,7 @@ export default function TeamNew() {
       await api<{ team: { id: string; name: string } }>('/teams', {
         body: { name: name.trim(), memberIds, leaderId },
       });
-      toast.success('Team created', 'Jobs can now be allocated to the whole crew.');
+      toast.success('Team created', 'Tasks can now be allocated to the whole crew.');
       router.replace('/team');
     } catch (e) {
       toast.error('Could not create team', e instanceof ApiError ? e.message : 'Try again');
@@ -49,12 +49,12 @@ export default function TeamNew() {
 
   return (
     <Screen footer={<Button label="Create team" icon="people" size="lg" loading={busy} disabled={!name.trim() || memberIds.length < 2 || !leaderId} onPress={submit} />}>
-      <ScreenHeader title="New team" subtitle="A crew that takes jobs together" />
+      <ScreenHeader title="New team" subtitle="A crew that takes tasks together" />
       <SectionHeader title="Team name" />
       <Input label="Name or number" icon="people-outline" value={name} onChangeText={setName} placeholder="e.g. Team 3 or Kilimani crew" maxLength={60} />
       <SectionHeader title="Members" />
       <Text variant="bodySm" color={colors.textMuted} style={{ paddingHorizontal: space.md }}>
-        Pick at least two active technicians. Everyone in the team sees the job and its alerts.
+        Pick at least two active technicians. Everyone in the team sees the task and its alerts.
       </Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, paddingHorizontal: space.md }}>
         {people.map((p) => {
@@ -81,7 +81,7 @@ export default function TeamNew() {
         <>
           <SectionHeader title="Team leader" />
           <Text variant="bodySm" color={colors.textMuted} style={{ paddingHorizontal: space.md }}>
-            The leader starts the job and files the report for everyone.
+            The leader starts the task and files the report for everyone.
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, paddingHorizontal: space.md }}>
             {members.map((p) => {

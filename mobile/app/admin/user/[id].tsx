@@ -103,8 +103,8 @@ export default function UserProfile() {
           <StatGrid>
             <StatTile icon="calendar" label="Days present (30d)" value={data.stats.daysPresent30} hint={data.stats.lateDays30 ? `${data.stats.lateDays30} late` : undefined} tint={colors.info} />
             <StatTile icon="time-outline" label="Hours worked (30d)" value={data.stats.hoursWorked30} tint={colors.accent} />
-            <StatTile icon="checkmark-done" label="Jobs completed" value={done} hint={open ? `${open} open` : undefined} tint={colors.success} />
-            <StatTile icon="timer-outline" label="Avg. job time" value={duration(data.stats.avgJobMinutes)} hint={data.stats.dressRejected30 ? `${data.stats.dressRejected30} dress rejections` : undefined} tint={colors.warning} />
+            <StatTile icon="checkmark-done" label="Tasks completed" value={done} hint={open ? `${open} open` : undefined} tint={colors.success} />
+            <StatTile icon="timer-outline" label="Avg. task time" value={duration(data.stats.avgJobMinutes)} hint={data.stats.dressRejected30 ? `${data.stats.dressRejected30} dress rejections` : undefined} tint={colors.warning} />
           </StatGrid>
 
           <Section title="In custody" subtitle={data.lastCount ? `Last stock count ${dateTime(data.lastCount.createdAt)}${data.lastCount.missing.length ? ` · ${data.lastCount.missing.length} missing` : ''}` : 'No stock count yet'}>
@@ -124,14 +124,14 @@ export default function UserProfile() {
             )}
           </Section>
 
-          <Section title="Recent jobs">
+          <Section title="Recent tasks">
             {data.recentTasks.length ? (
               data.recentTasks.map((t) => (
                 <SectionRow key={t.id} icon={taskTypeIcon[t.type]} tint={colors.text} tintBg={colors.highlight} title={`${t.code} · ${t.title}`} subtitle={`${t.customerName}${t.durationMinutes != null ? ` · ${duration(t.durationMinutes)}` : ''}`} right={<Badge label={humanize(t.status)} tone={taskStatusTone[t.status]} />} onPress={() => router.push(`/task/${t.id}`)} />
               ))
             ) : (
               <Text variant="bodySm" color={colors.textDim}>
-                No jobs yet.
+                No tasks yet.
               </Text>
             )}
           </Section>

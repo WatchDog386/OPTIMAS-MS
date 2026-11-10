@@ -22,8 +22,8 @@ const COPY = {
   TECHNICIAN: {
     title: 'Share your location while you work?',
     points: [
-      ['navigate-outline', 'Turn-by-turn directions to every job, inside the app'],
-      ['flash-outline', 'The office can send you the jobs closest to you'],
+      ['navigate-outline', 'Turn-by-turn directions to every task, inside the app'],
+      ['flash-outline', 'The office can send you the tasks closest to you'],
       ['person-outline', 'Your customer sees you are on the way'],
     ],
     note: 'Only while the Optimas app is open. You can turn it off any time in Profile.',

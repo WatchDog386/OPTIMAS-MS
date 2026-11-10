@@ -104,15 +104,15 @@ export default function TechHome() {
 
   const s = stats.data;
   const todayStats: HeroStat[] = [
-    { key: 'open', label: 'Open jobs', value: jobs.length, sub: `${jobs.filter((j) => j.status === 'IN_PROGRESS').length} in progress`, icon: 'briefcase', onPress: () => router.push('/jobs') },
+    { key: 'open', label: 'Open tasks', value: jobs.length, sub: `${jobs.filter((j) => j.status === 'IN_PROGRESS').length} in progress`, icon: 'briefcase', onPress: () => router.push('/jobs') },
     { key: 'dev', label: 'Devices held', value: held, sub: pending.length ? `${pending.length} to confirm` : 'All confirmed', icon: 'cube', alert: pending.length > 0, onPress: () => router.push('/stock') },
-    { key: 'week', label: 'Done this week', value: s?.week.jobs ?? week.reduce((n, d) => n + d.value, 0), sub: s ? `avg ${duration(s.week.avgMinutes)} a job` : 'Completed jobs', icon: 'checkmark-done', onPress: () => router.push('/jobs') },
+    { key: 'week', label: 'Done this week', value: s?.week.jobs ?? week.reduce((n, d) => n + d.value, 0), sub: s ? `avg ${duration(s.week.avgMinutes)} a task` : 'Completed tasks', icon: 'checkmark-done', onPress: () => router.push('/jobs') },
     { key: 'alerts', label: 'Alerts', value: unread.data?.unread ?? 0, sub: 'Unread messages', icon: 'notifications', alert: !!unread.data?.unread, onPress: () => router.push('/notifications') },
   ];
   const perfStats: HeroStat[] = [
     { key: 'rating', label: 'Customer rating', value: s?.rating.average ? s.rating.average.toFixed(1) : 'New', sub: s?.rating.count ? `${s.rating.count} review${s.rating.count === 1 ? '' : 's'}` : 'No reviews yet', icon: 'star', onPress: () => router.push('/profile') },
     { key: 'ontime', label: 'On-time check-ins', value: s?.month.onTimeRate != null ? `${s.month.onTimeRate}%` : '—', sub: `${s?.month.days ?? 0} day${s?.month.days === 1 ? '' : 's'} · last 30`, icon: 'time', alert: s?.month.onTimeRate != null && s.month.onTimeRate < 80, onPress: () => router.push('/profile') },
-    { key: 'avg', label: 'Avg job time', value: duration(s?.month.avgMinutes), sub: `${s?.month.jobs ?? 0} jobs · last 30 days`, icon: 'stopwatch', onPress: () => router.push('/jobs') },
+    { key: 'avg', label: 'Avg task time', value: duration(s?.month.avgMinutes), sub: `${s?.month.jobs ?? 0} tasks · last 30 days`, icon: 'stopwatch', onPress: () => router.push('/jobs') },
     { key: 'hours', label: 'Hours this week', value: s?.week.hours ?? 0, sub: `${s?.week.days ?? 0} day${s?.week.days === 1 ? '' : 's'} on duty`, icon: 'calendar', onPress: () => router.push('/profile') },
   ];
 
@@ -141,7 +141,7 @@ export default function TechHome() {
           onTab={setTab}
           link={checkLink}
           onViewAll={() => router.push('/jobs')}
-          viewAllLabel="My jobs"
+          viewAllLabel="My tasks"
           loading={tab === 0 ? !open.data && open.loading : !s && stats.loading}
           stats={tab === 0 ? todayStats : perfStats}
         />
@@ -214,7 +214,7 @@ export default function TechHome() {
             <Ionicons name="sunny-outline" size={30} color={colors.text} />
             <Text variant="title">You’re all clear</Text>
             <Text variant="label" color={colors.textMuted} align="center">
-              No open jobs. New assignments appear here instantly.
+              No open tasks. New assignments appear here instantly.
             </Text>
           </Glass>
         )}
@@ -223,7 +223,7 @@ export default function TechHome() {
       {/* Today’s plan */}
       {plan.length > 1 ? (
         <Reveal index={4}>
-          <Section title="Today’s route" subtitle="In order — tap a stop to open it" action={{ label: 'All jobs', onPress: () => router.push('/jobs') }}>
+          <Section title="Today’s route" subtitle="In order — tap a stop to open it" action={{ label: 'All tasks', onPress: () => router.push('/jobs') }}>
             <Timeline items={plan} />
           </Section>
         </Reveal>
@@ -234,7 +234,7 @@ export default function TechHome() {
           owner={`${user.name} · ${user.staffNo}`}
           data={week}
           actions={[
-            { label: 'My jobs', onPress: () => router.push('/jobs') },
+            { label: 'My tasks', onPress: () => router.push('/jobs') },
             { label: 'Search', onPress: () => router.push('/search') },
           ]}
         />
@@ -264,7 +264,8 @@ export default function TechHome() {
           items={[
             { label: shift === 'ON' ? 'Check out' : 'Check in', icon: 'scan-outline', onPress: () => router.push(shift === 'ON' ? '/check-in?mode=out' : '/check-in?mode=in') },
             ...(installer.available ? [{ label: installer.busy ? 'Installing…' : 'Install app', icon: 'download-outline' as const, onPress: () => void installer.start() }] : []),
-            { label: 'My jobs', icon: 'briefcase-outline', onPress: () => router.push('/jobs') },
+            { label: 'My tasks', icon: 'briefcase-outline', onPress: () => router.push('/jobs') },
+            { label: 'Daily report', icon: 'document-text-outline', onPress: () => router.push('/day-report') },
             { label: 'My stock', icon: 'cube-outline', onPress: () => router.push('/stock'), badge: pending.length },
             { label: 'Onboard customer', icon: 'person-add-outline', onPress: () => router.push('/onboard') },
             { label: 'Messages', icon: 'chatbubble-ellipses-outline', onPress: () => router.push('/messages') },

@@ -63,6 +63,7 @@ model User {
   tasksAssigned        Task[]                @relation("TaskAssignee")
   tasksCreated         Task[]                @relation("TaskCreator")
   tasksVerified        Task[]                @relation("TaskVerifier")
+  dayReports           DayReport[]
   unitsHeld            SerialUnit[]
   bulkHoldings         BulkHolding[]
   movementsFrom        StockMovement[]       @relation("MovementFrom")
@@ -249,6 +250,11 @@ model Task {
   customerSignature String? // SVG path data drawn by the customer on the technician's phone
   signedByName      String?
   signedAt          DateTime?
+  /// The task report: router signal as read on site, house number, drop cable run, whether the FAT was already there
+  signal            String?
+  houseNo           String?
+  dropCableM        Float?
+  fatPreinstalled   Boolean?
   customerRating    Int? // 1–5 stars, given by the customer after the visit
   customerFeedback  String?
   ratedAt           DateTime?
@@ -458,6 +464,8 @@ enum NotificationType {
   ACTIVITY
   /// A stock change waiting for an admin, or the admin's decision on one
   STOCK_APPROVAL
+  /// A technician's (or team leader's) end-of-day report
+  DAY_REPORT
 }
 
 model Notification {
@@ -681,6 +689,7 @@ model Team {
   members   TeamMember[]
   tasks     Task[]
   chat      Conversation?
+  reports   DayReport[]
 }
 
 model TeamMember {
@@ -737,4 +746,26 @@ model StockRequest {
 
   @@index([status, createdAt])
   @@index([serialUnitId, status])
+}
+
+/// End-of-day report: a technician's tasks of the day, or (team tasks) the leader's report for the
+/// whole team. Built from the task reports; submitted to the admins. Resubmitting the same day replaces it.
+model DayReport {
+  id            String   @id @default(cuid())
+  workDate      DateTime @db.Date
+  submittedById String
+  teamId        String?
+  /// The report as sent (also shared on WhatsApp)
+  text          String
+  taskIds       String[]
+  tasksDone     Int
+  collected     Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  submittedBy User  @relation(fields: [submittedById], references: [id])
+  team        Team? @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  @@unique([submittedById, workDate])
+  @@index([workDate])
 }

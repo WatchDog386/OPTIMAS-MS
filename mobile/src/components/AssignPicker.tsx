@@ -111,7 +111,7 @@ export function AssignPicker({ value, onChange, allowNewTeam = true }: { value: 
           <View style={styles.note}>
             <Ionicons name="document-text-outline" size={16} color={colors.brand} />
             <Text variant="label" color={colors.textMuted} style={{ flex: 1 }}>
-              Everyone in the team sees the job and its alerts. The team leader starts it and files the report on behalf of everyone.
+              Everyone in the team sees the task and its alerts. The team leader starts it and files the report on behalf of everyone.
             </Text>
           </View>
         </>

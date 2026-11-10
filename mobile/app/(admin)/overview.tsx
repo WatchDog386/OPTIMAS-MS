@@ -69,7 +69,7 @@ export default function Overview() {
           },
           {
             key: 'ver',
-            label: 'Jobs to verify',
+            label: 'Tasks to verify',
             value: d?.tasks.awaitingVerification ?? 0,
             sub: 'Proof photos waiting',
             icon: 'shield-checkmark' as const,
@@ -89,7 +89,7 @@ export default function Overview() {
       : []),
     {
       key: 'open',
-      label: 'Open jobs',
+      label: 'Open tasks',
       value: d ? d.tasks.assigned + d.tasks.inProgress : 0,
       sub: `${d?.tasks.inProgress ?? 0} in progress`,
       icon: 'briefcase',
@@ -111,7 +111,7 @@ export default function Overview() {
       key: 'cash',
       label: 'Collected · 7 days',
       value: kes(d?.tasks.amountCollectedLast7Days),
-      sub: `KES · ${d?.tasks.completedLast7Days ?? 0} jobs · avg ${duration(d?.tasks.avgDurationMinutes)}`,
+      sub: `KES · ${d?.tasks.completedLast7Days ?? 0} tasks · avg ${duration(d?.tasks.avgDurationMinutes)}`,
       icon: 'cash',
       onPress: () => router.push('/admin/reports'),
     },
@@ -165,7 +165,7 @@ export default function Overview() {
     // Supervisors and the store check in like everyone else (admins do not)
     !!shift.action && { label: shift.action.label, icon: shift.action.icon, onPress: shift.action.onPress },
     managers && {
-      label: 'New job',
+      label: 'New task',
       icon: 'add-circle-outline',
       onPress: () => router.push('/admin/task-new'),
     },
@@ -174,6 +174,11 @@ export default function Overview() {
       icon: 'chatbubbles-outline',
       onPress: () => router.push('/admin/requests'),
       badge: d?.requests?.open,
+    },
+    managers && {
+      label: 'Daily reports',
+      icon: 'document-text-outline',
+      onPress: () => router.push('/admin/day-reports'),
     },
     managers && {
       label: 'People',
@@ -241,7 +246,7 @@ export default function Overview() {
           {managers ? (
             <>
               <DeskButton label="Add a person" icon="person-add-outline" onPress={() => router.push('/admin/user-new')} />
-              <DeskButton label="New job" icon="add" filled onPress={() => router.push('/admin/task-new')} />
+              <DeskButton label="New task" icon="add" filled onPress={() => router.push('/admin/task-new')} />
             </>
           ) : (
             <>
@@ -260,27 +265,27 @@ export default function Overview() {
           <View style={deskChip}>
             <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: desk.green }} />
             <Text variant="bodySm" color={desk.muted} fixedColor>
-              Live · jobs done over the last 7 days
+              Live · tasks done over the last 7 days
             </Text>
           </View>
         </View>
 
         <View style={{ flexDirection: 'row', gap: 16, flexWrap: 'wrap' }}>
-          <KpiCard tone="blue" value={d ? d.tasks.assigned + d.tasks.inProgress : 0} title="Open jobs" sub={`${d?.tasks.inProgress ?? 0} in progress`} icon="briefcase-outline" onPress={() => router.push('/board')} />
-          <KpiCard tone="green" value={d?.tasks.completedLast7Days ?? 0} title="Jobs done · 7 days" sub={`KES ${kes(d?.tasks.amountCollectedLast7Days)} collected`} icon="checkmark-done-outline" onPress={() => router.push('/admin/reports')} />
-          <KpiCard tone="amber" value={toApprove} title="Awaiting approval" sub={managers ? 'Photos, check-outs and jobs' : 'Jobs to verify'} icon="flag-outline" onPress={() => router.push(managers ? '/admin/approvals' : '/board?status=COMPLETED')} />
+          <KpiCard tone="blue" value={d ? d.tasks.assigned + d.tasks.inProgress : 0} title="Open tasks" sub={`${d?.tasks.inProgress ?? 0} in progress`} icon="briefcase-outline" onPress={() => router.push('/board')} />
+          <KpiCard tone="green" value={d?.tasks.completedLast7Days ?? 0} title="Tasks done · 7 days" sub={`KES ${kes(d?.tasks.amountCollectedLast7Days)} collected`} icon="checkmark-done-outline" onPress={() => router.push('/admin/reports')} />
+          <KpiCard tone="amber" value={toApprove} title="Awaiting approval" sub={managers ? 'Photos, check-outs and tasks' : 'Tasks to verify'} icon="flag-outline" onPress={() => router.push(managers ? '/admin/approvals' : '/board?status=COMPLETED')} />
           <KpiCard tone="red" value={flagged} title="Flagged devices" sub={flagged ? 'Overdue · missing · lost' : 'All accounted for'} icon="pie-chart-outline" onPress={() => router.push('/admin/reconciliation')} />
         </View>
 
         <View style={{ flexDirection: 'row', gap: 16, alignItems: 'stretch' }}>
-          <Panel title="Jobs done this week" link="All jobs" onLink={() => router.push('/board')} style={{ flex: 2 }}>
+          <Panel title="Tasks done this week" link="All tasks" onLink={() => router.push('/board')} style={{ flex: 2 }}>
             <View style={{ flexDirection: 'row', gap: 40 }}>
               <View style={{ gap: 4 }}>
                 <Text variant="bodySm" color={desk.muted} fixedColor>
                   Last 7 days
                 </Text>
                 <Text variant="h1" color={desk.ink} fixedColor style={{ fontFamily: fonts.semibold, fontSize: 22, lineHeight: 28 }}>
-                  {d?.tasks.completedLast7Days ?? 0} jobs
+                  {d?.tasks.completedLast7Days ?? 0} tasks
                 </Text>
               </View>
               <View style={{ gap: 4 }}>
@@ -292,7 +297,7 @@ export default function Overview() {
                 </Text>
               </View>
             </View>
-            <PillChart data={week} activeIndex={week.length - 1} format={(n) => `${n} ${n === 1 ? 'job' : 'jobs'}`} />
+            <PillChart data={week} activeIndex={week.length - 1} format={(n) => `${n} ${n === 1 ? 'task' : 'tasks'}`} />
           </Panel>
           <Panel title="Attendance today" link={managers ? 'See all' : undefined} onLink={() => router.push('/admin/attendance')} style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -304,7 +309,7 @@ export default function Overview() {
               <PanelRow label="Checked out" value={d?.attendance.checkedOut ?? 0} />
               <PanelRow label="Dress reviews waiting" value={d?.attendance.pendingDressReviews ?? 0} onPress={managers ? () => router.push('/admin/reviews') : undefined} />
               <PanelRow label="Customer requests" value={d?.requests?.open ?? 0} onPress={managers ? () => router.push('/admin/requests') : undefined} />
-              <PanelRow label="Jobs to verify" value={d?.tasks.awaitingVerification ?? 0} onPress={() => router.push('/board?status=COMPLETED')} />
+              <PanelRow label="Tasks to verify" value={d?.tasks.awaitingVerification ?? 0} onPress={() => router.push('/board?status=COMPLETED')} />
             </View>
           </Panel>
         </View>
@@ -375,12 +380,12 @@ export default function Overview() {
             tab === 0
               ? managers
                 ? {
-                    label: 'New Job',
+                    label: 'New task',
                     icon: 'add-circle-outline',
                     onPress: () => router.push('/admin/task-new'),
                   }
                 : {
-                    label: 'Open jobs',
+                    label: 'Open tasks',
                     icon: 'briefcase-outline',
                     onPress: () => router.push('/board'),
                   }
@@ -402,8 +407,8 @@ export default function Overview() {
         owner={`${user.name} · ${user.staffNo}`}
         data={week}
         actions={[
-          { label: 'All jobs', onPress: () => router.push('/board') },
-          ...(managers ? [{ label: 'New job', onPress: () => router.push('/admin/task-new') }] : []),
+          { label: 'All tasks', onPress: () => router.push('/board') },
+          ...(managers ? [{ label: 'New task', onPress: () => router.push('/admin/task-new') }] : []),
         ]}
       />
 
@@ -415,6 +420,7 @@ export default function Overview() {
           <QuickActions
             title="Insights"
             items={[
+              { label: 'Daily reports', icon: 'document-text-outline', onPress: () => router.push('/admin/day-reports') },
               { label: 'Approvals', icon: 'checkmark-done-circle-outline', onPress: () => router.push('/admin/approvals'), badge: approvals.data?.total },
               { label: 'Activity', icon: 'time-outline', onPress: () => router.push('/admin/activity') },
               { label: 'Leaderboard', icon: 'trophy-outline', onPress: () => router.push('/admin/leaderboard') },

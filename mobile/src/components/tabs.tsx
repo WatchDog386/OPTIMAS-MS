@@ -151,13 +151,13 @@ function TabBarView({ items, index }: { items: TabItem[]; index: number }) {
 const ROLE_TABS: Record<string, { label: string; href: string; icon: [keyof typeof Ionicons.glyphMap, keyof typeof Ionicons.glyphMap]; home?: boolean; managersOnly?: boolean }[]> = {
   STAFF: [
     { label: 'Team', href: '/team', icon: ['people-outline', 'people'], managersOnly: true },
-    { label: 'Jobs', href: '/board', icon: ['briefcase-outline', 'briefcase'] },
+    { label: 'Tasks', href: '/board', icon: ['briefcase-outline', 'briefcase'] },
     { label: 'Overview', href: '/overview', icon: ['grid-outline', 'grid'], home: true },
     { label: 'Store', href: '/store', icon: ['cube-outline', 'cube'] },
     { label: 'Profile', href: '/more', icon: ['person-circle-outline', 'person-circle'] },
   ],
   TECHNICIAN: [
-    { label: 'Jobs', href: '/jobs', icon: ['briefcase-outline', 'briefcase'] },
+    { label: 'Tasks', href: '/jobs', icon: ['briefcase-outline', 'briefcase'] },
     { label: 'My stock', href: '/stock', icon: ['cube-outline', 'cube'] },
     { label: 'Home', href: '/home', icon: ['flash-outline', 'flash'], home: true },
     { label: 'Chats', href: '/messages', icon: ['chatbubble-ellipses-outline', 'chatbubble-ellipses'] },
@@ -167,7 +167,7 @@ const ROLE_TABS: Record<string, { label: string; href: string; icon: [keyof type
     { label: 'Chats', href: '/support', icon: ['chatbubble-ellipses-outline', 'chatbubble-ellipses'] },
     { label: 'Requests', href: '/care-requests', icon: ['megaphone-outline', 'megaphone'] },
     { label: 'Home', href: '/care', icon: ['headset-outline', 'headset'], home: true },
-    { label: 'Jobs', href: '/care-jobs', icon: ['briefcase-outline', 'briefcase'] },
+    { label: 'Tasks', href: '/care-jobs', icon: ['briefcase-outline', 'briefcase'] },
     { label: 'Profile', href: '/care-profile', icon: ['person-outline', 'person'] },
   ],
   CUSTOMER: [

@@ -14,9 +14,9 @@ import { confirmAction } from '../../../src/utils/confirm';
 const initials = (n: string) => n.split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase();
 
 function status(t: NearbyTech): { label: string; tone: 'success' | 'warning' | 'neutral' | 'info' } {
-  if (t.current) return { label: 'Has the job', tone: 'info' };
+  if (t.current) return { label: 'Has the task', tone: 'info' };
   if (!t.onDuty) return { label: 'Not checked in', tone: 'neutral' };
-  if (t.busy) return { label: 'On a job', tone: 'warning' };
+  if (t.busy) return { label: 'On a task', tone: 'warning' };
   return { label: 'Free', tone: 'success' };
 }
 
@@ -48,11 +48,11 @@ export default function ForwardJob() {
 
   const forward = async () => {
     if (!chosen) return;
-    if (!(await confirmAction('Forward job', `${task.code} moves from ${task.assignee?.name ?? 'nobody yet'} to ${chosen.user.name}. Both are notified, and so is the customer.`, 'Forward'))) return;
+    if (!(await confirmAction('Forward task', `${task.code} moves from ${task.assignee?.name ?? 'nobody yet'} to ${chosen.user.name}. Both are notified, and so is the customer.`, 'Forward'))) return;
     setBusy(true);
     try {
       await api(`/tasks/${id}/forward`, { body: { technicianId: chosen.user.id, note: note.trim() || undefined } });
-      celebrate('Job forwarded', `${chosen.user.name} has ${task.code} now.`);
+      celebrate('Task forwarded', `${chosen.user.name} has ${task.code} now.`);
       router.replace(`/task/${id}`);
     } catch (e) {
       toast.error('Could not forward', e instanceof ApiError ? e.message : 'Try again');
@@ -72,7 +72,7 @@ export default function ForwardJob() {
 
       {task.status !== 'ASSIGNED' && task.status !== 'OPEN' ? (
         <Text variant="bodySm" color={colors.warning}>
-          This job has already started, so it can no longer be forwarded.
+          This task has already started, so it can no longer be forwarded.
         </Text>
       ) : null}
 
@@ -81,7 +81,7 @@ export default function ForwardJob() {
       </View>
       {data.job.lat == null ? (
         <Text variant="bodySm" color={colors.warning}>
-          This job has no map pin, so distances cannot be worked out. Edit the job to add the address or a pin.
+          This task has no map pin, so distances cannot be worked out. Edit the task to add the address or a pin.
         </Text>
       ) : null}
 
@@ -109,7 +109,7 @@ export default function ForwardJob() {
                     ) : null}
                   </View>
                   <Text variant="label" color={colors.textMuted} numberOfLines={1}>
-                    {t.distanceKm != null ? `${t.distanceKm} km · about ${t.etaMinutes} min away` : t.position ? 'Distance unknown' : 'Location not shared'} · {t.openJobs} open job{t.openJobs === 1 ? '' : 's'}
+                    {t.distanceKm != null ? `${t.distanceKm} km · about ${t.etaMinutes} min away` : t.position ? 'Distance unknown' : 'Location not shared'} · {t.openJobs} open task{t.openJobs === 1 ? '' : 's'}
                   </Text>
                 </View>
                 <Badge label={s.label} tone={s.tone} />

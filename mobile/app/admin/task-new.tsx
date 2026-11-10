@@ -79,12 +79,12 @@ export default function NewTask() {
         },
       });
       toast.success(
-        later ? 'Job saved' : 'Job created',
-        later ? 'Assign it from Jobs → To assign when the technicians are in.' : assign.mode === 'team' ? 'Everyone in the team has been notified.' : 'The technician has been notified.',
+        later ? 'Task saved' : 'Task created',
+        later ? 'Assign it from Tasks → To assign when the technicians are in.' : assign.mode === 'team' ? 'Everyone in the team has been notified.' : 'The technician has been notified.',
       );
       router.replace(`/task/${task.id}`);
     } catch (e) {
-      toast.error('Could not create job', e instanceof ApiError ? e.message : 'Try again');
+      toast.error('Could not create task', e instanceof ApiError ? e.message : 'Try again');
     } finally {
       setBusy(null);
     }
@@ -106,7 +106,7 @@ export default function NewTask() {
     <>
       <SectionHeader title="Assign to" />
       <Text variant="bodySm" color={colors.textMuted}>
-        Not sure who yet? Tap Create job to save it and assign it later.
+        Not sure who yet? Tap Create task to save it and assign it later.
       </Text>
       <AssignPicker value={assign} onChange={setAssign} allowNewTeam={!care} />
     </>
@@ -116,17 +116,17 @@ export default function NewTask() {
     <Screen
       footer={
         <View style={{ flexDirection: 'row', gap: space.sm }}>
-          <Button label="Create job" icon="save-outline" variant="outline" size="lg" loading={busy === 'later'} disabled={!!busy} onPress={() => submit(true)} style={{ flex: 1 }} />
+          <Button label="Create task" icon="save-outline" variant="outline" size="lg" loading={busy === 'later'} disabled={!!busy} onPress={() => submit(true)} style={{ flex: 1 }} />
           <Button label="Create & assign" icon="send" size="lg" loading={busy === 'now'} disabled={!!busy} onPress={() => submit(false)} style={{ flex: 1.3 }} />
         </View>
       }
     >
       <ScreenHeader
-        title="New job"
+        title="New task"
         subtitle={p.requestId ? 'From a customer request · the customer is notified too' : care ? 'From a customer call · the technician is notified in their app' : 'The technician is notified in their app'}
       />
       {care ? customer : assignTo}
-      <SectionHeader title={care ? 'Issue' : 'Job'} />
+      <SectionHeader title={care ? 'Issue' : 'Task'} />
       <Segmented options={TYPES} value={type} onChange={setType} />
       <Input label={care ? 'Issue' : 'Title'} value={form.title} onChangeText={set('title')} placeholder={care ? 'e.g. No internet since morning, red LOS light' : 'e.g. New fibre installation — 20 Mbps'} />
       <Input label="Details (optional)" multiline value={form.description} onChangeText={set('description')} />

@@ -17,7 +17,7 @@ export default function CareLayout() {
       <Tabs.Screen name="support" options={{ title: 'Chats', tabBarIcon: tabIcon('chatbubble-ellipses-outline', 'chatbubble-ellipses') }} />
       <Tabs.Screen name="care-requests" options={{ title: 'Requests', tabBarIcon: tabIcon('megaphone-outline', 'megaphone') }} />
       <Tabs.Screen name="care" options={{ title: 'Home', tabBarIcon: tabIcon('headset-outline', 'headset') }} />
-      <Tabs.Screen name="care-jobs" options={{ title: 'Jobs', tabBarIcon: tabIcon('briefcase-outline', 'briefcase') }} />
+      <Tabs.Screen name="care-jobs" options={{ title: 'Tasks', tabBarIcon: tabIcon('briefcase-outline', 'briefcase') }} />
       <Tabs.Screen name="care-profile" options={{ title: 'Profile', tabBarIcon: tabIcon('person-outline', 'person') }} />
     </Tabs>
   );

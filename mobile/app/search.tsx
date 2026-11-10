@@ -50,19 +50,19 @@ export default function Search() {
 
   return (
     <Screen>
-      <ScreenHeader title="Search" subtitle={manager ? 'Jobs, devices, people and requests' : 'Your jobs and devices'} />
-      <Input icon="search" placeholder="Job code, customer, serial, phone, name…" value={q} onChangeText={setQ} autoFocus autoCorrect={false} returnKeyType="search" />
+      <ScreenHeader title="Search" subtitle={manager ? 'Tasks, devices, people and requests' : 'Your tasks and devices'} />
+      <Input icon="search" placeholder="Task code, customer, serial, phone, name…" value={q} onChangeText={setQ} autoFocus autoCorrect={false} returnKeyType="search" />
       {busy ? <ActivityIndicator color={colors.text} /> : null}
       {error ? (
         <Text variant="bodySm" color={colors.danger}>
           {error}
         </Text>
       ) : null}
-      {!q.trim() ? <EmptyState icon="search-outline" title="Find anything" message="Search by job code (JOB-…), customer name or account, router serial number, phone or staff number." /> : null}
+      {!q.trim() ? <EmptyState icon="search-outline" title="Find anything" message="Search by task code (TSK-…), customer name or account, router serial number, phone or staff number." /> : null}
       {empty ? <EmptyState icon="file-tray-outline" title="No matches" message={`Nothing found for “${q.trim()}”.`} /> : null}
 
       {data?.tasks.length ? (
-        <Section title="Jobs">
+        <Section title="Tasks">
           {data.tasks.map((t) => (
             <SectionRow key={t.id} icon="briefcase-outline" tint={colors.text} tintBg={colors.highlight} title={`${t.code} · ${t.title}`} subtitle={`${t.customerName} · ${t.assignee?.name ?? 'Not assigned'}`} right={<Badge label={statusLabel(t.status)} tone={taskStatusTone[t.status]} />} onPress={() => router.push(`/task/${t.id}`)} />
           ))}

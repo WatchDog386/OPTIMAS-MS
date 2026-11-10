@@ -26,8 +26,8 @@ import { useApi } from '../src/hooks/useApi';
 const copy: Record<CapturePurpose, { title: string; hint: string; facing: 'front' | 'back' }> = {
   CHECK_IN: { title: 'Morning check-in', hint: 'Full upper body in frame — uniform and staff ID clearly visible', facing: 'front' },
   CHECK_OUT: { title: 'Evening check-out', hint: 'Face and uniform clearly visible', facing: 'front' },
-  TASK_START: { title: 'Job start photo', hint: 'Show the site / equipment before you begin work', facing: 'back' },
-  TASK_END: { title: 'Job completion photo', hint: 'Show the finished installation — router, cabling and labels', facing: 'back' },
+  TASK_START: { title: 'Task start photo', hint: 'Show the site / equipment before you begin work', facing: 'back' },
+  TASK_END: { title: 'Task completion photo', hint: 'Show the finished installation — router, cabling and labels', facing: 'back' },
 };
 
 async function deviceId() {

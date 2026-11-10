@@ -11,7 +11,7 @@ const NATIVE = Platform.OS !== 'web';
 
 const PLAN: Record<'TECH' | 'CUSTOMER' | 'STAFF' | 'CARE', { steps: string[]; paths: string[] }> = {
   TECH: {
-    steps: ['Verifying your account', 'Syncing today’s jobs', 'Loading your devices & stock', 'Preparing your dashboard'],
+    steps: ['Verifying your account', 'Syncing today’s tasks', 'Loading your devices & stock', 'Preparing your dashboard'],
     paths: ['/attendance/today', '/tasks?status=IN_PROGRESS,ASSIGNED', '/tasks?status=COMPLETED,VERIFIED', '/inventory/my', '/reports/me', '/notifications/unread-count'],
   },
   CUSTOMER: {
@@ -23,7 +23,7 @@ const PLAN: Record<'TECH' | 'CUSTOMER' | 'STAFF' | 'CARE', { steps: string[]; pa
     paths: ['/chat/conversations', '/requests?status=OPEN', '/tasks?status=ASSIGNED,IN_PROGRESS', '/notifications/unread-count'],
   },
   STAFF: {
-    steps: ['Verifying your account', 'Syncing team attendance', 'Loading jobs & stock', 'Preparing your dashboard'],
+    steps: ['Verifying your account', 'Syncing team attendance', 'Loading tasks & stock', 'Preparing your dashboard'],
     paths: ['/reports/dashboard', '/tasks?status=COMPLETED,VERIFIED', '/notifications/unread-count'],
   },
 };

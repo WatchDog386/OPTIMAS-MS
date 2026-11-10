@@ -104,6 +104,11 @@ export interface Task {
   durationMinutes: number | null;
   completionNotes: string | null;
   amountCollected: number | null;
+  /** Task report: signal as read on site, house no., drop cable (m), FAT already there */
+  signal?: string | null;
+  houseNo?: string | null;
+  dropCableM?: number | null;
+  fatPreinstalled?: boolean | null;
   verificationNote: string | null;
   customerSignature: string | null;
   signedByName: string | null;

@@ -36,18 +36,18 @@ export default function ChartsScreen() {
         onChange={setDays}
       />
 
-      <ChartCard title="Jobs completed" big={String(jobs)} note={`avg ${rows.length ? (jobs / rows.length).toFixed(1) : 0} a day`}>
+      <ChartCard title="Tasks completed" big={String(jobs)} note={`avg ${rows.length ? (jobs / rows.length).toFixed(1) : 0} a day`}>
         <BarChart data={rows.map((r) => ({ label: short(r.date), value: r.completed }))} />
       </ChartCard>
 
-      <ChartCard title="Cash collected" big={`KES ${cash.toLocaleString('en-KE')}`} note="on installation jobs">
+      <ChartCard title="Cash collected" big={`KES ${cash.toLocaleString('en-KE')}`} note="on installation tasks">
         <AreaChart data={rows.map((r) => ({ label: short(r.date), value: r.collected }))} format={kes} />
       </ChartCard>
 
       <AttendanceChartCard rows={rows} />
 
       <Glass strong style={{ gap: space.lg }}>
-        <Text variant="h2">Job mix</Text>
+        <Text variant="h2">Task mix</Text>
         <View style={styles.donutRow}>
           <Donut total={String(typeTotal)} slices={(data?.byType ?? []).map((t, i) => ({ label: t.type, value: t.count, color: TYPE_COLOR[i % TYPE_COLOR.length] }))} />
           <View style={{ flex: 1, gap: 10 }}>
@@ -70,7 +70,7 @@ export default function ChartsScreen() {
         <BarChart data={rows.map((r) => ({ label: short(r.date), value: r.installed }))} color={colors.accent} />
       </ChartCard>
 
-      <ChartCard title="Cable used" big={`${sum((r) => r.consumed).toLocaleString('en-KE')} m`} note="drop cable on jobs">
+      <ChartCard title="Cable used" big={`${sum((r) => r.consumed).toLocaleString('en-KE')} m`} note="drop cable on tasks">
         <AreaChart data={rows.map((r) => ({ label: short(r.date), value: r.consumed }))} color={colors.garnet} format={(n) => `${n}m`} />
       </ChartCard>
     </Screen>
