@@ -4,7 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import type { Attendance } from '../api/types';
 import { useApi } from '../hooks/useApi';
 import { useAuth } from '../store/auth';
-import { colors, fonts } from '../theme';
+import { isDark, colors, fonts } from '../theme';
 import { time } from '../utils/format';
 import { Text } from './Text';
 
@@ -63,7 +63,7 @@ export function ShiftCard() {
 }
 
 const styles = StyleSheet.create({
-  card: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 18, backgroundColor: colors.glassStrong, borderWidth: 1, borderColor: colors.glassBorder },
+  card: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 18, backgroundColor: isDark ? '#1F2321' : '#E8EDEA' },
   dot: { width: 10, height: 10, borderRadius: 5 },
   btn: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 42, paddingHorizontal: 16, borderRadius: 21, backgroundColor: colors.primary },
 });

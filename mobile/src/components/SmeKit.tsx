@@ -19,8 +19,8 @@ type IconName = keyof typeof Ionicons.glyphMap;
 
 /** SME's surface and text colours (its light theme, and its dark theme). */
 export const SME = isDark
-  ? { page: '#121212', surface: '#1E1E1E', surface3: '#303538', edge2: '#444444', fg: '#FFFFFF', fg2: '#E4E4EA', fg3: '#A8A8B0', fg4: '#82828C', fg5: '#62626C', unread: '#1E1E1E' }
-  : { page: '#F8FAFC', surface: '#FFFFFF', surface3: '#EEF2F0', edge2: '#CBD5D0', fg: '#17201C', fg2: '#2B3631', fg3: '#5E6B65', fg4: '#8A9690', fg5: '#AAB6B0', unread: '#F2F2F4' };
+  ? { page: '#121212', surface: '#1F2321', surface3: '#303538', edge2: '#444444', fg: '#FFFFFF', fg2: '#E4E4EA', fg3: '#A8A8B0', fg4: '#82828C', fg5: '#62626C', unread: '#1E1E1E' }
+  : { page: '#F8FAFC', surface: '#E8EDEA', surface3: '#DFE6E2', edge2: '#CBD5D0', fg: '#17201C', fg2: '#2B3631', fg3: '#5E6B65', fg4: '#8A9690', fg5: '#AAB6B0', unread: '#F2F2F4' };
 /** SME's lime (profile ring, switches) and brand green (tabs). */
 export const SME_LIME = '#76B82A';
 export const SME_GREEN = isDark ? '#34A94B' : '#2DA043';
@@ -294,7 +294,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     elevation: isDark ? 0 : 1,
   },
-  rowIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: isDark ? '#1E1E1E' : SME.surface3, alignItems: 'center', justifyContent: 'center', ...(isDark ? { borderWidth: 1, borderColor: '#303538' } : null) },
+  // A shade lighter than the row it sits on (rows are a muted tone, set apart from the page)
+  rowIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: isDark ? '#2A302D' : '#F6F8F7', alignItems: 'center', justifyContent: 'center' },
   count: { minWidth: 22, height: 22, paddingHorizontal: 6, borderRadius: 11, backgroundColor: '#E23B41', alignItems: 'center', justifyContent: 'center' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   chip: { height: 40, paddingHorizontal: 20, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },

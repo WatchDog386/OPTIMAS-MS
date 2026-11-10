@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
   caughtUp: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 16, backgroundColor: isDark ? 'rgba(16,185,129,0.1)' : '#ECFDF5' },
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: 8 },
   // Every notification, read or not, in the same clear card
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 16, backgroundColor: SME.surface, borderWidth: 1, borderColor: isDark ? '#303538' : '#E2E8F0' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 16, backgroundColor: SME.surface },
   icon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   dot: { position: 'absolute', right: -2, top: -2, width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: isDark ? '#1E1E1E' : '#FFFFFF' },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
