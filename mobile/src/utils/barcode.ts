@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import { excuseLeaving } from '../store/lock';
+import { readPhoto } from './barcodeDetect';
 
 export type BarcodeKind = 'label' | 'serial' | 'mac' | 'product';
 
@@ -22,8 +23,6 @@ export function readBarcode(raw: string): { kind: BarcodeKind; value: string } {
   if (/^\d{10}[A-Z][A-Z0-9]{5,}$/.test(v)) return { kind: 'product', value: v };
   return { kind: 'serial', value: v };
 }
-
-const FORMATS = ['code_128', 'code_39', 'code_93', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf', 'codabar', 'qr_code', 'data_matrix', 'pdf417', 'aztec'];
 
 /**
  * Opens the phone's own camera app (sharper and better focused than a live preview), then reads every
@@ -53,25 +52,5 @@ export function scanWithPhoneCamera(): Promise<string[] | null> {
   });
 }
 
-type Detector = { detect: (img: CanvasImageSource) => Promise<{ rawValue: string }[]> };
-
-async function decodeImage(file: Blob): Promise<string[]> {
-  const native = (globalThis as unknown as { BarcodeDetector?: { new (o: { formats: string[] }): Detector; getSupportedFormats(): Promise<string[]> } }).BarcodeDetector;
-  let detector: Detector;
-  if (native) {
-    const supported = await native.getSupportedFormats();
-    detector = new native({ formats: FORMATS.filter((f) => supported.includes(f)) });
-  } else {
-    const { BarcodeDetector } = await import('barcode-detector');
-    detector = new BarcodeDetector({ formats: FORMATS as never }) as unknown as Detector;
-  }
-  const bitmap = await createImageBitmap(file);
-  // Very large photos are slow to read and gain nothing: keep the long side near 2400 px
-  const scale = Math.min(1, 2400 / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  const found = await detector.detect(canvas);
-  return [...new Set(found.map((f) => f.rawValue).filter(Boolean))];
-}
+/** Every code in the photo, read every way there is (see barcodeDetect.ts). */
+const decodeImage = (file: Blob) => readPhoto(file);

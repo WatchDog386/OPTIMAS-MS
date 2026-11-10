@@ -1,26 +1,18 @@
 import { createElement, useEffect, useRef } from 'react';
 
-type Detector = { detect: (img: CanvasImageSource) => Promise<{ rawValue: string }[]> };
-type NativeDetector = { new (o: { formats: string[] }): Detector; getSupportedFormats(): Promise<string[]> };
-
-const FORMATS = ['code_128', 'code_39', 'code_93', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf', 'codabar', 'qr_code', 'data_matrix', 'pdf417', 'aztec'];
-
-/** The phone's own barcode reader where the browser has one (Chrome on Android), otherwise ours. */
-async function makeDetector(): Promise<Detector> {
-  const native = (globalThis as unknown as { BarcodeDetector?: NativeDetector }).BarcodeDetector;
-  if (native) {
-    const supported = await native.getSupportedFormats();
-    return new native({ formats: FORMATS.filter((f) => supported.includes(f)) });
-  }
-  const { BarcodeDetector } = await import('barcode-detector');
-  return new BarcodeDetector({ formats: FORMATS as never }) as unknown as Detector;
-}
+import { readView, stickerReaders, viewOf, VIEWS } from '../utils/barcodeDetect';
 
 /**
  * Live barcode scanning in the browser at the camera's full resolution. (A plain camera preview gets a
- * small 640×480 picture, too coarse for the thin barcodes on router stickers.) Reports every code seen.
+ * small 640×480 picture, too coarse for the thin barcodes on router stickers.)
+ *
+ * Accuracy: each frame is read one of four ways in turn (whole, middle enlarged, high contrast, turned),
+ * by the phone's own reader and ours; and a code is only reported once it has been read twice within a
+ * few seconds, so a single misread is never taken. Optimas QR labels (signed) are reported at once.
  */
-export function WebScanner({ onCodes, torch, onError }: { onCodes: (codes: string[]) => void; torch: boolean; onError: (message: string) => void }) {
+const CONFIRM_MS = 3000;
+
+export function WebScanner({ onCodes, torch, zoom = 1, onError }: { onCodes: (codes: string[]) => void; torch: boolean; zoom?: number; onError: (message: string) => void }) {
   const video = useRef<HTMLVideoElement | null>(null);
   const track = useRef<MediaStreamTrack | null>(null);
   const report = useRef(onCodes);
@@ -34,7 +26,7 @@ export function WebScanner({ onCodes, torch, onError }: { onCodes: (codes: strin
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           audio: false,
-          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 2560 }, height: { ideal: 1440 }, frameRate: { ideal: 30 } },
         });
         if (stopped) return stream.getTracks().forEach((t) => t.stop());
         const t = stream.getVideoTracks()[0];
@@ -44,32 +36,36 @@ export function WebScanner({ onCodes, torch, onError }: { onCodes: (codes: strin
         const v = video.current!;
         v.srcObject = stream;
         await v.play().catch(() => undefined);
-        const detector = await makeDetector();
-        // Every other frame: the middle of the picture (where the frame on screen is), enlarged, so a thin
-        // barcode held in the frame has wider bars to read
-        const zoom = document.createElement('canvas');
+        const readers = await stickerReaders();
+        if (!readers.length) throw new Error('no reader');
         let frame = 0;
-        const source = (): CanvasImageSource => {
-          frame += 1;
-          if (frame % 2) return v;
-          const w = v.videoWidth * 0.7;
-          const h = v.videoHeight * 0.4;
-          zoom.width = Math.round(w * 2);
-          zoom.height = Math.round(h * 2);
-          zoom.getContext('2d')!.drawImage(v, (v.videoWidth - w) / 2, (v.videoHeight - h) / 2, w, h, 0, 0, zoom.width, zoom.height);
-          return zoom;
-        };
+        // Codes read recently: value → when it was first and last read, and whether it was reported
+        const seen = new Map<string, { first: number; count: number; reported: boolean }>();
         const tick = async () => {
           if (stopped) return;
           if (v.readyState >= 2 && v.videoWidth) {
+            const view = VIEWS[frame % VIEWS.length];
+            frame += 1;
             try {
-              const found = await detector.detect(source());
-              if (found.length) report.current(found.map((f) => f.rawValue).filter(Boolean));
+              const found = await readView(viewOf(v, v.videoWidth, v.videoHeight, view), readers);
+              const now = Date.now();
+              const confirmed: string[] = [];
+              for (const value of new Set(found)) {
+                const label = /^OPTIMAS:|[?&]c=/i.test(value);
+                const s = seen.get(value);
+                const entry = s && now - s.first < CONFIRM_MS ? { ...s, count: s.count + 1 } : { first: now, count: 1, reported: false };
+                if (!entry.reported && (label || entry.count >= 2)) {
+                  entry.reported = true;
+                  confirmed.push(value);
+                }
+                seen.set(value, entry);
+              }
+              if (confirmed.length) report.current(confirmed);
             } catch {
               /* a frame that cannot be read: try the next one */
             }
           }
-          timer = setTimeout(tick, 120);
+          timer = setTimeout(tick, 70);
         };
         void tick();
       } catch (e) {
@@ -88,6 +84,17 @@ export function WebScanner({ onCodes, torch, onError }: { onCodes: (codes: strin
   useEffect(() => {
     void track.current?.applyConstraints({ advanced: [{ torch } as MediaTrackConstraintSet] }).catch(() => undefined);
   }, [torch]);
+
+  // Zoom (the camera's own, where the phone allows it): small barcodes fill more of the picture while the
+  // phone stays far enough away to focus
+  useEffect(() => {
+    const t = track.current;
+    if (!t) return;
+    const caps = (t.getCapabilities?.() ?? {}) as { zoom?: { min: number; max: number } };
+    if (!caps.zoom) return;
+    const z = Math.min(caps.zoom.max, Math.max(caps.zoom.min, zoom));
+    void t.applyConstraints({ advanced: [{ zoom: z } as MediaTrackConstraintSet] }).catch(() => undefined);
+  }, [zoom]);
 
   return createElement('video', {
     ref: video,

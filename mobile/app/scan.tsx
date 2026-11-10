@@ -43,6 +43,8 @@ export default function Scan() {
   const [serials, setSerials] = useState<string[]>([]);
   const [manual, setManual] = useState('');
   const [torch, setTorch] = useState(false);
+  // 2× zoom for small barcodes: the phone can stay far enough away to focus
+  const [zoom, setZoom] = useState(1);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const done = useRef(false);
   const lastScan = useRef<{ value: string; at: number }>({ value: '', at: 0 });
@@ -59,6 +61,7 @@ export default function Scan() {
 
   const [hint, setHint] = useState<string | null>(null);
   const lastAccepted = useRef(0);
+  const otherReads = useRef(0);
   const [reading, setReading] = useState(false);
 
   /** `typed`: entered by hand, taken as it is. Scanned codes must be the SN (or an Optimas label). */
@@ -67,9 +70,18 @@ export default function Scan() {
     if (!code.value) return;
     if (!typed && (code.kind === 'mac' || code.kind === 'product')) {
       // The same frame often holds the SN too: only nag when no SN came in just now
-      if (Date.now() - lastAccepted.current > 3000) setHint(`That is the ${code.kind === 'mac' ? 'MAC' : 'PROD ID'} barcode. Point at the one marked SN.`);
+      if (Date.now() - lastAccepted.current > 3000) {
+        otherReads.current += 1;
+        // Seeing the other barcodes again and again but never the SN: it is too small or blurred to read
+        setHint(
+          otherReads.current >= 6
+            ? 'The SN barcode is too small or blurred to read. Move closer, tap 2×, or use the phone camera — or type the SN below.'
+            : `That is the ${code.kind === 'mac' ? 'MAC' : 'PROD ID'} barcode. Point at the one marked SN.`,
+        );
+      }
       return false;
     }
+    otherReads.current = 0;
     setHint(null);
     lastAccepted.current = Date.now();
     const value = code.value;
@@ -125,7 +137,7 @@ export default function Scan() {
     <View style={styles.root}>
       {Platform.OS === 'web' ? (
         // Full-resolution video and the phone's own barcode reader (the SN barcode is too fine for a small preview)
-        <WebScanner torch={torch} onCodes={(codes) => codes.forEach((data) => onScanned({ data } as BarcodeScanningResult))} onError={setCameraError} />
+        <WebScanner torch={torch} zoom={zoom} onCodes={(codes) => codes.forEach((data) => onScanned({ data } as BarcodeScanningResult))} onError={setCameraError} />
       ) : (
         <CameraView
           style={StyleSheet.absoluteFill}
@@ -144,6 +156,11 @@ export default function Scan() {
           <Text variant="title" color={colors.white}>
             {params.title || 'Scan serial number'}
           </Text>
+          <Pressable onPress={() => setZoom((z) => (z === 1 ? 2 : 1))} style={styles.round} accessibilityLabel={zoom === 1 ? 'Zoom in 2 times' : 'Zoom out'}>
+            <Text variant="label" color={colors.white} fixedColor style={{ fontFamily: fonts.bold, fontSize: 13 }}>
+              {zoom === 1 ? '2×' : '1×'}
+            </Text>
+          </Pressable>
           <Pressable onPress={() => setTorch((t) => !t)} style={styles.round} accessibilityLabel={torch ? 'Turn torch off' : 'Turn torch on'}>
             <Ionicons name={torch ? 'flash' : 'flash-outline'} size={22} color={colors.white} />
           </Pressable>
