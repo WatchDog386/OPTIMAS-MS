@@ -14,6 +14,7 @@ import { fileRequest, tellAdmins } from '../inventory/stock-approval';
 import { notify, notifyRoles } from '../notifications/notifications.service';
 import { notifyCustomer } from '../customer/customer.service';
 import { audit } from '../../lib/audit';
+import { env } from '../../config/env';
 import { distanceMetres } from '../../lib/geo';
 import { estimateMinutes } from '../../lib/routing';
 import { positionsOf } from '../location/location.service';
@@ -82,15 +83,19 @@ tasksRouter.get(
     const forTech = typeof req.query.assigneeId === 'string' ? req.query.assigneeId : undefined;
     // A technician sees their own jobs and their teams' jobs
     const who = isManager ? forTech : user.id;
+    const where: Prisma.TaskWhereInput = {
+      ...(who ? { OR: [{ assigneeId: who }, { team: { members: { some: { userId: who } } } }] } : {}),
+      status: status?.length ? { in: status } : undefined,
+    };
+    // ?created=today: only jobs created today (company time); `earlier` says how many older ones match
+    const today = req.query.created === 'today' ? new Date(workDateOf().getTime() - env.TZ_OFFSET_MINUTES * 60_000) : null;
     const tasks = await prisma.task.findMany({
-      where: {
-        ...(who ? { OR: [{ assigneeId: who }, { team: { members: { some: { userId: who } } } }] } : {}),
-        status: status?.length ? { in: status } : undefined,
-      },
+      where: today ? { ...where, createdAt: { gte: today } } : where,
       include: { assignee: person, team: { select: { id: true, name: true, leaderId: true, _count: { select: { members: true } } } } },
       orderBy: [{ status: 'asc' }, { dueAt: 'asc' }, { createdAt: 'desc' }],
       take: 200,
     });
+    if (today) return void res.json({ tasks, earlier: await prisma.task.count({ where: { ...where, createdAt: { lt: today } } }) });
     res.json({ tasks });
   }),
 );

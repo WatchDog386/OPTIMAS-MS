@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import type { Task } from '../../src/api/types';
-import { EmptyState, PageHeader, Screen, Segmented, TaskList, Text } from '../../src/components';
-import { useApi } from '../../src/hooks/useApi';
+import { EarlierJobs, EmptyState, PageHeader, Screen, Segmented, TaskList, Text } from '../../src/components';
+import { useTodayJobs } from '../../src/hooks/useTodayJobs';
 import { colors } from '../../src/theme';
 
 const FILTERS = [
@@ -13,7 +12,7 @@ const FILTERS = [
 
 export default function Jobs() {
   const [filter, setFilter] = useState(FILTERS[0].value);
-  const { data, refreshing, refresh, loading } = useApi<{ tasks: Task[] }>(`/tasks${filter ? `?status=${filter}` : ''}`);
+  const { data, refreshing, refresh, loading, earlier, earlierShown, showEarlier } = useTodayJobs(filter);
   return (
     <Screen refreshing={refreshing} onRefresh={refresh}>
       <PageHeader title="My jobs" />
@@ -22,7 +21,8 @@ export default function Jobs() {
       </Text>
       <Segmented options={FILTERS} value={filter} onChange={setFilter} />
       {data?.tasks.length ? <TaskList tasks={data.tasks} /> : null}
-      {!loading && !data?.tasks.length ? <EmptyState icon="briefcase-outline" title="Nothing here" message="No jobs match this filter." /> : null}
+      {!loading && !data?.tasks.length ? <EmptyState icon="briefcase-outline" title={earlierShown ? 'Nothing here' : 'No jobs today'} message={earlierShown ? 'No jobs match this filter.' : 'Only jobs created today are listed here.'} /> : null}
+      <EarlierJobs count={earlier} onPress={showEarlier} />
     </Screen>
   );
 }

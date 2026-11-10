@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
 import type { Task, TaskStatus } from '../../src/api/types';
-import { Button, EmptyState, HeaderButton, PageHeader, Reveal, Screen, Segmented, TaskCard, Text } from '../../src/components';
+import { Button, EarlierJobs, EmptyState, HeaderButton, PageHeader, Reveal, Screen, Segmented, TaskCard, Text } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
+import { useTodayJobs } from '../../src/hooks/useTodayJobs';
 import { colors, space } from '../../src/theme';
 
 type Show = 'assign' | 'open' | 'done';
@@ -26,7 +27,7 @@ export default function CareJobs() {
     picked.current = true;
     setShow(v);
   };
-  const { data, refresh, refreshing, loading } = useApi<{ tasks: Task[] }>(`/tasks?status=${STATUSES[show].join(',')}`, { poll: 30_000 });
+  const { data, refresh, refreshing, loading, earlier, showEarlier } = useTodayJobs(STATUSES[show].join(','), { poll: 30_000 });
   const tasks = data?.tasks ?? [];
 
   return (
@@ -75,6 +76,7 @@ export default function CareJobs() {
           </View>
         </Reveal>
       ))}
+      <EarlierJobs count={earlier} onPress={showEarlier} />
       {show === 'done' && tasks.length ? (
         <Text variant="label" color={colors.textMuted} align="center">
           Open a job to read the technician’s report.

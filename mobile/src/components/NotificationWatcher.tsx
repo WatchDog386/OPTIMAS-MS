@@ -9,7 +9,7 @@ import * as Notifications from 'expo-notifications';
 import { playChime } from '../utils/chime';
 import { hasPush } from '../utils/push';
 import { router } from 'expo-router';
-import { notificationStyle, openNotificationTarget, type AppNotification } from '../utils/notifications';
+import { notificationLook, openNotificationTarget, type AppNotification } from '../utils/notifications';
 import { Text } from './Text';
 
 const POLL_MS = 20_000;
@@ -74,7 +74,7 @@ export function NotificationWatcher() {
   const hide = () => Animated.timing(y, { toValue: -160, duration: 300, useNativeDriver: Platform.OS !== 'web' }).start(() => setLatest(null));
 
   if (!latest || !userId) return null;
-  const style = notificationStyle[latest.type] ?? { icon: 'notifications' as const, tint: colors.text };
+  const style = notificationLook(latest);
   return (
     <Animated.View pointerEvents="box-none" style={[styles.wrap, { top: insets.top + 10, transform: [{ translateY: y }] }]}>
       <Pressable

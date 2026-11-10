@@ -11,7 +11,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useApi } from '../src/hooks/useApi';
 import { RoleTabBar } from '../src/components/tabs';
 import { fonts, isDark, space } from '../src/theme';
-import { notificationStyle, openNotificationTarget, type AppNotification } from '../src/utils/notifications';
+import { notificationLook, openNotificationTarget, type AppNotification, type NoteTone } from '../src/utils/notifications';
 
 type Tab = 'ALL' | 'JOBS' | 'ATTENDANCE' | 'STOCK' | 'ACTIVITY';
 const TAB_OF: Record<string, Exclude<Tab, 'ALL'>> = {
@@ -35,26 +35,23 @@ const TAB_OF: Record<string, Exclude<Tab, 'ALL'>> = {
 };
 
 /** SME's coloured round icon tiles: a soft tint with the icon in the strong colour. */
-type Tone = 'warning' | 'danger' | 'info' | 'success';
-const TONE: Record<Tone, { bg: string; fg: string }> = isDark
-  ? { warning: { bg: 'rgba(245,158,11,0.1)', fg: '#FCD34D' }, danger: { bg: 'rgba(239,68,68,0.1)', fg: '#FCA5A5' }, info: { bg: 'rgba(14,165,233,0.1)', fg: '#7DD3FC' }, success: { bg: 'rgba(16,185,129,0.1)', fg: '#6EE7B7' } }
-  : { warning: { bg: '#FFFBEB', fg: '#D97706' }, danger: { bg: '#FEF2F2', fg: '#DC2626' }, info: { bg: '#F0F9FF', fg: '#0284C7' }, success: { bg: '#ECFDF5', fg: '#059669' } };
-const TONE_OF: Record<string, Tone> = {
-  TASK_REJECTED: 'danger',
-  TASK_CANCELLED: 'danger',
-  DRESS_REJECTED: 'danger',
-  CHECKOUT_REJECTED: 'danger',
-  STOCK_COUNT_MISMATCH: 'danger',
-  UNIT_LOST: 'danger',
-  STOCK_APPROVAL: 'warning',
-  LATE_CHECK_IN: 'warning',
-  PHOTO_FLAGGED: 'warning',
-  SERVICE_REQUEST: 'warning',
-  TASK_COMPLETED: 'success',
-  TASK_VERIFIED: 'success',
-  JOB_UPDATE: 'success',
-  APP_UPDATE: 'success',
-};
+const TONE: Record<NoteTone, { bg: string; fg: string }> = isDark
+  ? {
+      warning: { bg: 'rgba(245,158,11,0.12)', fg: '#FCD34D' },
+      danger: { bg: 'rgba(239,68,68,0.12)', fg: '#FCA5A5' },
+      info: { bg: 'rgba(14,165,233,0.12)', fg: '#7DD3FC' },
+      success: { bg: 'rgba(16,185,129,0.12)', fg: '#6EE7B7' },
+      chat: { bg: 'rgba(139,92,246,0.14)', fg: '#C4B5FD' },
+      neutral: { bg: 'rgba(255,255,255,0.08)', fg: '#D4D4D8' },
+    }
+  : {
+      warning: { bg: '#FFF4D6', fg: '#B45309' },
+      danger: { bg: '#FDE4E4', fg: '#C62828' },
+      info: { bg: '#E0F0FB', fg: '#0369A1' },
+      success: { bg: '#DDF3E8', fg: '#047857' },
+      chat: { bg: '#ECE6FB', fg: '#6D28D9' },
+      neutral: { bg: '#F1F3F2', fg: '#52525B' },
+    };
 const TAB_LABEL: Record<Tab, string> = { ALL: 'All', JOBS: 'Jobs', ATTENDANCE: 'Attendance', STOCK: 'Stock', ACTIVITY: 'Activity' };
 
 /** "12:32 PM" today, otherwise "23/10/26". */
@@ -224,8 +221,9 @@ function Section({ title, count, children }: { title: string; count: number; chi
 }
 
 function Row({ n, unread = false, index, onOpen }: { n: AppNotification; unread?: boolean; index: number; onOpen: (n: AppNotification) => void }) {
-  const icon = notificationStyle[n.type]?.icon ?? 'notifications';
-  const tone = TONE[TONE_OF[n.type] ?? 'info'];
+  const look = notificationLook(n);
+  const icon = look.icon;
+  const tone = TONE[look.tone];
   return (
     <Reveal index={Math.min(index, 8)}>
       <Pressable

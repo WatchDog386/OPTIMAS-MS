@@ -34,6 +34,117 @@ export const notificationStyle: Record<string, { icon: keyof typeof Ionicons.gly
   STOCK_APPROVAL: { icon: 'cube', tint: colors.warning },
 };
 
+type IconName = keyof typeof Ionicons.glyphMap;
+/** The colour family of a notification's icon tile. */
+export type NoteTone = 'success' | 'warning' | 'danger' | 'info' | 'chat' | 'neutral';
+type Look = { icon: IconName; tone: NoteTone };
+
+/** Activity alerts: what someone did, matched on the alert's wording (see backend lib/activity.ts). */
+const ACTIVITY_LOOKS: [RegExp, Look][] = [
+  [/checked in/i, { icon: 'log-in', tone: 'success' }],
+  [/checked out/i, { icon: 'log-out', tone: 'info' }],
+  [/office location/i, { icon: 'business', tone: 'info' }],
+  [/reviewed a check-in photo/i, { icon: 'camera', tone: 'info' }],
+  [/reviewed a check-out/i, { icon: 'log-out', tone: 'info' }],
+  [/created job/i, { icon: 'add-circle', tone: 'info' }],
+  [/updated job/i, { icon: 'create', tone: 'info' }],
+  [/moved job|to another technician/i, { icon: 'git-branch', tone: 'info' }],
+  [/cancelled job/i, { icon: 'close-circle', tone: 'danger' }],
+  [/sent back job/i, { icon: 'arrow-undo-circle', tone: 'danger' }],
+  [/verified job/i, { icon: 'shield-checkmark', tone: 'success' }],
+  [/started job/i, { icon: 'play-circle', tone: 'warning' }],
+  [/finished job/i, { icon: 'checkmark-done-circle', tone: 'success' }],
+  [/approved items in bulk/i, { icon: 'checkmark-done', tone: 'success' }],
+  [/team/i, { icon: 'people', tone: 'info' }],
+  [/added an account|onboarded a customer/i, { icon: 'person-add', tone: 'info' }],
+  [/reset someone's password/i, { icon: 'key', tone: 'warning' }],
+  [/updated an account/i, { icon: 'person', tone: 'info' }],
+  [/received stock/i, { icon: 'download', tone: 'info' }],
+  [/issued stock/i, { icon: 'arrow-redo', tone: 'info' }],
+  [/confirmed receiving/i, { icon: 'checkmark-circle', tone: 'success' }],
+  [/returned stock/i, { icon: 'return-down-back', tone: 'info' }],
+  [/device installed/i, { icon: 'wifi', tone: 'success' }],
+  [/stock count/i, { icon: 'clipboard', tone: 'info' }],
+  [/collected a device/i, { icon: 'arrow-undo-circle', tone: 'warning' }],
+  [/adjusted store stock/i, { icon: 'options', tone: 'warning' }],
+  [/catalogue/i, { icon: 'pricetags', tone: 'info' }],
+  [/approved a stock change/i, { icon: 'checkmark-circle', tone: 'success' }],
+  [/rejected a stock change/i, { icon: 'close-circle', tone: 'danger' }],
+  [/asked for a service visit/i, { icon: 'construct', tone: 'warning' }],
+  [/rated a visit/i, { icon: 'star', tone: 'warning' }],
+  [/closed a customer request/i, { icon: 'checkmark-circle', tone: 'success' }],
+];
+
+/** A stock change, from its summary ("Install …", "Collect …", "Return …"). */
+function stockLook(text: string): IconName {
+  if (/^install|installed/i.test(text)) return 'wifi';
+  if (/^collect/i.test(text)) return 'arrow-undo-circle';
+  if (/^return/i.test(text)) return 'return-down-back';
+  if (/^issue/i.test(text)) return 'arrow-redo';
+  if (/^receive/i.test(text)) return 'download';
+  if (/lost/i.test(text)) return 'alert-circle';
+  if (/adjust/i.test(text)) return 'options';
+  return 'cube';
+}
+
+/**
+ * The icon and colour that say what a notification is about: by its kind, and for the broad kinds
+ * (activity, stock approvals, job updates, customer requests) by what actually happened.
+ */
+export function notificationLook(n: { type: string; title: string; body?: string }): Look {
+  const t = n.title;
+  const b = n.body ?? '';
+  switch (n.type) {
+    case 'ACTIVITY':
+      return ACTIVITY_LOOKS.find(([re]) => re.test(t))?.[1] ?? { icon: 'pulse', tone: 'info' };
+    case 'STOCK_APPROVAL':
+      if (/^approved/i.test(t)) return { icon: 'checkmark-circle', tone: 'success' };
+      if (/^not approved/i.test(t)) return { icon: 'close-circle', tone: 'danger' };
+      return { icon: stockLook(b), tone: 'warning' };
+    case 'TASK_ASSIGNED':
+      return /forwarded|moved/i.test(t) ? { icon: 'git-branch', tone: 'info' } : { icon: 'briefcase', tone: /urgent/i.test(t) ? 'danger' : 'info' };
+    case 'JOB_UPDATE':
+      if (/★/.test(t)) return { icon: 'star', tone: 'warning' };
+      if (/started/i.test(t)) return { icon: 'play-circle', tone: 'warning' };
+      if (/completed/i.test(t)) return { icon: 'checkmark-done-circle', tone: 'success' };
+      if (/reassigned|moved/i.test(t)) return { icon: 'git-branch', tone: 'info' };
+      return { icon: 'construct', tone: 'info' };
+    case 'SERVICE_REQUEST':
+      if (/repair/i.test(t)) return { icon: 'build', tone: 'warning' };
+      if (/relocation/i.test(t)) return { icon: 'swap-horizontal', tone: 'warning' };
+      if (/installation/i.test(t)) return { icon: 'wifi', tone: 'warning' };
+      return { icon: 'help-buoy', tone: 'warning' };
+    case 'TASK_COMPLETED':
+      return { icon: 'checkmark-done-circle', tone: 'success' };
+    case 'TASK_VERIFIED':
+      return { icon: 'shield-checkmark', tone: 'success' };
+    case 'TASK_REJECTED':
+      return { icon: 'arrow-undo-circle', tone: 'danger' };
+    case 'TASK_CANCELLED':
+      return { icon: 'close-circle', tone: 'danger' };
+    case 'STOCK_ISSUED':
+      return { icon: 'cube', tone: 'info' };
+    case 'DRESS_REJECTED':
+      return { icon: 'shirt', tone: 'danger' };
+    case 'CHECKOUT_REJECTED':
+      return { icon: 'log-out', tone: 'danger' };
+    case 'LATE_CHECK_IN':
+      return { icon: 'alarm', tone: 'warning' };
+    case 'PHOTO_FLAGGED':
+      return { icon: /location|away|outside/i.test(t + b) ? 'location' : 'flag', tone: 'warning' };
+    case 'STOCK_COUNT_MISMATCH':
+      return { icon: 'git-compare', tone: 'danger' };
+    case 'UNIT_LOST':
+      return { icon: 'alert-circle', tone: 'danger' };
+    case 'CHAT_MESSAGE':
+      return { icon: 'chatbubble-ellipses', tone: 'chat' };
+    case 'APP_UPDATE':
+      return { icon: 'rocket', tone: 'success' };
+    default:
+      return { icon: 'notifications', tone: 'neutral' };
+  }
+}
+
 /**
  * Opens what a notification is about (from the list, the in-app banner, or a phone alert). Returns false
  * when it has no page of its own — the caller then shows the full message instead.
