@@ -8,6 +8,7 @@ import { colors, fonts } from '../theme';
 import * as Notifications from 'expo-notifications';
 import { playChime } from '../utils/chime';
 import { hasPush } from '../utils/push';
+import { router } from 'expo-router';
 import { notificationStyle, openNotificationTarget, type AppNotification } from '../utils/notifications';
 import { Text } from './Text';
 
@@ -79,7 +80,7 @@ export function NotificationWatcher() {
       <Pressable
         onPress={() => {
           hide();
-          openNotificationTarget(latest.type, latest.data);
+          if (!openNotificationTarget(latest.type, latest.data)) router.push('/notifications');
         }}
         accessibilityRole="alert"
         style={({ pressed }) => [styles.card, pressed && { transform: [{ scale: 0.98 }] }]}

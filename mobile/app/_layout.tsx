@@ -126,7 +126,7 @@ export default function RootLayout() {
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       const content = response.notification.request.content;
       const data = (content.data ?? {}) as Record<string, unknown>;
-      openNotificationTarget(String(data.type ?? ''), data);
+      if (!openNotificationTarget(String(data.type ?? ''), data)) router.push('/notifications');
     });
     return () => sub.remove();
   }, []);

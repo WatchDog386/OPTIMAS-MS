@@ -33,7 +33,14 @@ self.addEventListener('push', (event) => {
         badge: '/icons/icon-192.png',
         // Chat messages open their conversation (one alert per conversation); everything else the inbox
         tag: msg.data && msg.data.conversationId ? `chat-${msg.data.conversationId}` : msg.type || 'optimas',
-        data: { url: msg.data && msg.data.conversationId ? `/chat/${msg.data.conversationId}` : '/notifications' },
+        // Tapping it opens what it is about: a chat straight away, anything else through the app (which
+        // knows each kind's page) via the notifications page
+        data: {
+          url:
+            msg.data && msg.data.conversationId
+              ? `/chat/${msg.data.conversationId}`
+              : `/notifications?go=${encodeURIComponent(JSON.stringify({ type: msg.type || '', data: msg.data || {} }))}`,
+        },
       });
     })(),
   );

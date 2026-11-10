@@ -34,26 +34,37 @@ export const notificationStyle: Record<string, { icon: keyof typeof Ionicons.gly
   STOCK_APPROVAL: { icon: 'cube', tint: colors.warning },
 };
 
-/** Where tapping a notification (in the inbox or from a push) should take the user. */
-export function openNotificationTarget(type: string, data?: Record<string, unknown> | null) {
-  const customer = useAuth.getState().user?.role === 'CUSTOMER';
+/**
+ * Opens what a notification is about (from the list, the in-app banner, or a phone alert). Returns false
+ * when it has no page of its own — the caller then shows the full message instead.
+ */
+export function openNotificationTarget(type: string, data?: Record<string, unknown> | null): boolean {
+  const role = useAuth.getState().user?.role;
+  const go = (href: string) => {
+    router.push(href as never);
+    return true;
+  };
   // A new version is live: reloading opens it
-  if (type === 'APP_UPDATE' && typeof window !== 'undefined' && window.location) return window.location.reload();
-  if (type === 'CHAT_MESSAGE' && typeof data?.conversationId === 'string') return router.push(`/chat/${data.conversationId}`);
-  if (customer) {
-    if (typeof data?.taskId === 'string') return router.push(`/visit/${data.taskId}`);
-    return router.push('/requests');
+  if (type === 'APP_UPDATE' && typeof window !== 'undefined' && window.location) {
+    window.location.reload();
+    return true;
   }
-  if (type === 'SERVICE_REQUEST') return router.push('/admin/requests');
-  if (typeof data?.taskId === 'string') return router.push(`/task/${data.taskId}`);
-  if (type === 'STOCK_ISSUED') return router.push('/stock');
+  if (type === 'CHAT_MESSAGE' && typeof data?.conversationId === 'string') return go(`/chat/${data.conversationId}`);
+  if (role === 'CUSTOMER') return typeof data?.taskId === 'string' ? go(`/visit/${data.taskId}`) : go('/requests');
+  if (type === 'SERVICE_REQUEST') return go(role === 'CUSTOMER_CARE' ? '/care-requests' : '/admin/requests');
+  if (typeof data?.taskId === 'string') return go(`/task/${data.taskId}`);
+  if (type === 'STOCK_ISSUED') return go(role === 'TECHNICIAN' ? '/stock' : '/store');
   // A stock change: admins open the Stock approvals; the person who asked sees it in My stock
-  if (type === 'STOCK_APPROVAL') return router.push((useAuth.getState().user?.role === 'ADMIN' ? '/admin/approvals?tab=stock' : useAuth.getState().user?.role === 'TECHNICIAN' ? '/stock' : '/store') as never);
+  if (type === 'STOCK_APPROVAL') return go(role === 'ADMIN' ? '/admin/approvals?tab=stock' : role === 'TECHNICIAN' ? '/stock' : '/store');
   // Late or flagged check-ins open straight on the review desk, where the photo can be approved
-  if (type === 'LATE_CHECK_IN' || type === 'PHOTO_FLAGGED') return router.push('/admin/approvals?tab=checkins');
-  if (type === 'STOCK_COUNT_MISMATCH') return router.push('/admin/reconciliation');
-  if (type === 'UNIT_LOST' && typeof data?.serialNumber === 'string') return router.push(`/admin/unit?serial=${data.serialNumber}`);
-  router.push('/notifications');
+  if (type === 'LATE_CHECK_IN' || type === 'PHOTO_FLAGGED') return go('/admin/approvals?tab=checkins');
+  // A technician's own check-in or check-out sent back: their attendance history
+  if (type === 'DRESS_REJECTED' || type === 'CHECKOUT_REJECTED') return go(role === 'TECHNICIAN' ? '/profile' : '/more');
+  if (type === 'STOCK_COUNT_MISMATCH') return go('/admin/reconciliation');
+  if (type === 'UNIT_LOST' && typeof data?.serialNumber === 'string') return go(`/admin/unit?serial=${encodeURIComponent(data.serialNumber)}`);
+  // Something someone did: the activity timeline (office staff)
+  if (type === 'ACTIVITY' && (role === 'ADMIN' || role === 'SUPERVISOR')) return go('/admin/activity');
+  return false;
 }
 
 export const ago = (iso: string) => {

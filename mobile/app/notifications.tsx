@@ -6,7 +6,8 @@ import { api } from '../src/api/client';
 import { Button, Reveal, Text } from '../src/components';
 import { SME, SmeAppBar, useScrolledBar, SmeChips } from '../src/components/SmeKit';
 import { enableWebPush, webPushState, type WebPushState } from '../src/utils/webpush';
-import { toast } from '../src/store/feedback';
+import { alertDialog, toast } from '../src/store/feedback';
+import { useLocalSearchParams } from 'expo-router';
 import { useApi } from '../src/hooks/useApi';
 import { fonts, isDark, space } from '../src/theme';
 import { notificationStyle, openNotificationTarget, type AppNotification } from '../src/utils/notifications';
@@ -64,7 +65,8 @@ function when(iso: string) {
 }
 
 /**
- * Notifications, as in Optimas-SME: "Mark all read", filled topic tabs, then "New" and "Earlier". Each
+ * Notifications, as in Optimas-SME: "Mark all read", filled topic tabs, then what is still unread (read
+ * ones leave the list; "Show read" brings them back). Each
  * is a clear card with a coloured round icon (a red dot while unread, green once read); opening one marks it read and goes to what it is about.
  */
 export default function Notifications() {
@@ -72,6 +74,20 @@ export default function Notifications() {
   const bar = useScrolledBar();
   const { data, setData, loading } = useApi<{ notifications: AppNotification[]; unread: number }>('/notifications');
   const [tab, setTab] = useState<Tab>('ALL');
+  // Read notifications leave the list; they can still be looked at here
+  const [showRead, setShowRead] = useState(false);
+
+  // Opened from a phone alert: open what it is about straight away
+  const { go } = useLocalSearchParams<{ go?: string }>();
+  useEffect(() => {
+    if (!go) return;
+    try {
+      const { type, data: d } = JSON.parse(go) as { type: string; data: Record<string, unknown> };
+      openNotificationTarget(type, d);
+    } catch {
+      /* not a link from an alert */
+    }
+  }, [go]);
 
   // On the installed web app: offer alerts that arrive even when the app is closed
   const [push, setPush] = useState<WebPushState>('unsupported');
@@ -104,9 +120,11 @@ export default function Notifications() {
     );
     void api('/notifications/read', { body: ids ? { ids } : {} }).catch(() => undefined);
   };
+  // Opening one marks it read (so it leaves the list) and goes to what it is about; one with no page of
+  // its own opens in full here
   const open = (n: AppNotification) => {
     if (!n.readAt) markRead([n.id]);
-    openNotificationTarget(n.type, n.data);
+    if (!openNotificationTarget(n.type, n.data)) void alertDialog({ title: n.title, message: n.body, emoji: '🔔' });
   };
 
   return (
@@ -147,7 +165,7 @@ export default function Notifications() {
           </View>
         ) : null}
 
-        {loading && !data ? null : !shown.length ? (
+        {loading && !data ? null : !shown.length && !earlier.length ? (
           <Empty />
         ) : (
           <>
@@ -166,11 +184,19 @@ export default function Notifications() {
               </View>
             )}
             {earlier.length ? (
-              <Section title="Earlier" count={earlier.length}>
-                {earlier.map((n, i) => (
-                  <Row key={n.id} n={n} index={i} onOpen={open} />
-                ))}
-              </Section>
+              showRead ? (
+                <Section title="Read" count={earlier.length}>
+                  {earlier.map((n, i) => (
+                    <Row key={n.id} n={n} index={i} onOpen={open} />
+                  ))}
+                </Section>
+              ) : (
+                <Pressable onPress={() => setShowRead(true)} accessibilityRole="button" style={styles.showRead}>
+                  <Text variant="label" color={SME.fg3} fixedColor style={{ fontFamily: fonts.medium, fontSize: 13 }}>
+                    Show read ({earlier.length})
+                  </Text>
+                </Pressable>
+              )
             ) : null}
           </>
         )}
@@ -251,6 +277,7 @@ const styles = StyleSheet.create({
   body: { paddingHorizontal: 16, paddingTop: 8, gap: 20, maxWidth: 672, width: '100%', alignSelf: 'center' },
   markAll: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 36, paddingHorizontal: 14, borderRadius: 18, backgroundColor: SME.surface3 },
   alerts: { gap: space.sm, padding: 16, borderRadius: 16, backgroundColor: SME.surface },
+  showRead: { alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 16 },
   caughtUp: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 16, backgroundColor: isDark ? 'rgba(16,185,129,0.1)' : '#ECFDF5' },
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: 8 },
   // Every notification, read or not, in the same clear card
