@@ -29,6 +29,7 @@ import {
   type TimelineItem,
 } from '../../src/components';
 import { WeekCard } from '../../src/components/WeekCard';
+import { useInstallAction } from '../../src/components/InstallPrompt';
 import { useApi } from '../../src/hooks/useApi';
 import { useAuth } from '../../src/store/auth';
 import { colors, fonts } from '../../src/theme';
@@ -72,6 +73,8 @@ export default function TechHome() {
   }, []);
 
   const record = today.data?.record;
+  // Install the app on this phone (shown until it is installed)
+  const installer = useInstallAction();
   const shift: 'OFF' | 'ON' | 'DONE' = !record ? 'OFF' : record.checkOutAt ? 'DONE' : 'ON';
   const jobs = open.data?.tasks ?? [];
   const next = pickNext(jobs);
@@ -260,7 +263,7 @@ export default function TechHome() {
         <QuickActions
           items={[
             { label: shift === 'ON' ? 'Check out' : 'Check in', icon: 'scan-outline', onPress: () => router.push(shift === 'ON' ? '/check-in?mode=out' : '/check-in?mode=in') },
-            { label: 'Install', icon: 'hardware-chip-outline', onPress: () => router.push('/install') },
+            ...(installer.available ? [{ label: installer.busy ? 'Installing…' : 'Install app', icon: 'download-outline' as const, onPress: () => void installer.start() }] : []),
             { label: 'My jobs', icon: 'briefcase-outline', onPress: () => router.push('/jobs') },
             { label: 'My stock', icon: 'cube-outline', onPress: () => router.push('/stock'), badge: pending.length },
             { label: 'Onboard customer', icon: 'person-add-outline', onPress: () => router.push('/onboard') },
@@ -271,6 +274,7 @@ export default function TechHome() {
       </Reveal>
 
       <BrandFooter />
+      {installer.sheet}
     </Screen>
   );
 }

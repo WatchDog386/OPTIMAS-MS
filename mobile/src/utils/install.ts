@@ -16,6 +16,15 @@ const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
 const isWeb = Platform.OS === 'web' && typeof window !== 'undefined';
+/** Set when this browser installed the app, so the tab it was installed from stops offering it. */
+const INSTALLED_KEY = 'optimas.installed';
+const installedHere = () => {
+  try {
+    return localStorage.getItem(INSTALLED_KEY) === '1';
+  } catch {
+    return false;
+  }
+};
 
 if (isWeb) {
   // Caught by /pwa-early.js before this code loaded
@@ -35,6 +44,11 @@ if (isWeb) {
   });
   window.addEventListener('appinstalled', () => {
     deferred = null;
+    try {
+      localStorage.setItem(INSTALLED_KEY, '1');
+    } catch {
+      /* private mode */
+    }
     emit();
   });
 }
@@ -83,10 +97,11 @@ export function useInstallPrompt() {
     /** iPhone Safari: install only via Share → Add to Home Screen. */
     needsIosSteps: ios && !deferred,
     /**
-     * Show Install only when it will work: the phone has offered to install the app (one tap installs it
-     * like any Android app), or on iPhone. Hidden once installed, and inside the installed app.
+     * Shown to everyone who opened the app in a browser and has not installed it: one tap installs where
+     * the phone offers it; on every other browser (Samsung, Firefox, iPhone, links opened inside WhatsApp,
+     * or Chrome after "Not now") the button shows that browser's steps. Hidden inside the installed app.
      */
-    available: isWeb && !runningAsApp() && (!!deferred || ios),
+    available: isWeb && !runningAsApp() && !installedHere(),
     install,
   };
 }
