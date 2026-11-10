@@ -17,6 +17,7 @@ export default function Profile() {
   return (
     <SmeProfilePage
       tools={[
+        { key: 'install', icon: 'hardware-chip-outline', title: 'Install a device', sub: 'Router installed, no job needed · admin approves', onPress: () => router.push('/install') },
         { key: 'alerts', icon: 'notifications-outline', title: 'Notifications', sub: 'Jobs, stock and approvals', onPress: () => router.push('/notifications'), count: unread.data?.unread },
         { key: 'search', icon: 'search', title: 'Search', sub: 'My jobs and devices', onPress: () => router.push('/search') },
       ]}

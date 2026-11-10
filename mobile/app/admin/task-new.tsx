@@ -70,7 +70,7 @@ export default function NewTask() {
     try {
       const { task } = await api<{ task: Task }>('/tasks', {
         body: {
-          ...Object.fromEntries(Object.entries(form).filter(([, v]) => v.trim() !== '')),
+          ...Object.fromEntries(Object.entries(form).filter(([k, v]) => v.trim() !== '' && !(k === 'customerAccount' && type === 'INSTALLATION'))),
           type,
           priority,
           ...(later ? { assignLater: true } : assignmentBody(assign)),
@@ -96,7 +96,8 @@ export default function NewTask() {
       <View style={{ gap: space.md }}>
         <Input label="Customer / premises" icon="person-outline" value={form.customerName} onChangeText={set('customerName')} />
         <Input label="Phone" icon="call-outline" keyboardType="phone-pad" value={form.customerPhone} onChangeText={set('customerPhone')} />
-        <Input label="Account no." icon="document-text-outline" autoCapitalize="characters" value={form.customerAccount} onChangeText={set('customerAccount')} />
+        {/* A new installation has no account number yet: it is given once the customer is connected */}
+        {type === 'INSTALLATION' ? null : <Input label="Account no." icon="document-text-outline" autoCapitalize="characters" value={form.customerAccount} onChangeText={set('customerAccount')} />}
         <Input label={care ? 'Location' : 'Address / directions'} icon="location-outline" multiline value={form.address} onChangeText={set('address')} placeholder={care ? 'Estate, road, building, house no.' : undefined} />
       </View>
     </>

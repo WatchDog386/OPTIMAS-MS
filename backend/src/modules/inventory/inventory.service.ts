@@ -277,6 +277,7 @@ export async function installSerial(
   userId: string,
   serialNumber: string,
   task: { id: string | null; customerAccount: string | null },
+  place?: { location?: string | null; note?: string | null; lat?: number | null; lng?: number | null } | null,
 ) {
   const unit = await requireHeldUnit(tx, userId, serialNumber);
   // Taking a device out and installing it proves it was received: accept it on the way
@@ -292,10 +293,14 @@ export async function installSerial(
       taskId: task.id,
       customerAccount: task.customerAccount,
       installedAt: new Date(),
+      installLocation: place?.location ?? null,
+      installNote: place?.note ?? null,
+      installLat: place?.lat ?? null,
+      installLng: place?.lng ?? null,
     },
   });
   await tx.stockMovement.create({
-    data: { type: 'INSTALL', itemId: unit.itemId, serialUnitId: unit.id, quantity: 1, fromUserId: userId, actorId: userId, taskId: task.id },
+    data: { type: 'INSTALL', itemId: unit.itemId, serialUnitId: unit.id, quantity: 1, fromUserId: userId, actorId: userId, taskId: task.id, note: [place?.location, place?.note].filter(Boolean).join(' — ') || undefined },
   });
   return unit;
 }

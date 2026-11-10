@@ -28,7 +28,7 @@ const EXECUTE: Record<StockRequestType, (tx: Tx, actorId: string, p: Payload) =>
     bulk: p.itemId && p.quantity ? await svc.returnBulk(tx, actor, p.userId, p.itemId, p.quantity, p.note) : undefined,
   }),
   REPORT_LOST: (tx, actor, p) => svc.reportLost(tx, actor, p.serialNumber, p.note),
-  INSTALL: (tx, actor, p) => svc.installSerial(tx, actor, p.serial, { id: p.taskId ?? null, customerAccount: p.customerAccount ?? null }),
+  INSTALL: (tx, actor, p) => svc.installSerial(tx, actor, p.serial, { id: p.taskId ?? null, customerAccount: p.customerAccount ?? null }, p.place ?? (p.note ? { note: p.note } : null)),
   MARK_INSTALLED: async (tx, actor, p) => {
     const unit = await tx.serialUnit.findFirst({ where: { serialNumber: { in: svc.codeVariants(p.serial) } } });
     if (!unit) throw badRequest(`No device with serial ${p.serial}`);
@@ -41,7 +41,7 @@ const EXECUTE: Record<StockRequestType, (tx: Tx, actorId: string, p: Payload) =>
     const unit = await tx.serialUnit.findUnique({ where: { id: p.unitId } });
     if (!unit || unit.status !== 'INSTALLED') throw conflict(`${p.serial} is no longer installed at a customer`);
     const status = p.storeSide ? (p.condition === 'GOOD' ? 'IN_STORE' : 'FAULTY') : 'WITH_TECHNICIAN';
-    await tx.serialUnit.update({ where: { id: unit.id }, data: { status, holderId: p.storeSide ? null : actor, heldSince: p.storeSide ? null : new Date(), customerAccount: null, taskId: null, installedAt: null } });
+    await tx.serialUnit.update({ where: { id: unit.id }, data: { status, holderId: p.storeSide ? null : actor, heldSince: p.storeSide ? null : new Date(), customerAccount: null, taskId: null, installedAt: null, installLocation: null, installNote: null, installLat: null, installLng: null } });
     await tx.stockMovement.create({
       data: { type: 'RECOVER', itemId: unit.itemId, serialUnitId: unit.id, quantity: 1, toUserId: p.storeSide ? null : actor, actorId: actor, taskId: p.taskId ?? null, note: `From ${unit.customerAccount ?? 'customer'} · ${p.condition === 'GOOD' ? 'working' : 'faulty'} · ${p.reason}` },
     });

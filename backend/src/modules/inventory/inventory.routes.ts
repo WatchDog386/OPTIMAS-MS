@@ -377,16 +377,38 @@ const installSchema = z.object({
   note: z.string().trim().max(300).optional(),
 });
 
-/** A technician records a device installed at a customer when there was no Installation job in the app. */
+/*
+ * A technician records a device installed when there was no job for it in the app: no job and no account
+ * number needed, just where it went (the place, as they would describe it, and the customer if known),
+ * their comments, and their GPS position when the phone gives it. It goes to an admin for approval.
+ */
+const installAnywhereSchema = z
+  .object({
+    serial: z.string().trim().min(3),
+    location: z.string().trim().max(200).optional(),
+    customerName: z.string().trim().max(120).optional(),
+    customerPhone: z.string().trim().max(30).optional(),
+    customerAccount: z.string().trim().max(40).optional(),
+    note: z.string().trim().max(500).optional(),
+    lat: z.number().min(-90).max(90).optional(),
+    lng: z.number().min(-180).max(180).optional(),
+  })
+  .refine((b) => (b.location?.length ?? 0) >= 3 || (b.customerAccount?.length ?? 0) >= 2, { message: 'Say where the device was installed', path: ['location'] });
+
 inventoryRouter.post(
   '/install',
   ah(async (req, res) => {
     const user = me(req);
     if (user.role !== 'TECHNICIAN') throw forbidden('Only technicians install devices');
-    const b = parse(installSchema, req.body);
-    const account = b.customerAccount.toUpperCase();
+    const b = parse(installAnywhereSchema, req.body);
+    const account = b.customerAccount ? b.customerAccount.toUpperCase() : null;
     const held = await prisma.$transaction((tx) => svc.findHeldUnit(tx, user.id, b.serial));
-    const out = await gate(user, 'INSTALL', { serial: held?.serialNumber ?? b.serial, customerAccount: account, note: b.note }, { summary: `Install ${held?.serialNumber ?? b.serial}${held ? ` (${held.item.name})` : ''} at ${account}${b.note ? ` — ${b.note}` : ''}`, serialUnitId: held?.id });
+    const serial = held?.serialNumber ?? b.serial;
+    const who = [b.customerName, b.customerPhone].filter(Boolean).join(', ');
+    const where = [b.location, account && `account ${account}`].filter(Boolean).join(' · ');
+    const place = { location: [b.location, who && `(${who})`].filter(Boolean).join(' ') || null, note: b.note ?? null, lat: b.lat ?? null, lng: b.lng ?? null };
+    const summary = `Install ${serial}${held ? ` (${held.item.name})` : ''} at ${where}${who ? ` for ${who}` : ''}${b.note ? ` — ${b.note}` : ''}${b.lat != null && b.lng != null ? ` · GPS ${b.lat.toFixed(5)}, ${b.lng.toFixed(5)}` : ''}`;
+    const out = await gate(user, 'INSTALL', { serial, customerAccount: account, place }, { summary, serialUnitId: held?.id });
     if (out.pending) return void res.status(202).json(out);
     res.json({ unit: { serialNumber: out.result.serialNumber, status: 'INSTALLED', customerAccount: account } });
   }),
@@ -644,7 +666,7 @@ inventoryRouter.post(
         else verdict = { tone: 'danger', title: 'Not yours', detail: `This device was issued to ${unit.holder?.name ?? 'another technician'}. Do not install it; return it to them or to the store.` };
         break;
       case 'INSTALLED':
-        verdict = { tone: 'info', title: `Installed at ${unit.customerAccount ?? 'a customer'}`, detail: `Installed${unit.installedAt ? ` on ${fmt(unit.installedAt)}` : ''}${unit.task ? ` on job ${unit.task.code}` : ''}.` };
+        verdict = { tone: 'info', title: `Installed at ${unit.customerAccount ?? (staffView ? unit.installLocation : null) ?? 'a customer'}`, detail: `Installed${unit.installedAt ? ` on ${fmt(unit.installedAt)}` : ''}${unit.task ? ` on job ${unit.task.code}` : ''}.` };
         break;
       case 'FAULTY':
         verdict = { tone: 'warning', title: 'Marked faulty', detail: 'This device came back faulty. It should not be issued or installed.' };
@@ -663,6 +685,7 @@ inventoryRouter.post(
         holder: unit.holder,
         heldSince: unit.heldSince,
         customerAccount: staffView || unit.task?.assigneeId === user.id ? unit.customerAccount : null,
+        ...(staffView ? { installLocation: unit.installLocation, installNote: unit.installNote, installLat: unit.installLat, installLng: unit.installLng } : {}),
         installedAt: unit.installedAt,
         task: unit.task ? { id: unit.task.id, code: unit.task.code } : null,
         issued: issue ? { by: issue.actor.name, to: issue.toUser?.name ?? null, at: issue.createdAt } : null,

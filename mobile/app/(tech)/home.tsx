@@ -260,6 +260,7 @@ export default function TechHome() {
         <QuickActions
           items={[
             { label: shift === 'ON' ? 'Check out' : 'Check in', icon: 'scan-outline', onPress: () => router.push(shift === 'ON' ? '/check-in?mode=out' : '/check-in?mode=in') },
+            { label: 'Install', icon: 'hardware-chip-outline', onPress: () => router.push('/install') },
             { label: 'My jobs', icon: 'briefcase-outline', onPress: () => router.push('/jobs') },
             { label: 'My stock', icon: 'cube-outline', onPress: () => router.push('/stock'), badge: pending.length },
             { label: 'Onboard customer', icon: 'person-add-outline', onPress: () => router.push('/onboard') },

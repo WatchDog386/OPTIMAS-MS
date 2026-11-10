@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { api, ApiError } from '../api/client';
 import { confirmDialog, promptDialog, toast } from '../store/feedback';
 import { requestScan } from '../store/bridge';
@@ -26,46 +27,11 @@ export async function collectDevice(): Promise<boolean> {
 }
 
 /**
- * A device the technician installed but that is still listed as "in hand" (for example the job was
- * closed without it): the technician TYPES the serial number (SN) from the sticker — scanning often picked
- * up the MAC address by mistake — or taps the device in My stock, gives the customer's account, and the
- * install goes to an admin for approval. Resolves true when sent.
+ * A device the technician installed but that is still listed as "in hand" (no job, or the job was closed
+ * without it): opens the Install page, where they pick the device or TYPE its SN (scanning often picked up
+ * the MAC address by mistake), say where it went and add comments, for an admin to approve.
  */
 export async function markInstalled(serial?: string): Promise<boolean> {
-  let code = serial;
-  if (!code) {
-    code =
-      (await promptDialog({
-        title: 'Serial number (SN)',
-        message: 'Type the SN exactly as printed on the sticker, next to "SN". Not the MAC address.',
-        emoji: '🔢',
-        confirmLabel: 'Next',
-        input: { placeholder: 'e.g. HWTC1A2B3C4D', required: true },
-      })) ?? undefined;
-  }
-  if (!code) return false;
-  let unit: { serialNumber: string; item: { name: string } };
-  try {
-    unit = (await api<{ unit: typeof unit }>(`/inventory/my/find?code=${encodeURIComponent(code.trim().toUpperCase())}`)).unit;
-  } catch (e) {
-    toast.error('Not one of your devices', e instanceof ApiError ? e.message : 'Check the SN and try again');
-    return false;
-  }
-  const account = await promptDialog({
-    title: 'Installed for which customer?',
-    message: `${unit.item.name} · S/N ${unit.serialNumber}. Enter the customer's account number.`,
-    emoji: '📡',
-    confirmLabel: 'Send for approval',
-    input: { placeholder: 'Customer account, e.g. FBI-CUS-1234', required: true },
-  });
-  if (!account) return false;
-  try {
-    const r = await api('/inventory/install', { body: { serial: unit.serialNumber, customerAccount: account } });
-    if (isPending(r)) toastPending(r);
-    else toast.success('Marked installed', `${unit.serialNumber} moved from In hand to Installed.`);
-    return true;
-  } catch (e) {
-    toast.error('Not sent', e instanceof ApiError ? e.message : 'Try again');
-    return false;
-  }
+  router.push((serial ? `/install?serial=${encodeURIComponent(serial)}` : '/install') as never);
+  return false;
 }

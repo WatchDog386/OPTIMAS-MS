@@ -347,6 +347,11 @@ model SerialUnit {
   taskId          String?
   customerAccount String?
   installedAt     DateTime?
+  /// Installed without a job: where (as the technician described it), their comments and GPS position
+  installLocation String?
+  installNote     String?
+  installLat      Float?
+  installLng      Float?
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 

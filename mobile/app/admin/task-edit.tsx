@@ -83,7 +83,7 @@ export default function TaskEdit() {
         <Input label="Details" multiline value={form.description} onChangeText={set('description')} />
         <Input label="Customer / premises" icon="person-outline" value={form.customerName} onChangeText={set('customerName')} />
         <Input label="Phone" icon="call-outline" keyboardType="phone-pad" value={form.customerPhone} onChangeText={set('customerPhone')} />
-        <Input label="Account no." icon="document-text-outline" autoCapitalize="characters" value={form.customerAccount} onChangeText={set('customerAccount')} />
+        {t.type === 'INSTALLATION' ? null : <Input label="Account no." icon="document-text-outline" autoCapitalize="characters" value={form.customerAccount} onChangeText={set('customerAccount')} />}
         <Input label="Address / directions" icon="location-outline" multiline value={form.address} onChangeText={set('address')} />
         {error ? (
           <Text variant="bodySm" color={colors.danger}>

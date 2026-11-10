@@ -79,7 +79,7 @@ export default function MyStock() {
         <Button label="Check a device" icon="shield-checkmark-outline" variant="secondary" style={{ flex: 1 }} onPress={() => router.push('/verify')} />
         <Button label="Collect from customer" icon="arrow-undo-outline" variant="secondary" style={{ flex: 1 }} onPress={() => void collectDevice().then((ok) => (ok ? reload() : undefined))} />
       </View>
-      <Button label="Mark a device installed" icon="checkmark-done-outline" variant="secondary" onPress={() => void markInstalled().then((ok) => (ok ? reload() : undefined))} />
+      <Button label="Install a device" icon="checkmark-done-outline" variant="secondary" onPress={() => void markInstalled().then((ok) => (ok ? reload() : undefined))} />
 
       <Card variant="hero" style={styles.hero}>
         <View style={{ flex: 1, gap: 4 }}>

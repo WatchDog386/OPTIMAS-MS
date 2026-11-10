@@ -70,6 +70,27 @@ describe('scanning the device installed: it leaves "in hand" and shows as instal
     expect((await api().post('/api/v1/inventory/install').set(auth(store)).send({ serial, customerAccount: 'X1' })).status).toBe(403);
   });
 
+  it('records an install with no job and no account number: where it went, comments and GPS, for approval', async () => {
+    const admin = (await login('FBI-ADM-001')).token;
+    const tech = await newTechnician(admin);
+    const serial = `MRB${hex8()}`;
+    await issueRouter(admin, tech.user.id, serial);
+    await api().post('/api/v1/inventory/accept').set(auth(tech.token)).send({});
+    // Saying nothing about where is refused
+    expect((await api().post('/api/v1/inventory/install').set(auth(tech.token)).send({ serial, note: 'Done' })).status).toBe(400);
+    const asked = await api()
+      .post('/api/v1/inventory/install')
+      .set(auth(tech.token))
+      .send({ serial, location: 'Kahawa Sukari, 3rd Ave, house 12', customerName: 'Jane W', note: 'New connection, tested Wi-Fi', lat: -1.18527, lng: 36.90382 });
+    expect(asked.status).toBe(202);
+    expect(asked.body.request.summary).toContain('Kahawa Sukari');
+    expect(asked.body.request.summary).toContain('New connection, tested Wi-Fi');
+    expect(asked.body.request.summary).toContain('GPS -1.18527, 36.90382');
+    await approveAllStock(admin);
+    const trail = await api().get(`/api/v1/inventory/units/${serial}/history`).set(auth(admin));
+    expect(trail.body.unit).toMatchObject({ status: 'INSTALLED', customerAccount: null, installLocation: 'Kahawa Sukari, 3rd Ave, house 12 (Jane W)', installNote: 'New connection, tested Wi-Fi', installLat: -1.18527 });
+  });
+
   it('leaves the device in the technician\'s hands when the admin rejects, and tells them why', async () => {
     const admin = (await login('FBI-ADM-001')).token;
     const tech = await newTechnician(admin);
