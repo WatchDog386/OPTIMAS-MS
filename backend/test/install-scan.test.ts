@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { describe, expect, it } from 'vitest';
+import { prisma } from '../src/lib/prisma';
 import { api, approveAllStock, auth, checkIn, createTask, itemBySku, login, newTechnician, photoId } from './helpers';
 
 /** Receives one router with the given serial (and MAC) and issues it to the technician (not yet accepted). */
@@ -89,6 +90,32 @@ describe('scanning the device installed: it leaves "in hand" and shows as instal
     await approveAllStock(admin);
     const trail = await api().get(`/api/v1/inventory/units/${serial}/history`).set(auth(admin));
     expect(trail.body.unit).toMatchObject({ status: 'INSTALLED', customerAccount: null, installLocation: 'Kahawa Sukari, 3rd Ave, house 12 (Jane W)', installNote: 'New connection, tested Wi-Fi', installLat: -1.18527 });
+  });
+
+  it('the admin can approve an install even if the device left the technician\'s hands after they asked', async () => {
+    const admin = (await login('FBI-ADM-001')).token;
+    const [tech, mate] = await Promise.all([newTechnician(admin), newTechnician(admin)]);
+    const serial = `MRB${hex8()}`;
+    await issueRouter(admin, tech.user.id, serial);
+    await api().post('/api/v1/inventory/accept').set(auth(tech.token)).send({});
+    const asked = await api().post('/api/v1/inventory/install').set(auth(tech.token)).send({ serial, location: 'Kware, Terena Apartments', note: 'Installed and tested' });
+    expect(asked.status).toBe(202);
+    // Meanwhile the register moved it: handed to a teammate
+    await prisma.serialUnit.update({ where: { serialNumber: serial }, data: { holderId: mate.user.id } });
+    const ok = await api().post(`/api/v1/inventory/requests/${asked.body.request.id}/approve`).set(auth(admin)).send({});
+    expect(ok.status).toBe(200);
+    const trail = await api().get(`/api/v1/inventory/units/${serial}/history`).set(auth(admin));
+    expect(trail.body.unit).toMatchObject({ status: 'INSTALLED', installLocation: 'Kware, Terena Apartments' });
+    expect(trail.body.unit.movements.at(-1).note).toContain(`was with ${mate.user.name}`);
+
+    // Back in the store before the approval: still recorded installed
+    const s2 = `MRB${hex8()}`;
+    await issueRouter(admin, tech.user.id, s2);
+    await api().post('/api/v1/inventory/accept').set(auth(tech.token)).send({});
+    const asked2 = await api().post('/api/v1/inventory/install').set(auth(tech.token)).send({ serial: s2, location: 'Kahawa West' });
+    await prisma.serialUnit.update({ where: { serialNumber: s2 }, data: { holderId: null, heldSince: null, status: 'IN_STORE' } });
+    expect((await api().post(`/api/v1/inventory/requests/${asked2.body.request.id}/approve`).set(auth(admin)).send({})).status).toBe(200);
+    expect((await api().get(`/api/v1/inventory/units/${s2}/history`).set(auth(admin))).body.unit.status).toBe('INSTALLED');
   });
 
   it('leaves the device in the technician\'s hands when the admin rejects, and tells them why', async () => {

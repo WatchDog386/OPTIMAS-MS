@@ -58,6 +58,58 @@ const EXECUTE: Record<StockRequestType, (tx: Tx, actorId: string, p: Payload) =>
   },
 };
 
+/**
+ * An admin approving a device installed: the admin has confirmed it is at the customer, so it is recorded
+ * installed wherever the register has it now — still with the technician who asked, handed to a teammate,
+ * back in the store, or issued again — instead of refusing because it left the asker's hands after they
+ * asked. (When the technician asks, it must still be in their hands.) Already installed: nothing to move.
+ */
+async function installOnApproval(tx: Tx, actorId: string, p: Payload) {
+  const unit = await tx.serialUnit.findFirst({ where: { serialNumber: { in: svc.codeVariants(p.serial) } }, include: { holder: { select: { name: true } } } });
+  if (!unit) throw badRequest(`No device with serial ${p.serial} in the register`);
+  if (unit.status === 'INSTALLED') return { serialNumber: unit.serialNumber, status: 'INSTALLED', alreadyInstalled: true };
+  const where =
+    unit.holderId === actorId
+      ? null
+      : unit.holder
+        ? `was with ${unit.holder.name}`
+        : unit.status === 'IN_STORE'
+          ? 'was still in the store'
+          : `was marked ${unit.status.toLowerCase().replace('_', ' ')}`;
+  if (unit.status === 'IN_TRANSIT' && unit.holderId) {
+    await tx.stockMovement.create({ data: { type: 'ACCEPT', itemId: unit.itemId, serialUnitId: unit.id, quantity: 1, toUserId: unit.holderId, actorId } });
+  }
+  const place = p.place ?? (p.note ? { note: p.note } : null);
+  await tx.serialUnit.update({
+    where: { id: unit.id },
+    data: {
+      status: 'INSTALLED',
+      holderId: null,
+      heldSince: null,
+      taskId: p.taskId ?? null,
+      customerAccount: p.customerAccount ?? null,
+      installedAt: new Date(),
+      installLocation: place?.location ?? null,
+      installNote: place?.note ?? null,
+      installLat: place?.lat ?? null,
+      installLng: place?.lng ?? null,
+    },
+  });
+  await tx.stockMovement.create({
+    data: {
+      type: 'INSTALL',
+      itemId: unit.itemId,
+      serialUnitId: unit.id,
+      quantity: 1,
+      fromUserId: unit.holderId,
+      actorId,
+      taskId: p.taskId ?? null,
+      note: [place?.location, place?.note, where && `Approved by admin; the device ${where}`].filter(Boolean).join(' — ') || undefined,
+    },
+  });
+  return { serialNumber: unit.serialNumber, status: 'INSTALLED' };
+}
+
 /** What follows a change once it is carried out (telling the people it concerns). */
 async function afterwards(type: StockRequestType, actorId: string, p: Payload, result: Payload) {
   if (type === 'ISSUE') {
@@ -137,7 +189,7 @@ export async function approve(id: string, admin: { id: string; name: string }, n
     const claimed = await tx.stockRequest.updateMany({ where: { id, status: 'PENDING' }, data: { status: 'APPROVED', reviewedById: admin.id, reviewedAt: new Date(), reviewNote: note } });
     if (!claimed.count) throw conflict('This request was already decided', 'ALREADY_DECIDED');
     const r = await tx.stockRequest.findUniqueOrThrow({ where: { id } });
-    const result = (await EXECUTE[r.type](tx, r.requestedById, r.payload as Payload)) as Payload;
+    const result = (r.type === 'INSTALL' ? await installOnApproval(tx, r.requestedById, r.payload as Payload) : await EXECUTE[r.type](tx, r.requestedById, r.payload as Payload)) as Payload;
     return { r, result };
   });
   await afterwards(request.r.type, request.r.requestedById, request.r.payload as Payload, request.result);
