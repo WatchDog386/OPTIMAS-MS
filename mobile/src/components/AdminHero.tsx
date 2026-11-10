@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
     paddingTop: 2,
     paddingBottom: 8,
   },
-  avatarPhoto: { width: '100%', height: '100%', borderRadius: 999 },
+  avatarPhoto: { width: 40, height: 40, borderRadius: 20 },
   avatar: {
     width: 40,
     height: 40,

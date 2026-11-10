@@ -9,6 +9,7 @@ import { enableWebPush, webPushState, type WebPushState } from '../src/utils/web
 import { alertDialog, toast } from '../src/store/feedback';
 import { useLocalSearchParams } from 'expo-router';
 import { useApi } from '../src/hooks/useApi';
+import { RoleTabBar } from '../src/components/tabs';
 import { fonts, isDark, space } from '../src/theme';
 import { notificationStyle, openNotificationTarget, type AppNotification } from '../src/utils/notifications';
 
@@ -141,7 +142,7 @@ export default function Notifications() {
           </Pressable>
         }
       />
-      <ScrollView onScroll={bar.onScroll} scrollEventThrottle={32} contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 40 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView onScroll={bar.onScroll} scrollEventThrottle={32} contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 120 }]} showsVerticalScrollIndicator={false}>
         {tabs.length > 1 ? (
           <SmeChips
             items={tabs.map((t) => {
@@ -201,6 +202,7 @@ export default function Notifications() {
           </>
         )}
       </ScrollView>
+      <RoleTabBar />
     </View>
   );
 }

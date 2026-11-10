@@ -13,6 +13,8 @@ import { OPENED_ON_DESKTOP } from '../src/theme/desktop';
 import { DesktopShell } from '../src/components/desktop/DesktopShell';
 import { OfflineBar, clearOfflineLeftovers } from '../src/components/OfflineBar';
 import { useAuth } from '../src/store/auth';
+import { api } from '../src/api/client';
+import type { User } from '../src/api/types';
 import { registerForPush } from '../src/utils/push';
 import { openNotificationTarget } from '../src/utils/notifications';
 import { setupPwa } from '../src/utils/install';
@@ -118,6 +120,28 @@ export default function RootLayout() {
     if (userId) void registerForPush();
     // Download every page's code in the background, so pages open without waiting for it
     if (userId) prefetchPages();
+  }, [userId]);
+
+  // Keep the signed-in account up to date (profile photo, name …): a photo added on another phone or
+  // on the laptop shows here too. On opening the app and each time it comes back to the front.
+  useEffect(() => {
+    if (!userId) return;
+    const refresh = () => {
+      api<{ user: User }>('/auth/me')
+        .then(({ user }) => {
+          const current = useAuth.getState().user;
+          if (current?.id === user.id && JSON.stringify({ ...current, ...user }) !== JSON.stringify(current)) void useAuth.getState().updateUser({ ...current, ...user });
+        })
+        .catch(() => {});
+    };
+    refresh();
+    const onShow = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+    if (Platform.OS === 'web' && typeof document !== 'undefined') document.addEventListener('visibilitychange', onShow);
+    return () => {
+      if (Platform.OS === 'web' && typeof document !== 'undefined') document.removeEventListener('visibilitychange', onShow);
+    };
   }, [userId]);
 
 
