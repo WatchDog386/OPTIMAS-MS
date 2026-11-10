@@ -28,3 +28,6 @@ deploy/secrets/
 deploy/backup.env
 deploy/monitor.env
 deploy/.monitor-state
+
+# Demo screenshots made for review, not part of the app
+demo-report/
