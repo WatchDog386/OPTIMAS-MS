@@ -21,7 +21,9 @@ reportsRouter.get(
     // Open tasks by their due time: due in the next 2 hours, or past due (the overview's three task tiles)
     const now = new Date();
     const soon = new Date(now.getTime() + 2 * 3600_000);
-    const openNow = { status: { in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS'] as ('OPEN' | 'ASSIGNED' | 'IN_PROGRESS')[] } };
+    // Tasks scheduled for a later day are not counted until their day
+    const notFuture = { OR: [{ scheduledFor: null }, { scheduledFor: { lte: today } }] };
+    const openNow = { status: { in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS'] as ('OPEN' | 'ASSIGNED' | 'IN_PROGRESS')[] }, ...notFuture };
     const [dueSoon, overdue] = await Promise.all([
       prisma.task.count({ where: { ...openNow, dueAt: { gte: now, lt: soon } } }),
       prisma.task.count({ where: { ...openNow, dueAt: { lt: now } } }),
@@ -31,7 +33,8 @@ reportsRouter.get(
         // Everyone expected to check in today (all staff but admins)
         prisma.user.count({ where: { active: true, role: { in: ROLES.CHECK_IN } } }),
         prisma.attendance.findMany({ where: { workDate: today }, select: { status: true, checkOutAt: true } }),
-        prisma.task.groupBy({ by: ['status'], _count: { _all: true } }),
+        prisma.task.groupBy({ by: ['status'], where: notFuture, _count: { _all: true } }),
+
         prisma.task.aggregate({
           where: { endedAt: { gte: weekAgo }, status: { in: ['COMPLETED', 'VERIFIED'] } },
           _count: { _all: true },
@@ -68,6 +71,7 @@ reportsRouter.get(
         open: tasks.OPEN ?? 0,
         dueSoon,
         overdue,
+        scheduled: await prisma.task.count({ where: { scheduledFor: { gt: today }, status: { in: ['OPEN', 'ASSIGNED'] } } }),
         completedLast7Days: completedWeek._count._all,
         avgDurationMinutes: Math.round(completedWeek._avg.durationMinutes ?? 0),
         amountCollectedLast7Days: completedWeek._sum.amountCollected ?? 0,

@@ -41,6 +41,19 @@ const detailInclude = {
   team: { include: teamInclude },
 } satisfies Prisma.TaskInclude;
 
+/** Drop cable used: the difference between the length marks when both are given, otherwise as entered. */
+export function cableUsed(b: { dropCableM?: number | null; dropStartM?: number | null; dropEndM?: number | null }) {
+  return b.dropStartM != null && b.dropEndM != null ? Math.round(Math.abs(b.dropStartM - b.dropEndM) * 10) / 10 : (b.dropCableM ?? undefined);
+}
+
+/** Today, company time, as a @db.Date value; and the instant today starts. */
+const todayDate = () => workDateOf();
+const todayStart = () => new Date(workDateOf().getTime() - env.TZ_OFFSET_MINUTES * 60_000);
+/** "Sat 14 Nov" for a scheduled day. */
+const dayLabel = (d: Date) => d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+/** Tasks the technicians see: not scheduled for a later day. */
+const notFuture = (): Prisma.TaskWhereInput => ({ OR: [{ scheduledFor: null }, { scheduledFor: { lte: todayDate() } }] });
+
 type Crewed = { assigneeId: string | null; team?: { members: { userId: string }[] } | null };
 /** Everyone working the job: the assignee plus, for a team job, every member (nobody while it is OPEN). */
 const crewOf = (task: Crewed) => [...new Set([task.assigneeId, ...(task.team?.members.map((m) => m.userId) ?? [])])].filter((id): id is string => !!id);
@@ -83,8 +96,13 @@ tasksRouter.get(
     const forTech = typeof req.query.assigneeId === 'string' ? req.query.assigneeId : undefined;
     // A technician sees their own jobs and their teams' jobs
     const who = isManager ? forTech : user.id;
+    // ?scheduled=1 (office): tasks for a later day; otherwise those only show once their day comes
+    const future = isManager && req.query.scheduled === '1';
     const where: Prisma.TaskWhereInput = {
-      ...(who ? { OR: [{ assigneeId: who }, { team: { members: { some: { userId: who } } } }] } : {}),
+      AND: [
+        who ? { OR: [{ assigneeId: who }, { team: { members: { some: { userId: who } } } }] } : {},
+        future ? { scheduledFor: { gt: todayDate() } } : notFuture(),
+      ],
       status: status?.length ? { in: status } : undefined,
     };
     // ?due=soon (due in the next 2 hours) or ?due=overdue (past due), open tasks only: the overview's tiles
@@ -94,14 +112,19 @@ tasksRouter.get(
       where.dueAt = req.query.due === 'soon' ? { gte: now, lt: new Date(now.getTime() + 2 * 3600_000) } : { lt: now };
     }
     // ?created=today: only tasks created today (company time); `earlier` says how many older ones match
-    const today = req.query.created === 'today' ? new Date(workDateOf().getTime() - env.TZ_OFFSET_MINUTES * 60_000) : null;
+    // A task scheduled for a day counts as that day's
+    const today = req.query.created === 'today' && !future ? todayStart() : null;
+    const isToday: Prisma.TaskWhereInput = { OR: [{ scheduledFor: null, createdAt: { gte: today ?? new Date(0) } }, { scheduledFor: todayDate() }] };
     const tasks = await prisma.task.findMany({
-      where: today ? { ...where, createdAt: { gte: today } } : where,
-      include: { assignee: person, team: { select: { id: true, name: true, leaderId: true, _count: { select: { members: true } } } } },
-      orderBy: [{ status: 'asc' }, { dueAt: 'asc' }, { createdAt: 'desc' }],
+      where: today ? { AND: [where, isToday] } : where,
+      include: { assignee: person, createdBy: { select: { id: true, name: true } }, team: { select: { id: true, name: true, leaderId: true, _count: { select: { members: true } } } } },
+      orderBy: future ? [{ scheduledFor: 'asc' }, { dueAt: 'asc' }] : [{ status: 'asc' }, { dueAt: 'asc' }, { createdAt: 'desc' }],
       take: 200,
     });
-    if (today) return void res.json({ tasks, earlier: await prisma.task.count({ where: { ...where, createdAt: { lt: today } } }) });
+    // Earlier: made before today without a day, or scheduled for an earlier day (spelled out: NOT on a
+    // nullable column would skip the tasks without a day)
+    const isEarlier: Prisma.TaskWhereInput = { OR: [{ scheduledFor: null, createdAt: { lt: today ?? new Date(0) } }, { scheduledFor: { lt: todayDate() } }] };
+    if (today) return void res.json({ tasks, earlier: await prisma.task.count({ where: { AND: [where, isEarlier] } }) });
     res.json({ tasks });
   }),
 );
@@ -130,6 +153,12 @@ const taskSchema = z.object({
   lat: z.number().min(-90).max(90).optional(),
   lng: z.number().min(-180).max(180).optional(),
   dueAt: z.coerce.date().optional(),
+  /** A later day (YYYY-MM-DD, company time): the technicians see and hear of the task only on that day */
+  scheduledFor: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Pick a date')
+    .nullable()
+    .optional(),
   /** One technician… */
   assigneeId: z.string().min(1).optional(),
   /** …or a team: an existing one, or a new one made here. The leader becomes the assignee. */
@@ -160,7 +189,7 @@ async function resolveAssignment(tx: Prisma.TransactionClient, body: { assigneeI
 }
 
 /** Tells the leader (or the one technician) and the rest of the team about a new job. */
-function announce(task: { id: string; title: string; priority: string; customerName: string; address: string; assigneeId: string | null; assignee: { name: string } | null; team: { name: string; members: { userId: string }[] } | null }, prefix = 'New') {
+export function announce(task: { id: string; title: string; priority: string; customerName: string; address: string; assigneeId: string | null; assignee: { name: string } | null; team: { name: string; members: { userId: string }[] } | null }, prefix = 'New') {
   if (!task.assigneeId) return;
   const urgent = task.priority === 'URGENT' ? 'URGENT ' : '';
   void notify([task.assigneeId], {
@@ -185,7 +214,12 @@ tasksRouter.post(
   dispatchers,
   ah(async (req, res) => {
     mayMakeTeam(me(req).role, req.body?.newTeam);
-    const { newTeam, teamId: _teamId, assigneeId: _assigneeId, assignLater, ...body } = parse(taskSchema, req.body);
+    const { newTeam, teamId: _teamId, assigneeId: _assigneeId, assignLater, scheduledFor: day, ...fields } = parse(taskSchema, req.body);
+    const scheduledFor = day ? new Date(`${day}T00:00:00Z`) : null;
+    if (scheduledFor && scheduledFor < todayDate()) throw badRequest('Pick today or a later day');
+    // For a later day: kept quiet until then (released by the morning run)
+    const laterDay = !!scheduledFor && scheduledFor > todayDate();
+    const body = { ...fields, scheduledFor, releasedAt: scheduledFor && !laterDay ? new Date() : null };
     // Nobody chosen and "assign later": the job waits, OPEN, until someone assigns it
     const later = !!assignLater && !newTeam && !_teamId && !_assigneeId;
     if (body.requestId) {
@@ -206,7 +240,11 @@ tasksRouter.post(
     const task = await create().catch((e) => (codeClash(e) ? create() : Promise.reject(e)));
     if (task.lat == null) void fillJobCoordinates(task.id, task.address);
     if (later) {
-      await audit(me(req).id, 'TASK_CREATED', 'Task', task.id, `Created ${task.code} to assign later`);
+      await audit(me(req).id, 'TASK_CREATED', 'Task', task.id, `Created ${task.code} to assign later${laterDay ? ` for ${dayLabel(scheduledFor!)}` : ''}`);
+      return void res.status(201).json({ task });
+    }
+    if (laterDay) {
+      await audit(me(req).id, 'TASK_SCHEDULED', 'Task', task.id, `Scheduled ${task.code} for ${dayLabel(scheduledFor!)}${task.team ? ` (${task.team.name})` : ''}`);
       return void res.status(201).json({ task });
     }
     void notifyCustomer(task, {
@@ -225,8 +263,13 @@ tasksRouter.patch(
   ah(async (req, res) => {
     // Linking to a customer request is only allowed at creation, where it is validated.
     mayMakeTeam(me(req).role, req.body?.newTeam);
-    const { newTeam, teamId, assigneeId, ...body } = parse(taskSchema.omit({ requestId: true }).partial(), req.body);
+    const { newTeam, teamId, assigneeId, scheduledFor: day, ...fields } = parse(taskSchema.omit({ requestId: true }).partial(), req.body);
     const task = await loadTask(req.params.id);
+    // Moving the day: to a later day it goes quiet again; to today it is given out now
+    const newDay = day === undefined ? undefined : day ? new Date(`${day}T00:00:00Z`) : null;
+    if (newDay && newDay < todayDate() && newDay.getTime() !== task.scheduledFor?.getTime()) throw badRequest('Pick today or a later day');
+    const body = newDay === undefined ? fields : { ...fields, scheduledFor: newDay, releasedAt: newDay && newDay > todayDate() ? null : (task.releasedAt ?? new Date()) };
+    const wasQuiet = !!task.scheduledFor && task.scheduledFor > todayDate();
     if (task.status !== 'ASSIGNED' && task.status !== 'OPEN') throw conflict('Only tasks that have not started can be edited or reassigned');
     // Assigning an OPEN job, or reassigning: to a new team, another team, or one technician (which ends the team job)
     const reassigning =
@@ -240,16 +283,17 @@ tasksRouter.patch(
       return tx.task.update({ where: { id: task.id }, data: { ...(moved ? { ...body, lat: null, lng: null } : body), ...who }, include: detailInclude });
     });
     if (body.address && body.address !== task.address && body.lat == null) void fillJobCoordinates(task.id, updated.address);
+    const quietNow = !!updated.scheduledFor && updated.scheduledFor > todayDate();
     if (reassigning && (updated.assigneeId !== task.assigneeId || updated.teamId !== task.teamId)) {
       const from = task.team ? `${task.team.name} (${lead(task)})` : lead(task);
       const to = updated.team ? `${updated.team.name} (${lead(updated)})` : lead(updated);
       await audit(me(req).id, task.status === 'OPEN' ? 'TASK_ASSIGNED' : 'TASK_REASSIGNED', 'Task', task.id, task.status === 'OPEN' ? `Assigned ${task.code} to ${to}` : `Reassigned ${task.code} from ${from} to ${to}`);
       if (task.status === 'OPEN')
         void notifyCustomer(updated, { title: updated.team ? 'A team has been assigned' : 'A technician has been assigned', body: `${updated.team ? `${updated.team.name}, led by ${lead(updated)},` : lead(updated)} will handle "${updated.title}".` });
-      announce(updated);
+      if (!quietNow) announce(updated);
       const dropped = crewOf(task).filter((id) => !crewOf(updated).includes(id));
-      if (dropped.length) void notify(dropped, { type: 'TASK_CANCELLED', title: `${task.code} reassigned`, body: 'This task was moved to another technician.', data: { taskId: task.id } });
-    }
+      if (dropped.length && !wasQuiet) void notify(dropped, { type: 'TASK_CANCELLED', title: `${task.code} reassigned`, body: 'This task was moved to another technician.', data: { taskId: task.id } });
+    } else if (wasQuiet && !quietNow) announce(updated, 'Today');
     res.json({ task: updated });
   }),
 );
@@ -402,6 +446,7 @@ tasksRouter.post(
     const task = await loadTask(req.params.id);
     mustBeAssignee(task, userId);
     if (task.status !== 'ASSIGNED') throw conflict(`Task is already ${task.status.toLowerCase().replace('_', ' ')}`);
+    if (task.scheduledFor && task.scheduledFor > todayDate()) throw conflict(`This task is for ${dayLabel(task.scheduledFor)}`, 'NOT_YET');
 
     // A job started offline counts for the day it was really started, even if it is sent later
     const startedAt = await eventTime(photoId);
@@ -431,6 +476,9 @@ const completeSchema = z.object({
   signal: z.string().trim().max(20).optional(),
   houseNo: z.string().trim().max(40).optional(),
   dropCableM: z.number().min(0).max(5000).optional(),
+  /** The length marks printed on the drop cable where the run started and ended; their difference is the cable used */
+  dropStartM: z.number().min(0).max(100_000).optional(),
+  dropEndM: z.number().min(0).max(100_000).optional(),
   fatPreinstalled: z.boolean().optional(),
   serials: z.array(z.string().trim().min(1)).default([]),
   materials: z
@@ -503,7 +551,9 @@ tasksRouter.post(
           amountCollected: body.amountCollected,
           signal: body.signal || undefined,
           houseNo: body.houseNo || undefined,
-          dropCableM: body.dropCableM,
+          dropCableM: cableUsed(body),
+          dropStartM: body.dropStartM,
+          dropEndM: body.dropEndM,
           fatPreinstalled: body.fatPreinstalled,
           customerAccount,
           customerSignature: body.signature?.path,

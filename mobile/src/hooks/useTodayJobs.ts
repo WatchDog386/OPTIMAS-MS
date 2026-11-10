@@ -10,7 +10,9 @@ export function useTodayJobs(status: string, options?: { poll?: number; due?: 's
   const [earlierShown, setEarlierShown] = useState(false);
   // Due soon / overdue (the overview's tiles) are about open tasks from any day
   const due = options?.due;
-  const q = [status ? `status=${status}` : null, due ? `due=${due}` : earlierShown ? null : 'created=today'].filter(Boolean).join('&');
+  // "SCHEDULED": the office's tasks for later days (they appear in the lists on their day)
+  const scheduled = status === 'SCHEDULED';
+  const q = scheduled ? 'scheduled=1' : [status ? `status=${status}` : null, due ? `due=${due}` : earlierShown ? null : 'created=today'].filter(Boolean).join('&');
   const api = useApi<{ tasks: Task[]; earlier?: number }>(`/tasks${q ? `?${q}` : ''}`, options);
-  return { ...api, earlier: earlierShown || due ? 0 : (api.data?.earlier ?? 0), earlierShown: earlierShown || !!due, showEarlier: () => setEarlierShown(true) };
+  return { ...api, earlier: earlierShown || due || scheduled ? 0 : (api.data?.earlier ?? 0), earlierShown: earlierShown || !!due || scheduled, showEarlier: () => setEarlierShown(true) };
 }

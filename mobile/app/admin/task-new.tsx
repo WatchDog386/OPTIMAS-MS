@@ -25,16 +25,32 @@ const DUE = [
   { value: '2', label: 'In 2 hrs' },
   { value: '4', label: 'In 4 hrs' },
   { value: 'eod', label: 'End of day' },
-  { value: 'tomorrow', label: 'Tomorrow' },
+];
+/** On a later day: by when on that day. */
+const DUE_LATER = [
+  { value: '10', label: 'Morning' },
+  { value: '13', label: 'Midday' },
+  { value: '17', label: 'End of day' },
 ];
 
-const dueDate = (v: string) => {
+/** Today, tomorrow and the next two weeks (Nairobi dates), for "When". */
+function nextDays() {
+  const out: { value: string; label: string }[] = [];
+  for (let i = 0; i < 15; i++) {
+    const d = new Date(Date.now() + i * 86_400_000);
+    const value = d.toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' });
+    const label = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', timeZone: 'Africa/Nairobi' });
+    out.push({ value, label });
+  }
+  return out;
+}
+
+/** When it is due: hours from now (today), or a time on the chosen later day (Nairobi time). */
+const dueDate = (v: string, day: string, today: string) => {
+  if (day !== today) return new Date(`${day}T${v.padStart(2, '0')}:00:00+03:00`).toISOString();
   const d = new Date();
-  if (v === 'eod') d.setHours(17, 0, 0, 0);
-  else if (v === 'tomorrow') {
-    d.setDate(d.getDate() + 1);
-    d.setHours(12, 0, 0, 0);
-  } else d.setHours(d.getHours() + Number(v));
+  if (v === 'eod') return new Date(`${day}T17:00:00+03:00`).toISOString();
+  d.setHours(d.getHours() + Number(v));
   return d.toISOString();
 };
 
@@ -45,7 +61,16 @@ export default function NewTask() {
   const [assign, setAssign] = useState<Assignment>(NO_ASSIGNMENT);
   const [type, setType] = useState<TaskType>(p.type ?? 'INSTALLATION');
   const [priority, setPriority] = useState<TaskPriority>('NORMAL');
+  const days = nextDays();
+  const today = days[0].value;
+  const [day, setDay] = useState(today);
   const [due, setDue] = useState('eod');
+  const laterDay = day !== today;
+  const pickDay = (v: string) => {
+    setDay(v);
+    // Due options differ for today and for a later day
+    setDue(v === today ? 'eod' : '10');
+  };
   const [form, setForm] = useState({
     title: p.title ?? '',
     description: p.description ?? '',
@@ -75,12 +100,20 @@ export default function NewTask() {
           priority,
           ...(later ? { assignLater: true } : assignmentBody(assign)),
           requestId: p.requestId || undefined,
-          dueAt: dueDate(due),
+          dueAt: dueDate(due, day, today),
+          ...(laterDay ? { scheduledFor: day } : {}),
         },
       });
+      const forDay = days.find((d) => d.value === day)?.label;
       toast.success(
-        later ? 'Task saved' : 'Task created',
-        later ? 'Assign it from Tasks → To assign when the technicians are in.' : assign.mode === 'team' ? 'Everyone in the team has been notified.' : 'The technician has been notified.',
+        later ? 'Task saved' : laterDay ? `Task for ${forDay}` : 'Task created',
+        later
+          ? `Assign it from Tasks → To assign${laterDay ? ` (it shows there from ${forDay})` : ' when the technicians are in'}.`
+          : laterDay
+            ? `${assign.mode === 'team' ? 'The team is' : 'The technician is'} told on the morning of ${forDay}.`
+            : assign.mode === 'team'
+              ? 'Everyone in the team has been notified.'
+              : 'The technician has been notified.',
       );
       router.replace(`/task/${task.id}`);
     } catch (e) {
@@ -135,9 +168,18 @@ export default function NewTask() {
       </Text>
       <Segmented options={PRIORITIES} value={priority} onChange={setPriority} />
       <Text variant="label" color={colors.textMuted}>
+        When
+      </Text>
+      <Segmented options={days} value={day} onChange={pickDay} />
+      {laterDay ? (
+        <Text variant="bodySm" color={colors.textMuted}>
+          The technician sees this task, and is told about it, on the morning of {days.find((d) => d.value === day)?.label}.
+        </Text>
+      ) : null}
+      <Text variant="label" color={colors.textMuted}>
         Due
       </Text>
-      <Segmented options={DUE} value={due} onChange={setDue} />
+      <Segmented options={laterDay ? DUE_LATER : DUE} value={due} onChange={setDue} />
       {care ? assignTo : customer}
     </Screen>
   );

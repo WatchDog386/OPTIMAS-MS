@@ -108,7 +108,12 @@ export interface Task {
   signal?: string | null;
   houseNo?: string | null;
   dropCableM?: number | null;
+  /** Length marks printed on the drop cable at the start and end of the run */
+  dropStartM?: number | null;
+  dropEndM?: number | null;
   fatPreinstalled?: boolean | null;
+  /** A later day (YYYY-MM-DD…): the technicians see the task only on that day */
+  scheduledFor?: string | null;
   verificationNote: string | null;
   customerSignature: string | null;
   signedByName: string | null;

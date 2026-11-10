@@ -77,3 +77,10 @@ export const flagLabel: Record<string, string> = {
 };
 
 export const minutesSince = (iso?: string | null) => (iso ? Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000)) : 0);
+
+/** "Sat 14 Nov" for a scheduled day (a date-only value). */
+export const dayLabel = (iso?: string | null) => (iso ? new Date(`${iso.slice(0, 10)}T12:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }) : '');
+/** Today's date in Nairobi as YYYY-MM-DD. */
+export const todayYmd = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' });
+/** Whether a scheduled day is still to come. */
+export const isLaterDay = (iso?: string | null) => !!iso && iso.slice(0, 10) > todayYmd();

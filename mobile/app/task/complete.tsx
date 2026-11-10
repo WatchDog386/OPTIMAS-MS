@@ -24,6 +24,9 @@ export default function CompleteTask() {
   const [signal, setSignal] = useState('');
   const [houseNo, setHouseNo] = useState('');
   const [cable, setCable] = useState<string | null>(null);
+  // The length marks printed on the drop cable where the run starts and ends
+  const [markStart, setMarkStart] = useState('');
+  const [markEnd, setMarkEnd] = useState('');
   const [fat, setFat] = useState<'yes' | 'no' | null>(null);
   const [busy, setBusy] = useState(false);
   const [signature, setSignature] = useState<string | null>(null);
@@ -45,7 +48,9 @@ export default function CompleteTask() {
   const total = materials.reduce((n, m) => n + Math.round(m.quantity * m.holding.item.unitPrice), 0);
   // Drop cable: filled in from the cable taken from stock above (metres), and can be changed
   const cableFromStock = materials.filter((m) => /cable/i.test(m.holding.item.name) && /^m(etres?)?$/i.test(m.holding.item.unit)).reduce((n, m) => n + m.quantity, 0);
-  const cableM = cable ?? (cableFromStock ? String(cableFromStock) : '');
+  const marked = markStart !== '' && markEnd !== '';
+  const fromMarks = marked ? Math.round(Math.abs(Number(markStart) - Number(markEnd)) * 10) / 10 : null;
+  const cableM = fromMarks != null ? String(fromMarks) : (cable ?? (cableFromStock ? String(cableFromStock) : ''));
 
   if (!task.data || !stock.data) return <Loading />;
   const t = task.data.task;
@@ -93,6 +98,7 @@ export default function CompleteTask() {
           signal: signal.trim() || undefined,
           houseNo: houseNo.trim() || undefined,
           dropCableM: cableM ? Number(cableM) : undefined,
+          ...(marked ? { dropStartM: Number(markStart), dropEndM: Number(markEnd) } : {}),
           fatPreinstalled: fat ? fat === 'yes' : undefined,
           serials,
           materials: materials.map((m) => ({ itemId: m.holding.item.id, quantity: m.quantity })),
@@ -212,7 +218,30 @@ export default function CompleteTask() {
       <Input label="House / unit no." icon="home-outline" value={houseNo} onChangeText={setHouseNo} placeholder="e.g. D3" autoCapitalize="characters" />
       {t.type === 'INSTALLATION' ? null : <Input label="Customer account no." icon="person-outline" value={account ?? t.customerAccount ?? ''} onChangeText={setAccount} autoCapitalize="characters" />}
       <Input label={needsSerial ? 'Router signal (required)' : 'Router signal'} icon="cellular-outline" value={signal} onChangeText={setSignal} placeholder="As read on site, e.g. -27 dBm" />
-      <Input label="Drop cable used (m)" icon="git-commit-outline" keyboardType="decimal-pad" value={cableM} onChangeText={(v) => setCable(v.replace(/[^0-9.]/g, ''))} placeholder="0" />
+      <Text variant="label" color={colors.textMuted}>
+        Drop cable · the length marks printed on the cable
+      </Text>
+      <View style={{ flexDirection: 'row', gap: space.sm }}>
+        <View style={{ flex: 1 }}>
+          <Input label="Mark at start (m)" keyboardType="decimal-pad" value={markStart} onChangeText={(v) => setMarkStart(v.replace(/[^0-9.]/g, ''))} placeholder="e.g. 1240" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Input label="Mark at end (m)" keyboardType="decimal-pad" value={markEnd} onChangeText={(v) => setMarkEnd(v.replace(/[^0-9.]/g, ''))} placeholder="e.g. 1210" />
+        </View>
+      </View>
+      {marked ? (
+        <View style={styles.used}>
+          <Ionicons name="git-commit-outline" size={16} color={colors.primary} />
+          <Text variant="title" style={{ flex: 1 }}>
+            {fromMarks} m used
+          </Text>
+          <Text variant="label" color={colors.textMuted}>
+            {markStart} → {markEnd}
+          </Text>
+        </View>
+      ) : (
+        <Input label="No marks? Metres used" icon="git-commit-outline" keyboardType="decimal-pad" value={cableM} onChangeText={(v) => setCable(v.replace(/[^0-9.]/g, ''))} placeholder="0" />
+      )}
       <Text variant="label" color={colors.textMuted}>
         {needsSerial ? 'FAT pre-installed? (required)' : 'FAT pre-installed?'}
       </Text>
@@ -236,5 +265,6 @@ const styles = StyleSheet.create({
   matRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   total: { paddingTop: space.md, borderTopWidth: 1, borderTopColor: colors.border },
   qtyBox: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.surfaceAlt, borderRadius: radius.sm, paddingHorizontal: space.md, height: 44, minWidth: 96 },
+  used: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 12, borderRadius: radius.md, backgroundColor: colors.primarySoft },
   qtyInput: { flex: 1, color: colors.text, fontFamily: fonts.bold, fontSize: 16, textAlign: 'right' },
 });

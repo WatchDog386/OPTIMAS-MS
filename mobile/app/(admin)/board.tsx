@@ -14,6 +14,7 @@ const FILTERS = [
   { value: 'COMPLETED', label: 'To verify' },
   { value: 'VERIFIED', label: 'Verified' },
   { value: 'REJECTED,CANCELLED', label: 'Rejected' },
+  { value: 'SCHEDULED', label: 'Scheduled' },
   { value: '', label: 'All' },
 ];
 

@@ -3,7 +3,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import type { Task, TaskStatus } from '../api/types';
 import { fonts, isDark } from '../theme';
-import { statusLabel, taskTypeIcon, time } from '../utils/format';
+import { dayLabel, firstName, isLaterDay, statusLabel, taskTypeIcon, time } from '../utils/format';
 import { SME } from './SmeKit';
 import { Text } from './Text';
 
@@ -50,7 +50,10 @@ const GROUP_TITLE: Record<TaskStatus, string> = {
 export function TaskCard({ task, showAssignee }: { task: Task; showAssignee?: boolean }) {
   const s = JOB_STATE[task.status];
   const who = task.team ? `${task.team.name}` : showAssignee ? (task.assignee?.name ?? 'Not assigned yet') : null;
-  const sub = [task.code, task.customerName, who, task.dueAt && task.status !== 'VERIFIED' && task.status !== 'CANCELLED' ? `Due ${time(task.dueAt)}` : null].filter(Boolean).join(' · ');
+  const later = isLaterDay(task.scheduledFor);
+  const by = task.createdBy?.name ? `By ${firstName(task.createdBy.name)}` : null;
+  // Who posted it comes right after the code, so it is never cut off
+  const sub = [task.code, by, task.customerName, who, later ? `For ${dayLabel(task.scheduledFor)}` : task.dueAt && task.status !== 'VERIFIED' && task.status !== 'CANCELLED' ? `Due ${time(task.dueAt)}` : null].filter(Boolean).join(' · ');
   const urgent = task.priority === 'URGENT' || task.priority === 'HIGH';
   return (
     <Pressable
@@ -75,7 +78,7 @@ export function TaskCard({ task, showAssignee }: { task: Task; showAssignee?: bo
       </View>
       <View style={[styles.chip, { backgroundColor: s.chip }]}>
         <Text variant="label" color={s.ink} fixedColor style={{ fontFamily: fonts.semibold, fontSize: 11 }}>
-          {statusLabel(task.status)}
+          {later ? dayLabel(task.scheduledFor) : statusLabel(task.status)}
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={16} color={SME.fg4} />
@@ -85,6 +88,33 @@ export function TaskCard({ task, showAssignee }: { task: Task; showAssignee?: bo
 
 /** Jobs grouped by their state, each group a titled list (like the Profile page's sections). */
 export function TaskList({ tasks, showAssignee, renderAfter }: { tasks: Task[]; showAssignee?: boolean; renderAfter?: (t: Task) => React.ReactNode }) {
+  // Tasks for later days (the Scheduled filter): grouped by their day instead
+  if (tasks.length && tasks.every((t) => isLaterDay(t.scheduledFor))) {
+    const days = [...new Set(tasks.map((t) => t.scheduledFor!.slice(0, 10)))].sort();
+    return (
+      <View style={{ gap: 18 }}>
+        {days.map((d) => {
+          const items = tasks.filter((t) => t.scheduledFor!.slice(0, 10) === d);
+          return (
+            <View key={d} style={{ gap: 8 }}>
+              <View style={styles.head}>
+                <Ionicons name="calendar-outline" size={14} color={SME.fg3} />
+                <Text variant="title" color={SME.fg} fixedColor style={{ fontFamily: fonts.medium, fontSize: 15, flex: 1 }}>
+                  {dayLabel(d)}
+                </Text>
+                <Text variant="label" color={SME.fg4} fixedColor style={{ fontSize: 12 }}>
+                  {items.length}
+                </Text>
+              </View>
+              {items.map((t) => (
+                <TaskCard key={t.id} task={t} showAssignee={showAssignee} />
+              ))}
+            </View>
+          );
+        })}
+      </View>
+    );
+  }
   const groups = ORDER.map((st) => ({ st, items: tasks.filter((t) => t.status === st) })).filter((g) => g.items.length);
   return (
     <View style={{ gap: 18 }}>

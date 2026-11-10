@@ -8,6 +8,7 @@ import { time, workDateOf } from '../../lib/time';
 import { ah } from '../../middleware/async';
 import { ROLES, me } from '../../middleware/auth';
 import { parse } from '../../middleware/validate';
+import { cableUsed } from '../tasks/tasks.routes';
 import { notifyRoles } from '../notifications/notifications.service';
 
 /*
@@ -30,6 +31,9 @@ const kes = (n: number) => `KES ${n.toLocaleString('en-KE')}`;
 const humanize = (s: string) => s.charAt(0) + s.slice(1).toLowerCase().replace(/_/g, ' ');
 const qty = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 const mins = (m?: number | null) => (m == null ? '' : m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`);
+/** "30 m (marks 1240 m → 1210 m)": the cable used, and the length marks it was read from. */
+const cableLine = (used?: number | null, start?: number | null, end?: number | null) =>
+  used == null ? 'not recorded' : `${qty(used)} m${start != null && end != null ? ` (marks ${qty(start)} m → ${qty(end)} m)` : ''}`;
 const dayStart = (d: Date) => new Date(d.getTime() - env.TZ_OFFSET_MINUTES * 60_000);
 
 /** A task added on the report form that is not in the app (done without a task, or before the app). */
@@ -43,10 +47,15 @@ const extraSchema = z.object({
   paid: z.number().int().min(0).max(10_000_000).optional(),
   materials: z.array(z.string().trim().min(1).max(120)).max(30).default([]),
   cableM: z.number().min(0).max(5000).optional(),
+  /** The length marks on the cable at the start and end of the run */
+  cableStart: z.number().min(0).max(100_000).optional(),
+  cableEnd: z.number().min(0).max(100_000).optional(),
   fat: z.boolean().optional(),
   notes: z.string().trim().max(500).optional(),
 });
 type Extra = z.infer<typeof extraSchema>;
+/** Hand-added task: the cable used is worked out from the marks when both are given. */
+const withCable = (e: Extra): Extra => (e.cableStart != null && e.cableEnd != null ? { ...e, cableM: cableUsed({ dropStartM: e.cableStart, dropEndM: e.cableEnd }) } : e);
 
 async function todaysTasks(userId: string, workDate: Date) {
   const from = dayStart(workDate);
@@ -73,6 +82,7 @@ async function buildReport(user: { id: string; name: string }, workDate = workDa
   }
   const team = tasks.find((t) => t.team)?.team ?? null;
   const members = team ? [...new Map([[user.id, user.name], ...team.members.map((m) => [m.user.id, m.user.name] as [string, string])]).entries()].map(([id, name]) => ({ id, name, leader: id === user.id })) : [];
+  extra = extra.map(withCable);
   const collected = tasks.reduce((n, t) => n + (t.amountCollected ?? 0), 0) + extra.reduce((n, e) => n + (e.paid ?? 0), 0);
   const cable = tasks.reduce((n, t) => n + (t.dropCableM ?? 0), 0) + extra.reduce((n, e) => n + (e.cableM ?? 0), 0);
   const routers = tasks.reduce((n, t) => n + t.materials.filter((m) => m.unit).length, 0);
@@ -97,7 +107,7 @@ async function buildReport(user: { id: string; name: string }, workDate = workDa
       // Devices one by one with their SN; bulk items with their quantity
       t.materials.forEach((m, k) => lines.push(`  ${k + 1}. ${m.unit ? `1 ${m.item.name} (SN ${m.unit.serialNumber})` : `${qty(m.quantity)} ${m.item.unit === 'pcs' || m.item.unit === 'pc' ? '' : `${m.item.unit} `}${m.item.name}`.replace(/\s+/g, ' ')}`));
     } else lines.push('Materials used: none');
-    lines.push(`Drop cable: ${t.dropCableM != null ? `${qty(t.dropCableM)} m` : 'not recorded'}`);
+    lines.push(`Drop cable: ${cableLine(t.dropCableM, t.dropStartM, t.dropEndM)}`);
     lines.push(`FAT pre-installed: ${t.fatPreinstalled == null ? 'not recorded' : t.fatPreinstalled ? 'Yes' : 'No'}`);
     if (t.completionNotes) lines.push(`Notes: ${t.completionNotes}`);
   });
@@ -113,7 +123,7 @@ async function buildReport(user: { id: string; name: string }, workDate = workDa
       lines.push('Materials used:');
       e.materials.forEach((m, i) => lines.push(`  ${i + 1}. ${m}`));
     } else lines.push('Materials used: none');
-    lines.push(`Drop cable: ${e.cableM != null ? `${qty(e.cableM)} m` : 'not recorded'}`);
+    lines.push(`Drop cable: ${cableLine(e.cableM, e.cableStart, e.cableEnd)}`);
     lines.push(`FAT pre-installed: ${e.fat == null ? 'not recorded' : e.fat ? 'Yes' : 'No'}`);
     if (e.notes) lines.push(`Notes: ${e.notes}`);
   });
@@ -160,6 +170,8 @@ const view = (r: Awaited<ReturnType<typeof buildReport>>) => ({
     signal: t.signal,
     amountCollected: t.amountCollected,
     dropCableM: t.dropCableM,
+    dropStartM: t.dropStartM,
+    dropEndM: t.dropEndM,
     fatPreinstalled: t.fatPreinstalled,
     completionNotes: t.completionNotes,
     status: t.status,
@@ -202,6 +214,8 @@ const fixSchema = z.object({
   houseNo: z.string().trim().max(40).nullable().optional(),
   amountCollected: z.number().int().min(0).nullable().optional(),
   dropCableM: z.number().min(0).max(5000).nullable().optional(),
+  dropStartM: z.number().min(0).max(100_000).nullable().optional(),
+  dropEndM: z.number().min(0).max(100_000).nullable().optional(),
   fatPreinstalled: z.boolean().nullable().optional(),
   completionNotes: z.string().trim().min(5, 'Describe the work done').max(2000).optional(),
 });
@@ -215,7 +229,9 @@ dayReportsRouter.patch(
     if (task.assigneeId !== user.id) throw forbidden('Only the technician (or team leader) who did this task can change its report');
     if (task.status !== 'COMPLETED') throw forbidden(task.status === 'VERIFIED' ? 'This task is already verified; ask the office to change it' : 'Finish the task first');
     if (!task.endedAt || task.endedAt < dayStart(workDateOf())) throw forbidden("Only today's tasks can be changed on the report form");
-    const updated = await prisma.task.update({ where: { id: task.id }, data: body });
+    // Both length marks given: the cable used is their difference
+    const marks = body.dropStartM != null && body.dropEndM != null ? { dropCableM: cableUsed(body) ?? null } : {};
+    const updated = await prisma.task.update({ where: { id: task.id }, data: { ...body, ...marks } });
     await audit(user.id, 'TASK_REPORT_EDITED', 'Task', task.id, `Report form: ${Object.keys(body).join(', ')}`);
     res.json({ task: updated });
   }),

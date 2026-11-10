@@ -232,6 +232,10 @@ model Task {
   lat             Float?
   lng             Float?
   dueAt           DateTime?
+  /// A task for a later day: the technicians see it (and are told) only when that day comes
+  scheduledFor    DateTime? @db.Date
+  /// When a scheduled task was given out on its day (null until then)
+  releasedAt      DateTime?
 
   assigneeId  String? // empty while the job is OPEN (not assigned yet)
   createdById String
@@ -254,6 +258,9 @@ model Task {
   signal            String?
   houseNo           String?
   dropCableM        Float?
+  /// The length marks printed on the drop cable at the start and end of the run; the difference is dropCableM
+  dropStartM        Float?
+  dropEndM          Float?
   fatPreinstalled   Boolean?
   customerRating    Int? // 1–5 stars, given by the customer after the visit
   customerFeedback  String?
@@ -282,6 +289,7 @@ model Task {
   @@index([status, endedAt])
   @@index([status, createdAt])
   @@index([customerAccount])
+  @@index([scheduledFor])
 }
 
 model TaskMaterial {

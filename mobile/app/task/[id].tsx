@@ -12,7 +12,7 @@ import { requestCapture } from '../../src/store/bridge';
 import { colors, fonts, isDark, radius, space } from '../../src/theme';
 import { JOB_STATE } from '../../src/components/TaskCard';
 import { SME } from '../../src/components/SmeKit';
-import { dateTime, duration, firstName, flagLabel, humanize, kes, statusLabel, priorityTone, taskStatusTone, taskTypeIcon, time } from '../../src/utils/format';
+import { dateTime, dayLabel, duration, firstName, isLaterDay, flagLabel, humanize, kes, statusLabel, priorityTone, taskStatusTone, taskTypeIcon, time } from '../../src/utils/format';
 import { celebrate, toast } from '../../src/store/feedback';
 import { openChatWith } from '../../src/utils/chat';
 import { collectDevice } from '../../src/utils/devices';
@@ -133,6 +133,11 @@ export default function TaskDetail() {
         <Text variant="h2" color={SME.fg} fixedColor>
           {task.title}
         </Text>
+        {task.createdBy ? (
+          <Text variant="label" color={SME.fg3} fixedColor>
+            Posted by {firstName(task.createdBy.name)} · {dateTime(task.createdAt)}
+          </Text>
+        ) : null}
         {task.description ? (
           <Text variant="bodySm" color={SME.fg3} fixedColor>
             {task.description}
@@ -254,7 +259,7 @@ export default function TaskDetail() {
             <Fact label="Location" value={`${task.address}${task.houseNo ? ` · House ${task.houseNo}` : ''}`} />
             <Fact label="Signal" value={task.signal || '—'} />
             <Fact label="Client paid" value={task.amountCollected ? kes(task.amountCollected) : 'Nothing'} />
-            <Fact label="Drop cable" value={task.dropCableM != null ? `${task.dropCableM} m` : '—'} />
+            <Fact label="Drop cable" value={task.dropCableM != null ? `${task.dropCableM} m${task.dropStartM != null && task.dropEndM != null ? ` (${task.dropStartM} → ${task.dropEndM})` : ''}` : '—'} />
             <Fact label="FAT pre-installed" value={task.fatPreinstalled == null ? '—' : task.fatPreinstalled ? 'Yes' : 'No'} />
           </Card>
         </>
@@ -366,6 +371,7 @@ function Fact({ label, value }: { label: string; value: string }) {
 /** The task's state in words, as it stands now. */
 function stateText(t: Task) {
   const who = t.team ? t.team.name : t.assignee?.name;
+  if ((t.status === 'ASSIGNED' || t.status === 'OPEN') && isLaterDay(t.scheduledFor)) return `For ${dayLabel(t.scheduledFor)} · ${who ? `${who} gets it that morning` : 'to assign'}`;
   switch (t.status) {
     case 'OPEN':
       return 'Not assigned yet · waiting for a technician';

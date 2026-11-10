@@ -24,6 +24,8 @@ interface DayTask {
   signal: string | null;
   amountCollected: number | null;
   dropCableM: number | null;
+  dropStartM: number | null;
+  dropEndM: number | null;
   fatPreinstalled: boolean | null;
   completionNotes: string | null;
   status: string;
@@ -53,11 +55,15 @@ interface Extra {
   paid?: number;
   materials: string[];
   cableM?: number;
+  cableStart?: number;
+  cableEnd?: number;
   fat?: boolean;
   notes?: string;
 }
 /** The form's copy of one task's report fields (strings while typing). */
-type Fields = { houseNo: string; signal: string; paid: string; cable: string; fat: 'yes' | 'no' | ''; notes: string };
+type Fields = { houseNo: string; signal: string; paid: string; cable: string; markStart: string; markEnd: string; fat: 'yes' | 'no' | ''; notes: string };
+/** Cable used: from the two length marks when both are filled, otherwise as typed. */
+const usedFrom = (f: Fields) => (f.markStart !== '' && f.markEnd !== '' ? String(Math.round(Math.abs(Number(f.markStart) - Number(f.markEnd)) * 10) / 10) : f.cable);
 type ExtraForm = Fields & { type: string; customer: string; location: string; materials: string };
 
 const fieldsOf = (t: DayTask): Fields => ({
@@ -65,10 +71,12 @@ const fieldsOf = (t: DayTask): Fields => ({
   signal: t.signal ?? '',
   paid: t.amountCollected ? String(t.amountCollected) : '',
   cable: t.dropCableM != null ? String(t.dropCableM) : '',
+  markStart: t.dropStartM != null ? String(t.dropStartM) : '',
+  markEnd: t.dropEndM != null ? String(t.dropEndM) : '',
   fat: t.fatPreinstalled == null ? '' : t.fatPreinstalled ? 'yes' : 'no',
   notes: t.completionNotes ?? '',
 });
-const emptyExtra = (): ExtraForm => ({ type: 'Installation', customer: '', location: '', houseNo: '', signal: '', paid: '', cable: '', fat: '', notes: '', materials: '' });
+const emptyExtra = (): ExtraForm => ({ type: 'Installation', customer: '', location: '', houseNo: '', signal: '', paid: '', cable: '', markStart: '', markEnd: '', fat: '', notes: '', materials: '' });
 const extraOf = (e: Extra): ExtraForm => ({
   type: e.type,
   customer: e.customer ?? '',
@@ -77,6 +85,8 @@ const extraOf = (e: Extra): ExtraForm => ({
   signal: e.signal ?? '',
   paid: e.paid ? String(e.paid) : '',
   cable: e.cableM != null ? String(e.cableM) : '',
+  markStart: e.cableStart != null ? String(e.cableStart) : '',
+  markEnd: e.cableEnd != null ? String(e.cableEnd) : '',
   fat: e.fat == null ? '' : e.fat ? 'yes' : 'no',
   notes: e.notes ?? '',
   materials: e.materials.join('\n'),
@@ -89,7 +99,8 @@ const toExtra = (f: ExtraForm): Extra => ({
   signal: f.signal.trim() || undefined,
   paid: f.paid ? Number(f.paid) : undefined,
   materials: f.materials.split('\n').map((m) => m.trim()).filter(Boolean),
-  cableM: f.cable ? Number(f.cable) : undefined,
+  cableM: usedFrom(f) ? Number(usedFrom(f)) : undefined,
+  ...(f.markStart !== '' && f.markEnd !== '' ? { cableStart: Number(f.markStart), cableEnd: Number(f.markEnd) } : {}),
   fat: f.fat ? f.fat === 'yes' : undefined,
   notes: f.notes.trim() || undefined,
 });
@@ -144,7 +155,9 @@ export default function DayReport() {
             houseNo: f.houseNo.trim() || null,
             signal: f.signal.trim() || null,
             amountCollected: f.paid ? Number(f.paid) : null,
-            dropCableM: f.cable ? Number(f.cable) : null,
+            dropCableM: usedFrom(f) ? Number(usedFrom(f)) : null,
+            dropStartM: f.markStart !== '' && f.markEnd !== '' ? Number(f.markStart) : null,
+            dropEndM: f.markStart !== '' && f.markEnd !== '' ? Number(f.markEnd) : null,
             fatPreinstalled: f.fat ? f.fat === 'yes' : null,
             ...(f.notes.trim().length >= 5 && f.notes !== was.notes ? { completionNotes: f.notes.trim() } : {}),
           },
@@ -330,7 +343,15 @@ function TemplateFields({ f, on }: { f: Fields; on: (k: keyof Fields, v: string)
           <Input label="Client paid (KES)" keyboardType="number-pad" value={f.paid} onChangeText={(v) => on('paid', v.replace(/\D/g, ''))} placeholder="0" />
         </View>
         <View style={{ flex: 1 }}>
-          <Input label="Drop cable (m)" keyboardType="decimal-pad" value={f.cable} onChangeText={(v) => on('cable', num(v))} placeholder="0" />
+          <Input label="Drop cable (m)" keyboardType="decimal-pad" value={usedFrom(f)} onChangeText={(v) => on('cable', num(v))} placeholder="0" />
+        </View>
+      </View>
+      <View style={styles.pair}>
+        <View style={{ flex: 1 }}>
+          <Input label="Cable mark at start" keyboardType="decimal-pad" value={f.markStart} onChangeText={(v) => on('markStart', num(v))} placeholder="e.g. 1240" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Input label="Cable mark at end" keyboardType="decimal-pad" value={f.markEnd} onChangeText={(v) => on('markEnd', num(v))} placeholder="e.g. 1210" />
         </View>
       </View>
       <Text variant="label" color={SME.fg3} fixedColor>

@@ -5,12 +5,13 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { goBack } from '../../../src/utils/nav';
 import { api, ApiError } from '../../../src/api/client';
 import type { Item } from '../../../src/api/types';
-import { Badge, Button, Glass, Input, Loading, Screen, ScreenHeader, Section, Segmented, StatGrid, StatTile, Text } from '../../../src/components';
+import { Badge, Button, Glass, Input, Loading, Screen, ScreenHeader, Section, Segmented, Text } from '../../../src/components';
 import { useApi } from '../../../src/hooks/useApi';
 import { colors } from '../../../src/theme';
 import { confirmAction } from '../../../src/utils/confirm';
 import { toast } from '../../../src/store/feedback';
-import { humanize } from '../../../src/utils/format';
+import { humanize, kes } from '../../../src/utils/format';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 /** Item page: stock levels, edit details, stock-take adjustments and archiving. */
 export default function ItemDetail() {
@@ -79,11 +80,53 @@ export default function ItemDetail() {
 
   return (
     <Screen refreshing={refreshing} onRefresh={refresh}>
-      <ScreenHeader title={item.name} subtitle={`${item.sku} · ${humanize(item.category)} · ${item.tracking === 'SERIALIZED' ? 'serial-tracked' : 'counted in bulk'}`} right={item.lowStock ? <Badge label="Low stock" tone="danger" /> : undefined} />
-      <StatGrid>
-        <StatTile icon="cube" label="In store" value={item.stock?.inStore ?? 0} hint={`${item.unit}`} tint={item.lowStock ? colors.danger : colors.info} />
-        <StatTile icon="person" label="With technicians" value={item.stock?.withTechnicians ?? 0} hint={item.unit} tint={colors.accent} />
-      </StatGrid>
+      <ScreenHeader title="Item detail" />
+      {/* Header like Knoxville-SME's sale detail: icon, name, badge, line under it, value on the right */}
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, paddingHorizontal: 4 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+          <View style={{ width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft }}>
+            <Ionicons name={item.tracking === 'SERIALIZED' ? 'wifi' : 'git-commit-outline'} size={20} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <Text variant="title" style={{ fontSize: 14 }}>
+                {item.name}
+              </Text>
+              <Badge label={(item.stock?.inStore ?? 0) <= 0 ? 'Out of stock' : item.lowStock ? 'Low stock' : 'In stock'} tone={(item.stock?.inStore ?? 0) <= 0 ? 'danger' : item.lowStock ? 'warning' : 'success'} />
+            </View>
+            <Text variant="label" color={colors.textMuted}>
+              {item.sku} · {humanize(item.category)} · {item.tracking === 'SERIALIZED' ? 'serial-tracked' : 'counted in bulk'}
+            </Text>
+          </View>
+        </View>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text variant="label" color={colors.textMuted} style={{ letterSpacing: 1 }}>
+            VALUE
+          </Text>
+          <Text variant="h2">{kes((item.stock?.inStore ?? 0) * item.unitPrice)}</Text>
+        </View>
+      </View>
+      <View style={{ gap: 6, paddingHorizontal: 4 }}>
+        {[
+          ['In store', `${item.stock?.inStore ?? 0} ${item.unit}`],
+          ['With technicians', `${item.stock?.withTechnicians ?? 0} ${item.unit}`],
+          ['Unit price', kes(item.unitPrice)],
+          ['Reorder at', `${item.reorderLevel} ${item.unit}`],
+        ].map(([k, v]) => (
+          <View key={k} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Text variant="bodySm" color={colors.textMuted}>
+              {k}
+            </Text>
+            <Text variant="bodySm" style={{ fontWeight: '600' }}>
+              {v}
+            </Text>
+          </View>
+        ))}
+      </View>
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <Button label="Receive" icon="add" onPress={() => router.push(`/admin/receive?itemId=${item.id}`)} style={{ flex: 1 }} />
+        <Button label="Issue" icon="arrow-up" variant="secondary" onPress={() => router.push('/admin/transfer?direction=issue')} style={{ flex: 1 }} />
+      </View>
 
       <Section title="Details">
         <View style={{ gap: 12 }}>
