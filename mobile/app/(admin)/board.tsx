@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import type { Task } from '../../src/api/types';
-import { EmptyState, HeaderButton, PageHeader, Reveal, Screen, Segmented, TaskCard } from '../../src/components';
+import { EmptyState, HeaderButton, PageHeader, Screen, Segmented, TaskList } from '../../src/components';
 import { useAuth } from '../../src/store/auth';
 import { useApi } from '../../src/hooks/useApi';
 
@@ -25,11 +25,7 @@ export default function AdminJobs() {
     <Screen refreshing={refreshing} onRefresh={refresh}>
       <PageHeader title="Jobs" right={canCreate ? <HeaderButton icon="add" label="New job" primary onPress={() => router.push('/admin/task-new')} /> : undefined} />
       <Segmented options={FILTERS} value={filter} onChange={setFilter} />
-      {data?.tasks.map((t, i) => (
-        <Reveal key={t.id} index={Math.min(i, 8)}>
-          <TaskCard task={t} showAssignee />
-        </Reveal>
-      ))}
+      {data?.tasks.length ? <TaskList tasks={data.tasks} showAssignee /> : null}
       {!loading && !data?.tasks.length ? <EmptyState icon="briefcase-outline" title="No jobs" message="Nothing matches this filter." /> : null}
     </Screen>
   );

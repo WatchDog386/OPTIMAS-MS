@@ -24,6 +24,8 @@ interface Props {
   /** Uppercase, heavier label for editorial call-to-actions. */
   caps?: boolean;
   style?: StyleProp<ViewStyle>;
+  /** Label and icon colour, for a button on its own colour (e.g. white on WhatsApp green). */
+  textColor?: string;
 }
 
 /**
@@ -66,9 +68,10 @@ const inverse: Record<Variant, { bg: string; fg: string; border?: string }> = {
   outline: { bg: 'transparent', fg: colors.highlight, border: colors.highlight },
 };
 
-export function Button({ label, onPress, variant = 'primary', icon, trailingIcon, caps, loading, disabled, size = 'md', style }: Props) {
+export function Button({ label, onPress, variant = 'primary', icon, trailingIcon, caps, loading, disabled, size = 'md', style, textColor }: Props) {
   const inv = useInverse();
-  const p = (OPENED_ON_DESKTOP && !inv ? deskButtons : inv ? inverse : light)[variant];
+  const base = (OPENED_ON_DESKTOP && !inv ? deskButtons : inv ? inverse : light)[variant];
+  const p = textColor ? { ...base, fg: textColor } : base;
   const inactive = disabled || loading;
   const scale = useRef(new Animated.Value(1)).current;
   const [down, setDown] = useState(false);

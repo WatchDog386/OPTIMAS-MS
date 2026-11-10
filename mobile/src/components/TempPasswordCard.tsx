@@ -6,6 +6,9 @@ import { Glass } from './Glass';
 import { Text } from './Text';
 
 /** The web console the person signs in at (staff and customers use the same app). */
+/** WhatsApp's green, a shade deeper so the white label reads sharply on it. */
+export const WA_GREEN = '#1DA851';
+
 export const APP_SIGNIN_URL = 'https://ms.optimaswifi.co.ke';
 
 /**
@@ -46,7 +49,7 @@ export function TempPasswordCard({ loginId, password, name, phone }: { loginId: 
           {password}
         </Text>
       </View>
-      <Button label={to ? `Send on WhatsApp to ${phone}` : 'Send on WhatsApp'} icon="logo-whatsapp" onPress={() => void whatsapp(phone, message)} style={{ backgroundColor: '#25D366' }} />
+      <Button label={to ? `Send on WhatsApp to ${phone}` : 'Send on WhatsApp'} icon="logo-whatsapp" onPress={() => void whatsapp(phone, message)} style={{ backgroundColor: WA_GREEN, borderColor: WA_GREEN }} textColor="#FFFFFF" />
       <Pressable onPress={() => void Share.share({ message })} hitSlop={8} style={{ alignSelf: 'center' }} accessibilityRole="button">
         <Text variant="bodySm" color={colors.textMuted} style={{ textDecorationLine: 'underline' }}>
           {to ? 'Share another way' : 'No phone number saved · share another way'}

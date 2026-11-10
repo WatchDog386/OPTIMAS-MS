@@ -9,7 +9,9 @@ import { useApi } from '../../src/hooks/useApi';
 import { confirmAction } from '../../src/utils/confirm';
 import { isManager, useAuth } from '../../src/store/auth';
 import { requestCapture } from '../../src/store/bridge';
-import { colors, radius, space } from '../../src/theme';
+import { colors, fonts, isDark, radius, space } from '../../src/theme';
+import { JOB_STATE } from '../../src/components/TaskCard';
+import { SME } from '../../src/components/SmeKit';
 import { dateTime, duration, firstName, flagLabel, humanize, kes, statusLabel, priorityTone, taskStatusTone, taskTypeIcon, time } from '../../src/utils/format';
 import { celebrate, toast } from '../../src/store/feedback';
 import { openChatWith } from '../../src/utils/chat';
@@ -62,6 +64,7 @@ export default function TaskDetail() {
   };
 
   const open = task.status === 'ASSIGNED' || task.status === 'IN_PROGRESS';
+  const state = JOB_STATE[task.status];
   const materialsTotal = task.materials?.reduce((n, m) => n + m.amount, 0) ?? 0;
 
   const footer =
@@ -113,28 +116,37 @@ export default function TaskDetail() {
     <Screen refreshing={refreshing} onRefresh={refresh} footer={footer}>
       <ScreenHeader title={task.code} subtitle={humanize(task.type)} right={<Badge label={statusLabel(task.status)} tone={taskStatusTone[task.status]} />} />
 
-      <Card variant="hero" style={{ gap: space.md, padding: space.xl }}>
+      {/* The job opens on the colour of the state it is in now, with that state in words */}
+      <View style={[styles.hero, { backgroundColor: state.bg }]}>
         <View style={styles.row}>
-          <View style={styles.typeIcon}>
-            <Ionicons name={taskTypeIcon[task.type]} size={22} color={colors.white} />
+          <View style={[styles.typeIcon, { backgroundColor: state.chip }]}>
+            <Ionicons name={taskTypeIcon[task.type]} size={22} color={state.ink} />
           </View>
           <Badge label={`${humanize(task.priority)} priority`} tone={priorityTone[task.priority]} />
         </View>
-        <Text variant="h2">{task.title}</Text>
+        <View style={[styles.stateLine, { backgroundColor: state.chip }]}>
+          <View style={[styles.stateDot, { backgroundColor: state.ink }]} />
+          <Text variant="bodySm" color={state.ink} fixedColor style={{ fontFamily: fonts.semibold, flex: 1 }}>
+            {stateText(task)}
+          </Text>
+        </View>
+        <Text variant="h2" color={SME.fg} fixedColor>
+          {task.title}
+        </Text>
         {task.description ? (
-          <Text variant="bodySm" color={colors.textMuted}>
+          <Text variant="bodySm" color={SME.fg3} fixedColor>
             {task.description}
           </Text>
         ) : null}
-        <View style={styles.metrics}>
+        <View style={[styles.metrics, { backgroundColor: state.chip }]}>
           <Metric label="Started" value={time(task.startedAt)} />
           <Metric label="Finished" value={time(task.endedAt)} />
           <Metric label="Duration" value={task.durationMinutes != null ? duration(task.durationMinutes) : task.startedAt ? 'Running' : '—'} />
         </View>
-      </Card>
+      </View>
 
       <SectionHeader title="Customer" />
-      <Card style={{ gap: space.md }}>
+      <Card style={[styles.flat, { gap: space.md }]}>
         <Text variant="title">{task.customerName}</Text>
         {task.customerAccount ? (
           <Text variant="bodySm" color={colors.textMuted}>
@@ -149,22 +161,22 @@ export default function TaskDetail() {
         </View>
         <View style={{ flexDirection: 'row', gap: space.sm }}>
           {task.customerPhone ? (
-            <Button label="Call" icon="call" variant="secondary" style={{ flex: 1 }} onPress={() => Linking.openURL(`tel:${task.customerPhone}`)} />
+            <Button label="Call" icon="call" variant="secondary" style={[styles.flatBtn, { flex: 1 }]} onPress={() => Linking.openURL(`tel:${task.customerPhone}`)} />
           ) : null}
           {mine || helper ? (
-            <Button label="Directions" icon="navigate" variant="secondary" style={{ flex: 1 }} onPress={() => router.push(`/navigate/${task.id}`)} />
+            <Button label="Directions" icon="navigate" variant="secondary" style={[styles.flatBtn, { flex: 1 }]} onPress={() => router.push(`/navigate/${task.id}`)} />
           ) : open ? (
-            <Button label="Track" icon="navigate" variant="secondary" style={{ flex: 1 }} onPress={() => router.push(`/track/${task.id}`)} />
+            <Button label="Track" icon="navigate" variant="secondary" style={[styles.flatBtn, { flex: 1 }]} onPress={() => router.push(`/track/${task.id}`)} />
           ) : null}
         </View>
         {mine && open ? (
           <View style={{ flexDirection: 'row', gap: space.sm }}>
-            <Button label="Message" icon="chatbubble-ellipses-outline" variant="secondary" style={{ flex: 1 }} onPress={() => openChatWith({ taskId: task.id, with: 'customer' })} />
-            <Button label="Onboard customer" icon="person-add-outline" variant="secondary" style={{ flex: 1.3 }} onPress={() => router.push(`/onboard?taskId=${task.id}`)} />
+            <Button label="Message" icon="chatbubble-ellipses-outline" variant="secondary" style={[styles.flatBtn, { flex: 1 }]} onPress={() => openChatWith({ taskId: task.id, with: 'customer' })} />
+            <Button label="Onboard customer" icon="person-add-outline" variant="secondary" style={[styles.flatBtn, { flex: 1.3 }]} onPress={() => router.push(`/onboard?taskId=${task.id}`)} />
           </View>
         ) : null}
         {(mine || helper) && task.customerAccount ? (
-          <Button label="Collect a device from this customer" icon="arrow-undo-outline" variant="secondary" onPress={() => void collectDevice()} />
+          <Button label="Collect a device from this customer" icon="arrow-undo-outline" variant="secondary" style={styles.flatBtn} onPress={() => void collectDevice()} />
         ) : null}
       </Card>
 
@@ -174,7 +186,7 @@ export default function TaskDetail() {
           {assigner || mine || helper ? (
             <Button label="Team chat" icon="chatbubbles-outline" variant="outline" onPress={() => openChatWith({ teamId: team.id })} />
           ) : null}
-          <Card style={{ gap: space.md }}>
+          <Card style={[styles.flat, { gap: space.md }]}>
             {team.members.map((m) => {
               const leads = m.userId === task.assignee?.id;
               return (
@@ -201,7 +213,7 @@ export default function TaskDetail() {
       ) : null}
 
       {(manager || assigner) && !team && task.assignee ? (
-        <Card style={styles.row}>
+        <Card style={[styles.flat, styles.row]}>
           <Ionicons name="person-circle-outline" size={22} color={colors.primary} />
           <View style={{ flex: 1 }}>
             <Text variant="label" color={colors.textMuted}>
@@ -211,10 +223,10 @@ export default function TaskDetail() {
               {task.assignee.name} · {task.assignee.staffNo}
             </Text>
           </View>
-          <Button label="Message" icon="chatbubble-ellipses-outline" variant="secondary" onPress={() => openChatWith({ userId: task.assignee!.id })} />
+          <Button label="Message" icon="chatbubble-ellipses-outline" variant="secondary" style={styles.flatBtn} onPress={() => openChatWith({ userId: task.assignee!.id })} />
         </Card>
       ) : !task.assignee && task.status === 'OPEN' ? (
-        <Card style={styles.row}>
+        <Card style={[styles.flat, styles.row]}>
           <Ionicons name="time-outline" size={22} color={colors.warning} />
           <View style={{ flex: 1 }}>
             <Text variant="title">Not assigned yet</Text>
@@ -238,7 +250,7 @@ export default function TaskDetail() {
       {task.materials?.length ? (
         <>
           <SectionHeader title="Materials used" />
-          <Card style={{ gap: space.md }}>
+          <Card style={[styles.flat, { gap: space.md }]}>
             {task.materials.map((m) => (
               <View key={m.id} style={styles.matRow}>
                 <View style={{ flex: 1 }}>
@@ -273,7 +285,7 @@ export default function TaskDetail() {
       {task.customerSignature ? (
         <>
           <SectionHeader title="Customer sign-off" />
-          <Card style={{ gap: space.sm }}>
+          <Card style={[styles.flat, { gap: space.sm }]}>
             <SignatureView path={task.customerSignature} />
             <Text variant="bodySm" color={colors.textMuted}>
               Signed by <Text variant="bodySm">{task.signedByName}</Text> · {dateTime(task.signedAt)}
@@ -285,7 +297,7 @@ export default function TaskDetail() {
       {task.customerRating ? (
         <>
           <SectionHeader title="Customer rating" />
-          <Card style={{ gap: space.sm }}>
+          <Card style={[styles.flat, { gap: space.sm }]}>
             <StarRating value={task.customerRating} size={22} />
             {task.customerFeedback ? <Text variant="body">“{task.customerFeedback}”</Text> : null}
             <Text variant="bodySm" color={colors.textMuted}>
@@ -298,14 +310,14 @@ export default function TaskDetail() {
       {task.completionNotes ? (
         <>
           <SectionHeader title="Technician notes" />
-          <Card>
+          <Card style={styles.flat}>
             <Text variant="body">{task.completionNotes}</Text>
           </Card>
         </>
       ) : null}
 
       {task.verifiedBy ? (
-        <Card style={{ borderWidth: 1, borderColor: task.status === 'VERIFIED' ? colors.success : colors.danger, gap: 4 }}>
+        <Card style={[styles.flat, { backgroundColor: state.bg, gap: 4 }]}>
           <Text variant="title" color={task.status === 'VERIFIED' ? colors.success : colors.danger}>
             {task.status === 'VERIFIED' ? 'Verified' : 'Rejected'} by {task.verifiedBy.name}
           </Text>
@@ -325,13 +337,36 @@ export default function TaskDetail() {
   );
 }
 
+/** The job's state in words, as it stands now. */
+function stateText(t: Task) {
+  const who = t.team ? t.team.name : t.assignee?.name;
+  switch (t.status) {
+    case 'OPEN':
+      return 'Not assigned yet · waiting for a technician';
+    case 'ASSIGNED':
+      return `Assigned to ${who ?? 'a technician'} · not started yet`;
+    case 'IN_PROGRESS':
+      return `In progress · ${who ?? 'technician'} started at ${time(t.startedAt)}`;
+    case 'COMPLETED':
+      return `Done at ${time(t.endedAt)} · waiting to be verified`;
+    case 'VERIFIED':
+      return `Verified · closed${t.verifiedBy ? ` by ${t.verifiedBy.name}` : ''}`;
+    case 'REJECTED':
+      return `Returned to ${who ?? 'the technician'}${t.verificationNote ? ` · ${t.verificationNote}` : ''}`;
+    case 'CANCELLED':
+      return 'Cancelled';
+  }
+}
+
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <View style={{ flex: 1, gap: 2 }}>
-      <Text variant="label" color={colors.textMuted}>
+      <Text variant="label" color={SME.fg3} fixedColor>
         {label}
       </Text>
-      <Text variant="title">{value}</Text>
+      <Text variant="title" color={SME.fg} fixedColor>
+        {value}
+      </Text>
     </View>
   );
 }
@@ -357,9 +392,15 @@ function ProofPhoto({ label, photo }: { label: string; photo?: PhotoRef | null }
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm, justifyContent: 'space-between' },
   leadNote: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: radius.md, backgroundColor: colors.brandSoft },
-  typeIcon: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.heroInset, alignItems: 'center', justifyContent: 'center' },
-  metrics: { flexDirection: 'row', backgroundColor: colors.heroInset, borderRadius: radius.md, padding: space.md },
+  hero: { gap: space.md, padding: space.xl, borderRadius: radius.xl },
+  typeIcon: { width: 44, height: 44, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  stateLine: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 },
+  stateDot: { width: 8, height: 8, borderRadius: 4 },
+  metrics: { flexDirection: 'row', borderRadius: radius.md, padding: space.md },
+  // Details cards without outlines; their buttons filled instead of outlined
+  flat: { borderWidth: 0 },
+  flatBtn: { borderWidth: 0, borderColor: 'transparent', backgroundColor: isDark ? '#2A2D2C' : '#EEF2F0' },
   matRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  total: { paddingTop: space.md, borderTopWidth: 1, borderTopColor: colors.border },
+  total: { paddingTop: space.md },
   photoEmpty: { aspectRatio: 3 / 4, borderRadius: radius.md, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
 });

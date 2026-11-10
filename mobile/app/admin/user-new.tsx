@@ -113,9 +113,9 @@ export default function UserNew() {
         footer={
           <View style={{ gap: 10 }}>
             {delivery === 'whatsapp' && created.user.phone ? (
-              <Pressable onPress={() => void whatsapp(created.user.phone, message)} style={({ pressed }) => [styles.continue, { backgroundColor: '#25D366' }, pressed && styles.pressed]} accessibilityRole="button">
-                <Ionicons name="logo-whatsapp" size={20} color={colors.white} />
-                <Text variant="title" color={colors.white} fixedColor style={styles.continueText}>
+              <Pressable onPress={() => void whatsapp(created.user.phone, message)} style={({ pressed }) => [styles.continue, { backgroundColor: '#1DA851' }, pressed && styles.pressed]} accessibilityRole="button">
+                <Ionicons name="logo-whatsapp" size={20} color="#FFFFFF" />
+                <Text variant="title" color="#FFFFFF" fixedColor style={styles.continueText}>
                   Send on WhatsApp
                 </Text>
               </Pressable>
