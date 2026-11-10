@@ -31,6 +31,7 @@ import { duration, firstName } from '../../src/utils/format';
 import { useDesktop } from '../../src/theme/desktop';
 import { AttendanceChartCard } from '../../src/components/AttendanceChartCard';
 import { WeekCard } from '../../src/components/WeekCard';
+import { AdvertCard, OverviewSearch, TaskHealth } from '../../src/components/OverviewCards';
 import { DeskButton, KpiCard, MiniStat, Panel, PanelRow } from '../../src/components/desktop/Kit';
 import { desk } from '../../src/components/desktop/DesktopShell';
 import { Pressable } from 'react-native';
@@ -372,6 +373,8 @@ export default function Overview() {
         onBell={() => router.push('/notifications')}
         updatedAt={updatedAt}
       />
+      {/* Search bar under the header, as on Knoxville-SME */}
+      <OverviewSearch />
       <View style={{ marginHorizontal: -16 }}>
         <AdminHero
           bar={false}
@@ -431,6 +434,10 @@ export default function Overview() {
           />
         </Reveal>
       ) : null}
+
+      {/* Tasks at a glance (Knoxville-SME's Active / Expiring / Expired tiles), then the advert */}
+      <TaskHealth d={d} />
+      <AdvertCard />
 
       {managers ? (
         // The Attendance chart from Reports & charts, as it is there

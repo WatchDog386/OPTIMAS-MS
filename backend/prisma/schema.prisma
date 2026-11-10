@@ -758,6 +758,8 @@ model DayReport {
   /// The report as sent (also shared on WhatsApp)
   text          String
   taskIds       String[]
+  /// Tasks added on the report form that were not in the app (type, location, signal, paid …)
+  extra         Json?
   tasksDone     Int
   collected     Int
   createdAt     DateTime @default(now())

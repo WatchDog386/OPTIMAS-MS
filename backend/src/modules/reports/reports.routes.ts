@@ -18,6 +18,14 @@ reportsRouter.get(
     const weekAgo = new Date(Date.now() - 7 * DAY_MS);
     const alertBefore = new Date(Date.now() - env.CUSTODY_AGE_ALERT_DAYS * DAY_MS);
 
+    // Open tasks by their due time: due in the next 2 hours, or past due (the overview's three task tiles)
+    const now = new Date();
+    const soon = new Date(now.getTime() + 2 * 3600_000);
+    const openNow = { status: { in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS'] as ('OPEN' | 'ASSIGNED' | 'IN_PROGRESS')[] } };
+    const [dueSoon, overdue] = await Promise.all([
+      prisma.task.count({ where: { ...openNow, dueAt: { gte: now, lt: soon } } }),
+      prisma.task.count({ where: { ...openNow, dueAt: { lt: now } } }),
+    ]);
     const [staff, attendance, taskGroups, completedWeek, unitGroups, overdueUnits, pendingReviews, lowStock, recentLost, countsWithMissing, openRequests] =
       await Promise.all([
         // Everyone expected to check in today (all staff but admins)
@@ -57,6 +65,9 @@ reportsRouter.get(
         assigned: tasks.ASSIGNED ?? 0,
         inProgress: tasks.IN_PROGRESS ?? 0,
         awaitingVerification: tasks.COMPLETED ?? 0,
+        open: tasks.OPEN ?? 0,
+        dueSoon,
+        overdue,
         completedLast7Days: completedWeek._count._all,
         avgDurationMinutes: Math.round(completedWeek._avg.durationMinutes ?? 0),
         amountCollectedLast7Days: completedWeek._sum.amountCollected ?? 0,

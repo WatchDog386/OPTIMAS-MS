@@ -6,6 +6,8 @@ export interface PublicInfo {
   address: string | null;
   support: { phone: string | null; whatsapp: string | null; email: string | null };
   privacyEmail: string | null;
+  /** M-Pesa paybill for the overview's advert card, if set. */
+  paybill?: string | null;
   retention: { locationTrailDays: number; notificationDays: number; unusedPhotoDays: number; captureChallengeDays: number };
 }
 

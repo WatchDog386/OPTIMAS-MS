@@ -58,4 +58,32 @@ describe('end-of-day report', () => {
     expect(note.body).toContain('2 tasks completed');
     expect((await api().get(`/api/v1/day-reports/${note.data.dayReportId}`).set(auth(admin))).body.report.tasksDone).toBe(2);
   });
+
+  it('the report form: corrects today\'s task fields and adds tasks done outside the app', async () => {
+    const admin = (await login('FBI-ADM-001')).token;
+    const tech = await newTechnician(admin);
+    await checkIn(tech.token);
+    const r2 = await api().post('/api/v1/tasks').set(auth(admin)).send({ type: 'REPAIR', title: 'Fix', customerName: 'Baraka', address: 'Zimmerman', assigneeId: tech.user.id });
+    expect((await api().post(`/api/v1/tasks/${r2.body.task.id}/start`).set(auth(tech.token)).send({ photoId: await photoId(tech.token, 'TASK_START', r2.body.task.id) })).status).toBe(200);
+    expect((await api().get('/api/v1/day-reports/mine').set(auth(tech.token))).body.report.canSubmit).toBe(false);
+    // Not finished yet: cannot be changed on the form
+    expect((await api().patch(`/api/v1/day-reports/tasks/${r2.body.task.id}`).set(auth(tech.token)).send({ signal: '-20' })).status).toBe(403);
+    expect((await api().post(`/api/v1/tasks/${r2.body.task.id}/complete`).set(auth(tech.token)).send({ photoId: await photoId(tech.token, 'TASK_END', r2.body.task.id), notes: 'Replaced patch cord' })).status).toBe(200);
+
+    const fixed = await api().patch(`/api/v1/day-reports/tasks/${r2.body.task.id}`).set(auth(tech.token)).send({ signal: '-22 dBm', houseNo: 'B12', amountCollected: 500, dropCableM: 5, fatPreinstalled: false });
+    expect(fixed.status).toBe(200);
+    expect((await api().patch(`/api/v1/day-reports/tasks/${r2.body.task.id}`).set(auth(admin)).send({ signal: 'x' })).status).toBe(403);
+
+    const extra = [{ type: 'Installation', customer: 'Congo', location: 'Kware, Congo', signal: '-27 dBm', paid: 3000, materials: ['1 ATB', '1 patch cord', '1 router'], cableM: 30, fat: true }];
+    const preview = await api().post('/api/v1/day-reports/preview').set(auth(tech.token)).send({ extra });
+    const text = preview.body.report.text as string;
+    for (const bit of ['Location: Zimmerman · House B12', 'Signal: -22 dBm', 'Client paid: KES 500', 'FAT pre-installed: No', '*Task 2 — Installation*', 'Customer: Congo', '  3. 1 router', 'Drop cable: 30 m', 'Tasks completed: 2', 'Client paid in total: KES 3,500']) expect(text).toContain(bit);
+    expect(preview.body.report.tasksDone).toBe(2);
+
+    const sent = await api().post('/api/v1/day-reports').set(auth(tech.token)).send({ extra });
+    expect(sent.status).toBe(201);
+    expect(sent.body.report).toMatchObject({ tasksDone: 2, collected: 3500 });
+    const mine = await api().get('/api/v1/day-reports/mine').set(auth(tech.token));
+    expect(mine.body.sent.extra).toHaveLength(1);
+  });
 });

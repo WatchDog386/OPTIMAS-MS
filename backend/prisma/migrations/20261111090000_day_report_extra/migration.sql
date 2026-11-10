@@ -1,0 +1,1 @@
+ALTER TABLE "DayReport" ADD COLUMN "extra" JSONB;

@@ -87,7 +87,13 @@ tasksRouter.get(
       ...(who ? { OR: [{ assigneeId: who }, { team: { members: { some: { userId: who } } } }] } : {}),
       status: status?.length ? { in: status } : undefined,
     };
-    // ?created=today: only jobs created today (company time); `earlier` says how many older ones match
+    // ?due=soon (due in the next 2 hours) or ?due=overdue (past due), open tasks only: the overview's tiles
+    if (req.query.due === 'soon' || req.query.due === 'overdue') {
+      const now = new Date();
+      where.status = status?.length ? { in: status } : { in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS'] };
+      where.dueAt = req.query.due === 'soon' ? { gte: now, lt: new Date(now.getTime() + 2 * 3600_000) } : { lt: now };
+    }
+    // ?created=today: only tasks created today (company time); `earlier` says how many older ones match
     const today = req.query.created === 'today' ? new Date(workDateOf().getTime() - env.TZ_OFFSET_MINUTES * 60_000) : null;
     const tasks = await prisma.task.findMany({
       where: today ? { ...where, createdAt: { gte: today } } : where,

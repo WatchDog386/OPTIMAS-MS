@@ -14,9 +14,13 @@ import { setThemeColor, STATUS_BAR_COLOR } from '../utils/install';
 import { Text } from './Text';
 
 
+/** The lock comes on after this long without a tap, key press or scroll (time away from the app counts). */
+const IDLE_LOCK_MS = 60_000;
+const ACTIVITY_EVENTS = ['pointerdown', 'keydown', 'touchstart', 'scroll', 'wheel'] as const;
+
 /**
- * The fingerprint lock: when it is on for this device, the app opens locked and locks again the moment
- * it is left or closed. The fingerprint is checked by the phone and confirmed by the server.
+ * The fingerprint lock: when it is on for this device, the app opens locked and locks again after a minute
+ * of inactivity. The fingerprint is checked by the phone and confirmed by the server.
  */
 export function LockHost() {
   const user = useAuth((s) => s.user);
@@ -24,6 +28,7 @@ export function LockHost() {
   const setLocked = useLock((s) => s.setLocked);
   useLock((s) => s.rev); // re-read the device setting when it changes
   const enabled = !!user && Platform.OS === 'web' && !!lockKeyOnThisDevice(user.id);
+  const lastActive = useRef(Date.now());
 
   // Lock when the app opens with a saved sign-in (not right after typing the password)
   const hydrated = useAuth((s) => s.hydrated);
@@ -42,19 +47,38 @@ export function LockHost() {
     if (enabled && user) rememberFingerprintAccount(user);
   }, [enabled, user]);
 
-  // Lock again as soon as the app is left
+  // Lock after a minute without activity (as Knoxville-SME's session timeout watches for activity). Leaving
+  // the app for a moment no longer locks it: on coming back it locks only if a minute or more has passed
+  // since the last tap, key or scroll. Not while the phone's own camera is open for a photo or a scan.
   useEffect(() => {
     if (!enabled || typeof document === 'undefined') return;
-    // Locks the moment the app is left or closed (so even the recent-apps preview shows the lock), except
-    // while the phone's own camera is open for a photo or a scan
+    lastActive.current = Date.now();
+    const onActivity = () => {
+      lastActive.current = Date.now();
+    };
+    const idle = () => Date.now() - lastActive.current >= IDLE_LOCK_MS && !leavingExcused();
+    ACTIVITY_EVENTS.forEach((e) => document.addEventListener(e, onActivity, { passive: true, capture: true }));
     const onChange = () => {
-      if (document.visibilityState === 'hidden') {
-        if (!leavingExcused()) setLocked(true);
-      } else endExcuse();
+      if (document.visibilityState === 'visible') {
+        if (idle()) setLocked(true);
+        else lastActive.current = Date.now();
+        endExcuse();
+      }
     };
     document.addEventListener('visibilitychange', onChange);
-    return () => document.removeEventListener('visibilitychange', onChange);
+    const tick = setInterval(() => {
+      if (document.visibilityState === 'visible' && !useLock.getState().locked && idle()) setLocked(true);
+    }, 5_000);
+    return () => {
+      ACTIVITY_EVENTS.forEach((e) => document.removeEventListener(e, onActivity, { capture: true }));
+      document.removeEventListener('visibilitychange', onChange);
+      clearInterval(tick);
+    };
   }, [enabled, setLocked]);
+  // Unlocking counts as activity
+  useEffect(() => {
+    if (!locked) lastActive.current = Date.now();
+  }, [locked]);
 
   if (!enabled || !locked || !user) return null;
   return <LockScreen name={firstName(user.name)} onUnlocked={() => setLocked(false)} />;

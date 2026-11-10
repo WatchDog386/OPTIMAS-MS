@@ -190,6 +190,10 @@ export interface Dashboard {
     assigned: number;
     inProgress: number;
     awaitingVerification: number;
+    /** Saved to assign later; open tasks due in the next 2 hours; open tasks past due */
+    open?: number;
+    dueSoon?: number;
+    overdue?: number;
     completedLast7Days: number;
     avgDurationMinutes: number;
     amountCollectedLast7Days: number;

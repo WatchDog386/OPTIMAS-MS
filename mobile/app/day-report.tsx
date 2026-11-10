@@ -1,100 +1,354 @@
-import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { api, ApiError } from '../src/api/client';
-import { Button, EmptyState, Input, Loading, Screen, ScreenHeader, Text } from '../src/components';
+import { Button, EmptyState, Input, Loading, Screen, ScreenHeader, Segmented, Text } from '../src/components';
 import { SME } from '../src/components/SmeKit';
 import { WA_GREEN } from '../src/components/TempPasswordCard';
 import { useApi } from '../src/hooks/useApi';
 import { celebrate, toast } from '../src/store/feedback';
 import { fonts, isDark, space } from '../src/theme';
 import { whatsapp } from '../src/utils/contact';
-import { kes } from '../src/utils/format';
+import { humanize, kes, time } from '../src/utils/format';
 
-interface Mine {
-  report: {
-    canSubmit: boolean;
-    reason: string | null;
-    team: { id: string; name: string } | null;
-    members: { id: string; name: string; leader: boolean }[];
-    text: string;
-    tasksDone: number;
-    collected: number;
-    cable: number;
-    routers: number;
-  };
-  sent: { id: string; at: string; tasksDone: number } | null;
+interface DayTask {
+  id: string;
+  code: string;
+  type: string;
+  title: string;
+  customerName: string;
+  customerPhone: string | null;
+  address: string;
+  houseNo: string | null;
+  signal: string | null;
+  amountCollected: number | null;
+  dropCableM: number | null;
+  fatPreinstalled: boolean | null;
+  completionNotes: string | null;
+  status: string;
+  endedAt: string | null;
+  materials: string[];
 }
+interface Report {
+  canSubmit: boolean;
+  reason: string | null;
+  team: { id: string; name: string } | null;
+  members: { id: string; name: string; leader: boolean }[];
+  text: string;
+  tasksDone: number;
+  collected: number;
+  cable: number;
+  routers: number;
+  tasks: DayTask[];
+}
+/** A task added on the form that is not in the app. */
+interface Extra {
+  type: string;
+  customer?: string;
+  location: string;
+  houseNo?: string;
+  status?: string;
+  signal?: string;
+  paid?: number;
+  materials: string[];
+  cableM?: number;
+  fat?: boolean;
+  notes?: string;
+}
+/** The form's copy of one task's report fields (strings while typing). */
+type Fields = { houseNo: string; signal: string; paid: string; cable: string; fat: 'yes' | 'no' | ''; notes: string };
+type ExtraForm = Fields & { type: string; customer: string; location: string; materials: string };
+
+const fieldsOf = (t: DayTask): Fields => ({
+  houseNo: t.houseNo ?? '',
+  signal: t.signal ?? '',
+  paid: t.amountCollected ? String(t.amountCollected) : '',
+  cable: t.dropCableM != null ? String(t.dropCableM) : '',
+  fat: t.fatPreinstalled == null ? '' : t.fatPreinstalled ? 'yes' : 'no',
+  notes: t.completionNotes ?? '',
+});
+const emptyExtra = (): ExtraForm => ({ type: 'Installation', customer: '', location: '', houseNo: '', signal: '', paid: '', cable: '', fat: '', notes: '', materials: '' });
+const extraOf = (e: Extra): ExtraForm => ({
+  type: e.type,
+  customer: e.customer ?? '',
+  location: e.location,
+  houseNo: e.houseNo ?? '',
+  signal: e.signal ?? '',
+  paid: e.paid ? String(e.paid) : '',
+  cable: e.cableM != null ? String(e.cableM) : '',
+  fat: e.fat == null ? '' : e.fat ? 'yes' : 'no',
+  notes: e.notes ?? '',
+  materials: e.materials.join('\n'),
+});
+const toExtra = (f: ExtraForm): Extra => ({
+  type: f.type,
+  customer: f.customer.trim() || undefined,
+  location: f.location.trim(),
+  houseNo: f.houseNo.trim() || undefined,
+  signal: f.signal.trim() || undefined,
+  paid: f.paid ? Number(f.paid) : undefined,
+  materials: f.materials.split('\n').map((m) => m.trim()).filter(Boolean),
+  cableM: f.cable ? Number(f.cable) : undefined,
+  fat: f.fat ? f.fat === 'yes' : undefined,
+  notes: f.notes.trim() || undefined,
+});
+const num = (v: string) => v.replace(/[^0-9.]/g, '');
+const TYPES = ['Installation', 'Repair', 'Relocation', 'Maintenance'];
 
 /**
- * The end-of-day report: put together from today's task reports (members, then each task with its
- * location, status, signal, what the client paid, materials, drop cable and FAT), sent to the office
- * and, if wanted, on WhatsApp. On team tasks the team leader sends it for everyone.
+ * The daily report, in two steps. 1 — the report form: each task finished today with the template's
+ * fields (location, house no., signal, client paid, materials, drop cable, FAT, notes), filled from the task
+ * reports and correctable; tasks done outside the app can be added by hand. 2 — generate: the report in the
+ * office's template, sent to the office and shareable on WhatsApp. On team tasks the leader sends it.
  */
 export default function DayReport() {
-  const { data, reload, refresh, refreshing } = useApi<Mine>('/day-reports/mine');
+  const { data, reload } = useApi<{ report: Report; sent: { id: string; at: string; tasksDone: number; extra: Extra[] } | null }>('/day-reports/mine');
+  const [step, setStep] = useState<'form' | 'report'>('form');
+  const [fields, setFields] = useState<Record<string, Fields>>({});
+  const [extras, setExtras] = useState<ExtraForm[]>([]);
   const [note, setNote] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [preview, setPreview] = useState<Report | null>(null);
+  const [busy, setBusy] = useState<'gen' | 'send' | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  // Fill the form once from the task reports (and the hand-added tasks of a report already sent today)
+  useEffect(() => {
+    if (!data || loaded) return;
+    setFields(Object.fromEntries(data.report.tasks.map((t) => [t.id, fieldsOf(t)])));
+    setExtras((data.sent?.extra ?? []).map(extraOf));
+    setLoaded(true);
+  }, [data, loaded]);
+
   if (!data) return <Loading />;
   const r = data.report;
-  const full = note.trim() ? `${r.text}\n\n*Comments*\n${note.trim()}` : r.text;
+  const memberOnly = !r.canSubmit && !r.tasks.length && !!r.reason && /leads/.test(r.reason);
+
+  const setField = (id: string, k: keyof Fields, v: string) => setFields((f) => ({ ...f, [id]: { ...f[id], [k]: v } }));
+  const setExtra = (i: number, k: keyof ExtraForm, v: string) => setExtras((l) => l.map((e, j) => (j === i ? { ...e, [k]: v } : e)));
+
+  const generate = async () => {
+    const bad = extras.findIndex((e) => e.location.trim().length < 2);
+    if (bad >= 0) return toast.warning('Where was it?', `Fill in the location of added task ${bad + 1}.`);
+    if (!r.tasks.length && !extras.length) return toast.warning('Nothing to report', 'Finish a task in the app, or add one with "Add a task".');
+    setBusy('gen');
+    try {
+      // Save corrections to today's tasks first, so the report and the tasks agree
+      for (const t of r.tasks) {
+        const f = fields[t.id];
+        const was = fieldsOf(t);
+        if (!f || JSON.stringify(f) === JSON.stringify(was)) continue;
+        await api(`/day-reports/tasks/${t.id}`, {
+          method: 'PATCH',
+          body: {
+            houseNo: f.houseNo.trim() || null,
+            signal: f.signal.trim() || null,
+            amountCollected: f.paid ? Number(f.paid) : null,
+            dropCableM: f.cable ? Number(f.cable) : null,
+            fatPreinstalled: f.fat ? f.fat === 'yes' : null,
+            ...(f.notes.trim().length >= 5 && f.notes !== was.notes ? { completionNotes: f.notes.trim() } : {}),
+          },
+        });
+      }
+      const res = await api<{ report: Report }>('/day-reports/preview', { body: { note: note.trim() || undefined, extra: extras.map(toExtra) } });
+      setPreview(res.report);
+      setStep('report');
+    } catch (e) {
+      toast.error('Could not generate', e instanceof ApiError ? e.message : 'Try again');
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const send = async () => {
-    setBusy(true);
+    setBusy('send');
     try {
-      await api('/day-reports', { body: { note: note.trim() || undefined } });
+      await api('/day-reports', { body: { note: note.trim() || undefined, extra: extras.map(toExtra) } });
       celebrate('Report sent', r.team ? `${r.team.name}'s report is with the office.` : 'Your report is with the office.');
       await reload();
     } catch (e) {
       toast.error('Not sent', e instanceof ApiError ? e.message : 'Try again');
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   };
 
+  if (memberOnly) {
+    return (
+      <Screen>
+        <ScreenHeader title="Daily report" subtitle="Your tasks today" />
+        <EmptyState icon="document-text-outline" title="Nothing to send" message={r.reason!} />
+      </Screen>
+    );
+  }
+
+  const shown = preview ?? r;
   return (
     <Screen
-      refreshing={refreshing}
-      onRefresh={refresh}
       footer={
-        r.canSubmit ? (
+        step === 'form' ? (
+          <Button label="Generate report" icon="document-text" size="lg" loading={busy === 'gen'} disabled={!!busy} onPress={generate} />
+        ) : (
           <View style={{ gap: space.sm }}>
-            <Button label={data.sent ? 'Send updated report' : 'Send to the office'} icon="send" size="lg" loading={busy} onPress={send} />
-            <Button label="Share on WhatsApp" icon="logo-whatsapp" onPress={() => void whatsapp(null, full.replace(/\n/g, '\n'))} style={{ backgroundColor: WA_GREEN, borderColor: WA_GREEN }} textColor="#FFFFFF" />
+            <Button label={data.sent ? 'Send updated report' : 'Send to the office'} icon="send" size="lg" loading={busy === 'send'} disabled={!!busy} onPress={send} />
+            <Button label="Share on WhatsApp" icon="logo-whatsapp" onPress={() => void whatsapp(null, shown.text)} style={{ backgroundColor: WA_GREEN, borderColor: WA_GREEN }} textColor="#FFFFFF" />
           </View>
-        ) : undefined
+        )
       }
     >
       <ScreenHeader title="Daily report" subtitle={r.team ? `${r.team.name} · you send it as team leader` : 'Your tasks today'} />
 
-      {!r.canSubmit ? (
-        <EmptyState icon="document-text-outline" title="Nothing to send" message={r.reason ?? 'Finish a task first.'} />
-      ) : (
+      <View style={styles.steps}>
+        <StepPill n={1} label="Report form" on={step === 'form'} onPress={() => setStep('form')} />
+        <Ionicons name="chevron-forward" size={14} color={SME.fg4} />
+        <StepPill n={2} label="Report" on={step === 'report'} onPress={preview ? () => setStep('report') : undefined} />
+      </View>
+
+      {data.sent ? (
+        <View style={styles.sent}>
+          <Ionicons name="checkmark-circle" size={18} color={isDark ? '#6EE7B7' : '#047857'} />
+          <Text variant="bodySm" color={isDark ? '#6EE7B7' : '#047857'} fixedColor style={{ fontFamily: fonts.medium, flex: 1 }}>
+            Sent at {new Date(data.sent.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Nairobi' })} · {data.sent.tasksDone} task{data.sent.tasksDone === 1 ? '' : 's'}. Changed something? Generate and send again.
+          </Text>
+        </View>
+      ) : null}
+
+      {step === 'form' ? (
         <>
-          {data.sent ? (
-            <View style={styles.sent}>
-              <Ionicons name="checkmark-circle" size={18} color={isDark ? '#6EE7B7' : '#047857'} />
-              <Text variant="bodySm" color={isDark ? '#6EE7B7' : '#047857'} fixedColor style={{ fontFamily: fonts.medium, flex: 1 }}>
-                Sent at {new Date(data.sent.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Nairobi' })} · {data.sent.tasksDone} task{data.sent.tasksDone === 1 ? '' : 's'}. Finished more since? Send it again.
+          {r.team ? (
+            <View style={styles.card}>
+              <Text variant="title" color={SME.fg} fixedColor style={styles.cardTitle}>
+                {r.team.name}
               </Text>
+              <Text variant="label" color={SME.fg3} fixedColor>
+                Members
+              </Text>
+              {r.members.map((m, i) => (
+                <Text key={m.id} variant="bodySm" color={SME.fg2} fixedColor>
+                  {i + 1}. {m.name}
+                  {m.leader ? ' (leader)' : ''}
+                </Text>
+              ))}
             </View>
           ) : null}
 
-          <View style={styles.stats}>
-            <Stat label="Tasks done" value={String(r.tasksDone)} />
-            <Stat label="Client paid" value={kes(r.collected)} />
-            <Stat label="Drop cable" value={`${r.cable} m`} />
-          </View>
+          {r.tasks.map((t, i) => {
+            const f = fields[t.id] ?? fieldsOf(t);
+            return (
+              <View key={t.id} style={styles.card}>
+                <View style={styles.cardHead}>
+                  <Text variant="title" color={SME.fg} fixedColor style={[styles.cardTitle, { flex: 1 }]}>
+                    Task {i + 1} — {humanize(t.type)}
+                  </Text>
+                  <Text variant="label" color={SME.fg4} fixedColor>
+                    {t.code}
+                  </Text>
+                </View>
+                <Text variant="bodySm" color={SME.fg2} fixedColor>
+                  {t.customerName} · {t.address}
+                </Text>
+                <Text variant="label" color={SME.fg3} fixedColor>
+                  Status: Complete{t.endedAt ? ` at ${time(t.endedAt)}` : ''}
+                </Text>
+                <TemplateFields f={f} on={(k, v) => setField(t.id, k, v)} />
+                <Text variant="label" color={SME.fg3} fixedColor style={{ marginTop: 4 }}>
+                  Materials used (from the task)
+                </Text>
+                {t.materials.length ? (
+                  t.materials.map((m, k) => (
+                    <Text key={k} variant="bodySm" color={SME.fg2} fixedColor>
+                      {k + 1}. {m}
+                    </Text>
+                  ))
+                ) : (
+                  <Text variant="bodySm" color={SME.fg4} fixedColor>
+                    None recorded
+                  </Text>
+                )}
+              </View>
+            );
+          })}
 
-          <View style={styles.paper}>
-            <ReportText text={full} />
-          </View>
+          {extras.map((e, i) => (
+            <View key={i} style={styles.card}>
+              <View style={styles.cardHead}>
+                <Text variant="title" color={SME.fg} fixedColor style={[styles.cardTitle, { flex: 1 }]}>
+                  Task {r.tasks.length + i + 1} — added
+                </Text>
+                <Pressable onPress={() => setExtras((l) => l.filter((_, j) => j !== i))} hitSlop={10} accessibilityLabel="Remove this task">
+                  <Ionicons name="trash-outline" size={18} color={SME.fg3} />
+                </Pressable>
+              </View>
+              <Segmented options={TYPES.map((x) => ({ value: x, label: x }))} value={e.type} onChange={(v) => setExtra(i, 'type', v)} />
+              <Input label="Customer" icon="person-outline" value={e.customer} onChangeText={(v) => setExtra(i, 'customer', v)} />
+              <Input label="Location" icon="location-outline" value={e.location} onChangeText={(v) => setExtra(i, 'location', v)} placeholder="e.g. Kware, Terena Apartments" />
+              <TemplateFields f={e} on={(k, v) => setExtra(i, k, v)} />
+              <Input label="Materials used (one per line)" multiline value={e.materials} onChangeText={(v) => setExtra(i, 'materials', v)} placeholder={'1 ATB\n1 patch cord\n1 router'} />
+            </View>
+          ))}
+
+          <Button label="Add a task not in the app" icon="add-circle-outline" variant="secondary" onPress={() => setExtras((l) => [...l, emptyExtra()])} />
           <Input label="Comments for the office (optional)" multiline value={note} onChangeText={setNote} placeholder="Anything else the office should know" />
+          {!r.tasks.length && !extras.length ? (
+            <Text variant="bodySm" color={SME.fg3} fixedColor style={{ textAlign: 'center' }}>
+              No tasks finished in the app today. Add the tasks you did, or open your tasks.
+            </Text>
+          ) : null}
           <Button label="Open my tasks" icon="briefcase-outline" variant="ghost" onPress={() => router.push('/jobs')} />
+        </>
+      ) : (
+        <>
+          <View style={styles.stats}>
+            <Stat label="Tasks done" value={String(shown.tasksDone)} />
+            <Stat label="Client paid" value={kes(shown.collected)} />
+            <Stat label="Drop cable" value={`${shown.cable} m`} />
+          </View>
+          <View style={styles.card}>
+            <ReportText text={shown.text} />
+          </View>
+          <Button label="Back to the form" icon="create-outline" variant="ghost" onPress={() => setStep('form')} />
         </>
       )}
     </Screen>
+  );
+}
+
+/** The template's fields for one task: house no., signal, client paid, drop cable, FAT, notes. */
+function TemplateFields({ f, on }: { f: Fields; on: (k: keyof Fields, v: string) => void }) {
+  return (
+    <View style={{ gap: 10 }}>
+      <View style={styles.pair}>
+        <View style={{ flex: 1 }}>
+          <Input label="House no." value={f.houseNo} onChangeText={(v) => on('houseNo', v)} placeholder="D3" autoCapitalize="characters" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Input label="Signal" value={f.signal} onChangeText={(v) => on('signal', v)} placeholder="-27 dBm" />
+        </View>
+      </View>
+      <View style={styles.pair}>
+        <View style={{ flex: 1 }}>
+          <Input label="Client paid (KES)" keyboardType="number-pad" value={f.paid} onChangeText={(v) => on('paid', v.replace(/\D/g, ''))} placeholder="0" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Input label="Drop cable (m)" keyboardType="decimal-pad" value={f.cable} onChangeText={(v) => on('cable', num(v))} placeholder="0" />
+        </View>
+      </View>
+      <Text variant="label" color={SME.fg3} fixedColor>
+        FAT pre-installed?
+      </Text>
+      <Segmented options={[{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }]} value={(f.fat || '') as 'yes'} onChange={(v) => on('fat', v)} />
+      <Input label="Notes" multiline value={f.notes} onChangeText={(v) => on('notes', v)} placeholder="What was done" />
+    </View>
+  );
+}
+
+function StepPill({ n, label, on, onPress }: { n: number; label: string; on: boolean; onPress?: () => void }) {
+  return (
+    <Pressable onPress={onPress} disabled={!onPress} style={[styles.step, on && styles.stepOn]} accessibilityRole="tab" accessibilityState={{ selected: on }}>
+      <Text variant="label" color={on ? '#FFFFFF' : SME.fg3} fixedColor style={{ fontFamily: fonts.semibold }}>
+        {n}. {label}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -129,8 +383,14 @@ export function ReportText({ text }: { text: string }) {
 }
 
 const styles = StyleSheet.create({
+  steps: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  step: { paddingHorizontal: 14, height: 34, borderRadius: 17, justifyContent: 'center', backgroundColor: SME.surface },
+  stepOn: { backgroundColor: '#2DA043' },
   sent: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 14, backgroundColor: isDark ? 'rgba(16,185,129,0.1)' : '#E3F4EA' },
   stats: { flexDirection: 'row', gap: 8 },
   stat: { flex: 1, alignItems: 'center', gap: 2, paddingVertical: 12, borderRadius: 14, backgroundColor: SME.surface },
-  paper: { padding: 16, borderRadius: 16, backgroundColor: SME.surface },
+  card: { gap: 8, padding: 16, borderRadius: 16, backgroundColor: SME.surface },
+  cardHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cardTitle: { fontFamily: fonts.semibold },
+  pair: { flexDirection: 'row', gap: 10 },
 });

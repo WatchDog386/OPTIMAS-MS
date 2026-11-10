@@ -15,6 +15,7 @@ publicRouter.get('/info', (_req, res) => {
     address: env.COMPANY_ADDRESS || null,
     support: { phone: env.SUPPORT_PHONE || null, whatsapp: env.SUPPORT_WHATSAPP || null, email: env.SUPPORT_EMAIL || null },
     privacyEmail: env.PRIVACY_EMAIL || env.SUPPORT_EMAIL || null,
+    paybill: env.MPESA_PAYBILL || null,
     retention: RETENTION,
   });
 });

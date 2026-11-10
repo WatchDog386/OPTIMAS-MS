@@ -57,6 +57,8 @@ const schema = z.object({
   /** Id of the release now running (deploy.sh sets it from git). A new one tells everyone the app was updated. */
   APP_BUILD: z.string().default(''),
   SUPPORT_PHONE: z.string().default(''),
+  /** M-Pesa paybill shown on the overview's advert card (empty: the card shows the brand line instead). */
+  MPESA_PAYBILL: z.string().default(''),
   SUPPORT_WHATSAPP: z.string().default(''),
   SUPPORT_EMAIL: z.string().default(''),
   /** The company that runs the app (the data controller named in the Privacy Policy). */

@@ -89,7 +89,7 @@ export function usePrivacyItems(): PrivacyItem[] {
 
   const items: PrivacyItem[] = [];
   // Installing has its own card at the top of the profile (ProfileInstallCard)
-  if (lock) items.push({ key: 'lock', icon: 'finger-print', title: 'Fingerprint lock', sub: lock.busy ? 'Working…' : lock.on ? 'On · tap to turn off' : 'Off · tap to turn on', on: lock.on, onPress: () => void lock.toggle(!lock.on) });
+  if (lock) items.push({ key: 'lock', icon: 'finger-print', title: 'Fingerprint lock', sub: lock.busy ? 'Working…' : lock.on ? 'On · locks after 1 minute without use' : 'Off · tap to turn on', on: lock.on, onPress: () => void lock.toggle(!lock.on) });
   items.push({ key: 'theme', icon: isDark ? 'moon' : 'moon-outline', title: 'Dark mode', sub: isDark ? 'On · tap for light mode' : 'Off · tap for dark mode', on: isDark, onPress: () => setThemeMode(isDark ? 'light' : 'dark') });
   items.push(
     { key: 'data', icon: 'download-outline', title: 'Download my data', sub: busy === 'download' ? 'Preparing…' : 'Everything the app holds', onPress: download },
