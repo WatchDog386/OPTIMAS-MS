@@ -13,7 +13,7 @@ import { colors, fonts, isDark, radius, space } from '../../src/theme';
 import { JOB_STATE } from '../../src/components/TaskCard';
 import { SME } from '../../src/components/SmeKit';
 import { dateTime, dayLabel, duration, firstName, isLaterDay, flagLabel, humanize, kes, statusLabel, priorityTone, taskStatusTone, taskTypeIcon, time } from '../../src/utils/format';
-import { celebrate, toast } from '../../src/store/feedback';
+import { celebrate, promptDialog, toast } from '../../src/store/feedback';
 import { openChatWith } from '../../src/utils/chat';
 import { collectDevice } from '../../src/utils/devices';
 
@@ -67,11 +67,33 @@ export default function TaskDetail() {
   const state = JOB_STATE[task.status];
   const materialsTotal = task.materials?.reduce((n, m) => n + m.amount, 0) ?? 0;
 
+  // The technician cannot do it: back to the office with a reason (the only way out without a report)
+  const unable = async () => {
+    const reason = await promptDialog({
+      title: 'Can’t do this task?',
+      message: 'Say why. It goes back to the office to give to someone else, and you can check out without its report.',
+      emoji: '🙅',
+      confirmLabel: 'Hand it back',
+      input: { placeholder: 'e.g. Customer not at home, gate locked', required: true },
+    });
+    if (!reason) return;
+    if (reason.trim().length < 5) return toast.warning('Say a bit more', 'Give the office a reason they can act on.');
+    const ok = await run(() => api<{ task: Task }>(`/tasks/${task.id}/unable`, { body: { reason } }));
+    if (ok) toast.success('Handed back', 'The office has been told.');
+  };
+  const later = isLaterDay(task.scheduledFor);
+
   const footer =
     mine && task.status === 'ASSIGNED' ? (
-      <Button label="Start task · take photo" icon="camera" size="lg" loading={busy} onPress={start} />
+      <View style={{ gap: space.sm }}>
+        <Button label={later ? `For ${dayLabel(task.scheduledFor)}` : 'Start task · take photo'} icon="camera" size="lg" loading={busy} disabled={later} onPress={start} />
+        <Button label="Can’t do it today" icon="close-circle-outline" variant="ghost" onPress={unable} />
+      </View>
     ) : mine && task.status === 'IN_PROGRESS' ? (
-      <Button label="Complete task" icon="checkmark-done" size="lg" onPress={() => router.push(`/task/complete?id=${task.id}`)} />
+      <View style={{ gap: space.sm }}>
+        <Button label="Complete task · send report" icon="checkmark-done" size="lg" onPress={() => router.push(`/task/complete?id=${task.id}`)} />
+        <Button label="Can’t finish it" icon="close-circle-outline" variant="ghost" onPress={unable} />
+      </View>
     ) : manager && task.status === 'COMPLETED' ? (
       <View style={{ gap: space.sm }}>
         <Input placeholder="Note (required to reject)" value={note} onChangeText={setNote} />
@@ -374,9 +396,9 @@ function stateText(t: Task) {
   if ((t.status === 'ASSIGNED' || t.status === 'OPEN') && isLaterDay(t.scheduledFor)) return `For ${dayLabel(t.scheduledFor)} · ${who ? `${who} gets it that morning` : 'to assign'}`;
   switch (t.status) {
     case 'OPEN':
-      return 'Not assigned yet · waiting for a technician';
+      return t.returnNote ? `Handed back · ${t.returnNote}` : 'Not assigned yet · waiting for a technician';
     case 'ASSIGNED':
-      return `Assigned to ${who ?? 'a technician'} · not started yet`;
+      return t.seenAt ? `Assigned to ${who ?? 'a technician'} · opened ${time(t.seenAt)}, not started yet` : `Assigned to ${who ?? 'a technician'} · not opened yet`;
     case 'IN_PROGRESS':
       return `In progress · ${who ?? 'technician'} started at ${time(t.startedAt)}`;
     case 'COMPLETED':

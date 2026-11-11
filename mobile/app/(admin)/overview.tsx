@@ -31,7 +31,7 @@ import { duration, firstName } from '../../src/utils/format';
 import { useDesktop } from '../../src/theme/desktop';
 import { AttendanceChartCard } from '../../src/components/AttendanceChartCard';
 import { WeekCard } from '../../src/components/WeekCard';
-import { AdvertCard, OverviewSearch, TaskHealth } from '../../src/components/OverviewCards';
+import { AdvertCard, OverviewSearch, TaskHealth, TodayTasks } from '../../src/components/OverviewCards';
 import { DeskButton, KpiCard, MiniStat, Panel, PanelRow } from '../../src/components/desktop/Kit';
 import { desk } from '../../src/components/desktop/DesktopShell';
 import { Pressable } from 'react-native';
@@ -278,6 +278,9 @@ export default function Overview() {
           <KpiCard tone="red" value={flagged} title="Flagged devices" sub={flagged ? 'Overdue · missing · lost' : 'All accounted for'} icon="pie-chart-outline" onPress={() => router.push('/admin/reconciliation')} />
         </View>
 
+        <Panel title="Today’s tasks" link="All tasks" onLink={() => router.push('/board?status=')}>
+          <TodayTasks bare />
+        </Panel>
         <View style={{ flexDirection: 'row', gap: 16, alignItems: 'stretch' }}>
           <Panel title="Tasks done this week" link="All tasks" onLink={() => router.push('/board')} style={{ flex: 2 }}>
             <View style={{ flexDirection: 'row', gap: 40 }}>
@@ -437,6 +440,7 @@ export default function Overview() {
 
       {/* Tasks at a glance (Knoxville-SME's Active / Expiring / Expired tiles), then the advert */}
       <TaskHealth d={d} />
+      <TodayTasks />
       <AdvertCard />
 
       {managers ? (

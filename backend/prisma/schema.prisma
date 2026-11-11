@@ -236,6 +236,15 @@ model Task {
   scheduledFor    DateTime? @db.Date
   /// When a scheduled task was given out on its day (null until then)
   releasedAt      DateTime?
+  /// Follow-up: when the technician (the leader) was given it and first opened it; reminders sent so
+  /// far and the last one; the office's last alert about it ("unseen", "unstarted", "long")
+  assignedAt      DateTime?
+  seenAt          DateTime?
+  lastReminderAt  DateTime?
+  reminderCount   Int       @default(0)
+  escalated       String?
+  /// The technician could not do it and gave it back to the office, with this reason
+  returnNote      String?
 
   assigneeId  String? // empty while the job is OPEN (not assigned yet)
   createdById String

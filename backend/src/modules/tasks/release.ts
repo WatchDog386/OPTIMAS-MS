@@ -17,7 +17,7 @@ export async function releaseScheduledTasks() {
   });
   for (const task of due) {
     // Claim it first, so two server processes never announce the same task twice
-    const claimed = await prisma.task.updateMany({ where: { id: task.id, releasedAt: null }, data: { releasedAt: new Date() } });
+    const claimed = await prisma.task.updateMany({ where: { id: task.id, releasedAt: null }, data: { releasedAt: new Date(), assignedAt: task.assigneeId ? new Date() : null } });
     if (!claimed.count) continue;
     if (task.status === 'ASSIGNED') {
       announce(task, 'Today');

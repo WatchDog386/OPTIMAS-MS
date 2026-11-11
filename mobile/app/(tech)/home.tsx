@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { Attendance, Custody, MyStats, SerialUnit, Task } from '../../src/api/types';
@@ -203,6 +203,22 @@ export default function TechHome() {
         )}
       </Reveal>
 
+      {/* What still has to be done today: check-out waits for it */}
+      {jobs.length ? (
+        <Pressable onPress={() => router.push('/jobs')} style={styles.todo} accessibilityRole="button">
+          <Ionicons name="alert-circle" size={20} color={colors.warning} />
+          <View style={{ flex: 1 }}>
+            <Text variant="title" style={{ fontSize: 14 }}>
+              {jobs.length} task{jobs.length === 1 ? '' : 's'} to finish and report
+            </Text>
+            <Text variant="label" color={colors.textMuted}>
+              {jobs.filter((j) => !j.seenAt && j.status === 'ASSIGNED').length ? 'Open each new task so the office knows you have it. ' : ''}Start photo, completion photo and task report for each: check-out waits for them.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+        </Pressable>
+      ) : null}
+
       {/* Up next */}
       <Reveal index={3}>
         {!open.data && open.loading ? (
@@ -334,6 +350,7 @@ function NextJob({ job }: { job: Task }) {
 }
 
 const styles = StyleSheet.create({
+  todo: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: 18, backgroundColor: colors.warningSoft },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   shift: { flexDirection: 'row', alignItems: 'center', gap: 18 },
   cardTitle: { fontFamily: fonts.semibold, fontSize: 17, lineHeight: 22 },

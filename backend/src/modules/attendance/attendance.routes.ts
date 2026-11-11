@@ -3,6 +3,7 @@ import { cacheFor } from '../../lib/cache';
 import { z } from 'zod';
 import { ReviewStatus } from '@prisma/client';
 import { env } from '../../config/env';
+import { checkoutBlockers } from '../tasks/tasks.routes';
 import { prisma } from '../../lib/prisma';
 import { badRequest, conflict, forbidden, notFound } from '../../lib/http-error';
 import { audit } from '../../lib/audit';
@@ -111,6 +112,13 @@ attendanceRouter.post(
   ah(async (req, res) => {
     const userId = me(req).id;
     const { photoId } = parse(z.object({ photoId: z.string().min(1) }), req.body);
+    // Technicians report their work before going home: every task given to them finished (or handed back),
+    // and the day's report sent
+    if (me(req).role === 'TECHNICIAN') {
+      const b = await checkoutBlockers(userId);
+      if (b.tasks.length) throw conflict(`Finish and report ${b.tasks.length === 1 ? `${b.tasks[0].code} (${b.tasks[0].title})` : `your ${b.tasks.length} tasks`} before checking out, or tell the office you cannot do ${b.tasks.length === 1 ? 'it' : 'them'}`, 'TASKS_NOT_REPORTED');
+      if (b.needsDayReport) throw conflict('Send your daily report before checking out', 'DAY_REPORT_MISSING');
+    }
     const now = await eventTime(photoId);
     const workDate = workDateOf(now);
 
@@ -127,6 +135,16 @@ attendanceRouter.post(
     });
     if (record.checkOutPhoto) void flagLocation(record.id, record.checkOutPhoto, me(req).name, 'out');
     res.json({ record, custody: await custodySummary(userId) });
+  }),
+);
+
+/** Before the check-out photo: what still has to be done first (technicians). */
+attendanceRouter.get(
+  '/checkout-ready',
+  ah(async (req, res) => {
+    if (me(req).role !== 'TECHNICIAN') return void res.json({ ready: true, tasks: [], needsDayReport: false });
+    const b = await checkoutBlockers(me(req).id);
+    res.json({ ready: !b.tasks.length && !b.needsDayReport, ...b });
   }),
 );
 

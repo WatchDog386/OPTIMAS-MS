@@ -1,7 +1,9 @@
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import type { Dashboard } from '../api/types';
+import type { Dashboard, Task } from '../api/types';
+import { useApi } from '../hooks/useApi';
+import { TaskCard } from './TaskCard';
 import { usePublicInfo } from '../hooks/usePublicInfo';
 import { fonts, isDark } from '../theme';
 import { SME } from './SmeKit';
@@ -87,6 +89,37 @@ export function TaskHealth({ d }: { d?: Dashboard | null }) {
         </View>
         <Ionicons name="chevron-forward" size={16} color={SME.fg4} />
       </Pressable>
+    </View>
+  );
+}
+
+/**
+ * Today's tasks on the overview: the newest first, refreshed every 20 seconds, so a task made by anyone
+ * (customer care, a supervisor, another phone) shows up without leaving the page.
+ */
+export function TodayTasks({ bare }: { bare?: boolean } = {}) {
+  const { data } = useApi<{ tasks: Task[] }>('/tasks?created=today', { poll: 20_000 });
+  const tasks = [...(data?.tasks ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return (
+    <View style={{ gap: 10 }}>
+      {bare ? null : <View style={styles.head}>
+        <Text variant="title" color={SME.fg} fixedColor style={{ fontFamily: fonts.semibold, fontSize: 17, flex: 1 }}>
+          Today’s tasks{tasks.length ? ` · ${tasks.length}` : ''}
+        </Text>
+        <Pressable onPress={() => router.push('/board?status=' as never)} style={styles.seeAll} accessibilityRole="link">
+          <Text variant="label" color={SME.fg} fixedColor style={{ fontFamily: fonts.semibold, fontSize: 12 }}>
+            See all
+          </Text>
+        </Pressable>
+      </View>}
+      {data && !tasks.length ? (
+        <Text variant="bodySm" color={SME.fg4} fixedColor style={{ paddingHorizontal: 2 }}>
+          No tasks yet today. New ones appear here as soon as they are made.
+        </Text>
+      ) : null}
+      {tasks.slice(0, 5).map((t) => (
+        <TaskCard key={t.id} task={t} showAssignee />
+      ))}
     </View>
   );
 }

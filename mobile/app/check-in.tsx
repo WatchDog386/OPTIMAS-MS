@@ -30,6 +30,9 @@ export default function CheckIn() {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<{ record: Attendance; flags: string[] } | null>(null);
   const allChecked = Object.values(checks).every(Boolean);
+  // Check-out waits for the work to be reported: tasks given to them, then the daily report
+  const ready = useApi<{ ready: boolean; tasks: { id: string; code: string; title: string; status: string; customerName: string }[]; needsDayReport: boolean }>(isIn ? null : '/attendance/checkout-ready');
+  const blocked = !isIn && !!ready.data && !ready.data.ready;
   const where = useOfficeCheck();
 
   /** Says plainly when this check-in will not count as at the office, before the photo is taken. */
@@ -118,7 +121,7 @@ export default function CheckIn() {
           icon="camera"
           size="lg"
           loading={busy}
-          disabled={isIn && !allChecked}
+          disabled={(isIn && !allChecked) || blocked || (!isIn && !ready.data)}
           onPress={submit}
         />
       }
@@ -131,6 +134,41 @@ export default function CheckIn() {
       ) : null}
 
       <OfficeCheckCard check={where} />
+
+      {blocked && ready.data ? (
+        <Card style={{ gap: space.sm, backgroundColor: colors.warningSoft, borderWidth: 0 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Ionicons name="lock-closed" size={18} color={colors.warning} />
+            <Text variant="title" style={{ flex: 1 }}>
+              Report your work before checking out
+            </Text>
+          </View>
+          {ready.data.tasks.length ? (
+            <>
+              <Text variant="bodySm" color={colors.textMuted}>
+                Each task given to you needs its start photo, completion photo and task report. Can’t do one? Open it and tap “Can’t do it today”.
+              </Text>
+              {ready.data.tasks.map((t) => (
+                <ListRow
+                  key={t.id}
+                  icon={t.status === 'IN_PROGRESS' ? 'play-circle' : 'briefcase-outline'}
+                  title={`${t.code} · ${t.title}`}
+                  subtitle={`${t.customerName} · ${t.status === 'IN_PROGRESS' ? 'in progress: finish and send the report' : 'not started'}`}
+                  onPress={() => router.push(`/task/${t.id}`)}
+                />
+              ))}
+            </>
+          ) : null}
+          {ready.data.needsDayReport ? (
+            <>
+              <Text variant="bodySm" color={colors.textMuted}>
+                You finished tasks today: send the office your daily report.
+              </Text>
+              <Button label="Open daily report" icon="document-text-outline" onPress={() => router.push('/day-report')} />
+            </>
+          ) : null}
+        </Card>
+      ) : null}
 
       {isIn ? (
         <>

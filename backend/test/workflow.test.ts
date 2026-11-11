@@ -92,6 +92,14 @@ describe('a technician’s day: check-in → job → completion → verification
   });
 
   it('records check-out with worked minutes and lists what is still held', async () => {
+    // Tasks never done block check-out: they are handed back with a reason
+    expect((await api().post('/api/v1/attendance/check-out').set(auth(tech.token)).send({ photoId: await photoId(tech.token, 'CHECK_OUT') })).body.error.code).toBe('TASKS_NOT_REPORTED');
+    for (const t of (await api().get('/api/v1/attendance/checkout-ready').set(auth(tech.token))).body.tasks as { id: string }[]) {
+      expect((await api().post(`/api/v1/tasks/${t.id}/unable`).set(auth(tech.token)).send({ reason: 'Customer not at home' })).status).toBe(200);
+    }
+    // Finished tasks today: the daily report goes first
+    expect((await api().post('/api/v1/attendance/check-out').set(auth(tech.token)).send({ photoId: await photoId(tech.token, 'CHECK_OUT') })).body.error.code).toBe('DAY_REPORT_MISSING');
+    expect((await api().post('/api/v1/day-reports').set(auth(tech.token)).send({})).status).toBe(201);
     const res = await api().post('/api/v1/attendance/check-out').set(auth(tech.token)).send({ photoId: await photoId(tech.token, 'CHECK_OUT') });
     expect(res.status).toBe(200);
     expect(res.body.record.workedMinutes).toBeGreaterThanOrEqual(0);

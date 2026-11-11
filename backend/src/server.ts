@@ -3,6 +3,7 @@ import { createApp } from './app';
 import { prisma } from './lib/prisma';
 import { scheduleRetention } from './lib/retention';
 import { scheduleTaskRelease } from './modules/tasks/release';
+import { scheduleFollowUp } from './modules/tasks/follow-up';
 import { announceRelease } from './lib/release';
 
 /** One API process. `background`: this one also runs the background jobs. */
@@ -22,6 +23,8 @@ export function startServer(background: boolean) {
   if (background) scheduleRetention();
   // Tasks made for a later day go out on the morning of their day
   if (background) scheduleTaskRelease();
+  // Assigned tasks are followed until they are opened, started, finished and reported
+  if (background) scheduleFollowUp();
 
   const shutdown = async (signal: string) => {
     console.log(`${signal} received, shutting down…`);

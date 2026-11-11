@@ -114,6 +114,11 @@ export interface Task {
   fatPreinstalled?: boolean | null;
   /** A later day (YYYY-MM-DD…): the technicians see the task only on that day */
   scheduledFor?: string | null;
+  /** Follow-up: when it was given to the technician and when they first opened it */
+  assignedAt?: string | null;
+  seenAt?: string | null;
+  /** The technician could not do it and handed it back, with this reason */
+  returnNote?: string | null;
   verificationNote: string | null;
   customerSignature: string | null;
   signedByName: string | null;

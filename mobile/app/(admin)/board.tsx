@@ -23,7 +23,7 @@ export default function AdminJobs() {
   const [due, setDue] = useState<'soon' | 'overdue' | undefined>(params.due === 'soon' || params.due === 'overdue' ? params.due : undefined);
   const [filter, setFilter] = useState(params.status ?? (due ? '' : 'ASSIGNED,IN_PROGRESS'));
   const role = useAuth((s) => s.user?.role);
-  const { data, refresh, refreshing, loading, earlier, earlierShown, showEarlier } = useTodayJobs(filter, { due });
+  const { data, refresh, refreshing, loading, earlier, earlierShown, showEarlier } = useTodayJobs(filter, { due, poll: 20_000 });
   const canCreate = role === 'ADMIN' || role === 'SUPERVISOR';
 
   return (

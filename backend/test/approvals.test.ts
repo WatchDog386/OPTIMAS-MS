@@ -21,6 +21,7 @@ describe('the supervisor review desk', () => {
     taskId = task.id;
     expect((await api().post(`/api/v1/tasks/${task.id}/start`).set(auth(tech.token)).send({ photoId: await photoId(tech.token, 'TASK_START', task.id) })).status).toBe(200);
     expect((await api().post(`/api/v1/tasks/${task.id}/complete`).set(auth(tech.token)).send({ photoId: await photoId(tech.token, 'TASK_END', task.id), notes: 'Replaced patch cord' })).status).toBe(200);
+    expect((await api().post('/api/v1/day-reports').set(auth(tech.token)).send({})).status).toBe(201);
     expect((await api().post('/api/v1/attendance/check-out').set(auth(tech.token)).send({ photoId: await photoId(tech.token, 'CHECK_OUT') })).status).toBe(200);
   });
 

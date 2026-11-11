@@ -12,7 +12,7 @@ const FILTERS = [
 
 export default function Jobs() {
   const [filter, setFilter] = useState(FILTERS[0].value);
-  const { data, refreshing, refresh, loading, earlier, earlierShown, showEarlier } = useTodayJobs(filter);
+  const { data, refreshing, refresh, loading, earlier, earlierShown, showEarlier } = useTodayJobs(filter, { poll: 20_000 });
   return (
     <Screen refreshing={refreshing} onRefresh={refresh}>
       <PageHeader title="My tasks" />

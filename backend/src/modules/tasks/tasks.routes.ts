@@ -46,6 +46,9 @@ export function cableUsed(b: { dropCableM?: number | null; dropStartM?: number |
   return b.dropStartM != null && b.dropEndM != null ? Math.round(Math.abs(b.dropStartM - b.dropEndM) * 10) / 10 : (b.dropCableM ?? undefined);
 }
 
+/** A task given (again) to someone: the follow-up starts over (not opened yet, no reminders). */
+const freshFollowUp = (given: boolean) => ({ assignedAt: given ? new Date() : null, seenAt: null, lastReminderAt: null, reminderCount: 0, escalated: null, returnNote: null });
+
 /** Today, company time, as a @db.Date value; and the instant today starts. */
 const todayDate = () => workDateOf();
 const todayStart = () => new Date(workDateOf().getTime() - env.TZ_OFFSET_MINUTES * 60_000);
@@ -135,6 +138,12 @@ tasksRouter.get(
     const user = me(req);
     const task = await loadTask(req.params.id);
     if (!onCrew(task, user.id) && !ROLES.JOB_VIEWERS.includes(user.role)) throw forbidden();
+    // The technician (the leader) opened it: they have seen it, the reminders to open it stop
+    if (task.assigneeId === user.id && !task.seenAt && (task.status === 'ASSIGNED' || task.status === 'IN_PROGRESS')) {
+      const seenAt = new Date();
+      await prisma.task.update({ where: { id: task.id }, data: { seenAt } });
+      return void res.json({ task: { ...task, seenAt } });
+    }
     res.json({ task });
   }),
 );
@@ -232,7 +241,7 @@ tasksRouter.post(
     const create = () =>
       prisma.$transaction(async (tx) => {
         const who = later ? { assigneeId: null, teamId: null, status: 'OPEN' as const } : await resolveAssignment(tx, { newTeam, teamId: _teamId, assigneeId: _assigneeId }, me(req).id);
-        const created = await tx.task.create({ data: { ...body, ...who, code: newCode(), createdById: me(req).id }, include: detailInclude });
+        const created = await tx.task.create({ data: { ...body, ...who, ...freshFollowUp(!!who.assigneeId && !laterDay), code: newCode(), createdById: me(req).id }, include: detailInclude });
         if (body.requestId) await tx.serviceRequest.update({ where: { id: body.requestId }, data: { status: 'SCHEDULED' } });
         return created;
       });
@@ -280,7 +289,10 @@ tasksRouter.patch(
       const who = reassigning ? { ...(await resolveAssignment(tx, { newTeam, teamId, assigneeId: assigneeId ?? task.assigneeId ?? undefined }, me(req).id)), status: 'ASSIGNED' as const } : {};
       // A new address without a pin: forget the old pin and look the new address up
       const moved = body.address && body.address !== task.address && body.lat == null;
-      return tx.task.update({ where: { id: task.id }, data: { ...(moved ? { ...body, lat: null, lng: null } : body), ...who }, include: detailInclude });
+      // Given to someone (else): the follow-up starts over; a task moved to a later day waits for its morning
+      const quiet = (newDay !== undefined ? newDay : task.scheduledFor) ? ((newDay !== undefined ? newDay : task.scheduledFor) as Date) > todayDate() : false;
+      const follow = reassigning ? freshFollowUp(!quiet) : newDay !== undefined && !quiet && wasQuiet ? { assignedAt: new Date() } : {};
+      return tx.task.update({ where: { id: task.id }, data: { ...(moved ? { ...body, lat: null, lng: null } : body), ...who, ...follow }, include: detailInclude });
     });
     if (body.address && body.address !== task.address && body.lat == null) void fillJobCoordinates(task.id, updated.address);
     const quietNow = !!updated.scheduledFor && updated.scheduledFor > todayDate();
@@ -297,6 +309,49 @@ tasksRouter.patch(
     res.json({ task: updated });
   }),
 );
+
+/**
+ * The technician cannot do an assigned task (customer away, no fibre at the FAT, …): it goes back to the
+ * office to assign again, with their reason. This is how a task leaves their hands without a report.
+ */
+tasksRouter.post(
+  '/:id/unable',
+  ah(async (req, res) => {
+    const user = me(req);
+    const { reason } = parse(z.object({ reason: z.string().trim().min(5, 'Say why it cannot be done').max(500) }), req.body);
+    const task = await loadTask(req.params.id);
+    if (task.assigneeId !== user.id) throw forbidden(task.team ? `${lead(task)} leads ${task.team.name} and decides for this task` : 'This task is not assigned to you');
+    if (task.status !== 'ASSIGNED' && task.status !== 'IN_PROGRESS') throw conflict(`Task is already ${task.status.toLowerCase().replace('_', ' ')}`);
+    const updated = await prisma.task.update({
+      where: { id: task.id },
+      data: { status: 'OPEN', assigneeId: null, teamId: null, startedAt: null, startPhotoId: null, ...freshFollowUp(false), returnNote: `${user.name}: ${reason}` },
+      include: detailInclude,
+    });
+    await audit(user.id, 'TASK_HANDED_BACK', 'Task', task.id, `${task.code} handed back: ${reason}`);
+    void notifyRoles(['ADMIN', 'SUPERVISOR', 'CUSTOMER_CARE'], {
+      type: 'TASK_REJECTED',
+      title: `${user.name} could not do ${task.code}`,
+      body: `${reason} · ${task.customerName} · back in To assign`,
+      data: { taskId: task.id },
+    });
+    res.json({ task: updated });
+  }),
+);
+
+/**
+ * What stops a technician checking out: tasks given to them (they lead) that are not finished with their
+ * report, and — once they have finished tasks today as the one who reports — the day's report.
+ */
+export async function checkoutBlockers(userId: string) {
+  const open = await prisma.task.findMany({
+    where: { assigneeId: userId, status: { in: ['ASSIGNED', 'IN_PROGRESS'] }, ...notFuture() },
+    select: { id: true, code: true, title: true, status: true, customerName: true },
+    orderBy: { assignedAt: 'asc' },
+  });
+  const doneToday = await prisma.task.count({ where: { assigneeId: userId, status: { in: ['COMPLETED', 'VERIFIED'] }, endedAt: { gte: todayStart() } } });
+  const report = doneToday ? await prisma.dayReport.findUnique({ where: { submittedById_workDate: { submittedById: userId, workDate: todayDate() } } }) : null;
+  return { tasks: open, needsDayReport: doneToday > 0 && !report };
+}
 
 // ───────────────────────────── Tracking & dispatch ───────────────────
 
@@ -374,7 +429,7 @@ tasksRouter.post(
     if (!tech?.active || tech.role !== 'TECHNICIAN') throw badRequest('Tasks can only go to active technicians');
     // Guarded so two managers forwarding at once cannot both win
     // Forwarding gives the job to one technician, so a team job stops being a team job
-    const { count } = await prisma.task.updateMany({ where: { id: task.id, status: task.status, assigneeId: task.assigneeId }, data: { assigneeId: tech.id, teamId: null, status: 'ASSIGNED' } });
+    const { count } = await prisma.task.updateMany({ where: { id: task.id, status: task.status, assigneeId: task.assigneeId }, data: { assigneeId: tech.id, teamId: null, status: 'ASSIGNED', ...freshFollowUp(true) } });
     if (!count) throw conflict('This task changed while you were looking. Refresh and try again.', 'STALE');
     const updated = await loadTask(task.id);
     await audit(me(req).id, 'TASK_FORWARDED', 'Task', task.id, `Forwarded ${task.code} from ${lead(task)} to ${tech.name}${body.note ? `: ${body.note}` : ''}`);

@@ -53,7 +53,8 @@ export function TaskCard({ task, showAssignee }: { task: Task; showAssignee?: bo
   const later = isLaterDay(task.scheduledFor);
   const by = task.createdBy?.name ? `By ${firstName(task.createdBy.name)}` : null;
   // Who posted it comes right after the code, so it is never cut off
-  const sub = [task.code, by, task.customerName, who, later ? `For ${dayLabel(task.scheduledFor)}` : task.dueAt && task.status !== 'VERIFIED' && task.status !== 'CANCELLED' ? `Due ${time(task.dueAt)}` : null].filter(Boolean).join(' · ');
+  const unseen = task.status === 'ASSIGNED' && task.assignee && !task.seenAt && !later;
+  const sub = [task.code, by, unseen ? 'Not opened yet' : null, task.customerName, who, later ? `For ${dayLabel(task.scheduledFor)}` : task.dueAt && task.status !== 'VERIFIED' && task.status !== 'CANCELLED' ? `Due ${time(task.dueAt)}` : null].filter(Boolean).join(' · ');
   const urgent = task.priority === 'URGENT' || task.priority === 'HIGH';
   return (
     <Pressable
