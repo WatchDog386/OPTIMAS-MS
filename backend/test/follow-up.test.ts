@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { prisma } from '../src/lib/prisma';
 import { runFollowUp } from '../src/modules/tasks/follow-up';
-import { api, auth, checkIn, eventually, login, newTechnician, photoId } from './helpers';
+import { api, auth, checkIn, eventually, login, newTechnician, photoId, REPORT } from './helpers';
 
 const base = { type: 'REPAIR', title: 'No internet', customerName: 'Wanjiku', address: 'Roysambu, Hse 9' };
 const inbox = async (token: string) => (await api().get('/api/v1/notifications').set(auth(token))).body.notifications as { title: string; type: string; data?: { taskId?: string } }[];
@@ -28,7 +28,7 @@ describe('assigned tasks are seen through', () => {
 
     // The other is done with its report: now the daily report is what is missing
     await api().post(`/api/v1/tasks/${a.id}/start`).set(auth(tech.token)).send({ photoId: await photoId(tech.token, 'TASK_START', a.id) });
-    await api().post(`/api/v1/tasks/${a.id}/complete`).set(auth(tech.token)).send({ photoId: await photoId(tech.token, 'TASK_END', a.id), notes: 'Replaced the patch cord' });
+    await api().post(`/api/v1/tasks/${a.id}/complete`).set(auth(tech.token)).send({ photoId: await photoId(tech.token, 'TASK_END', a.id), report: REPORT });
     ready = (await api().get('/api/v1/attendance/checkout-ready').set(auth(tech.token))).body;
     expect(ready).toMatchObject({ ready: false, tasks: [], needsDayReport: true });
     const out2 = await api().post('/api/v1/attendance/check-out').set(auth(tech.token)).send({ photoId: await photoId(tech.token, 'CHECK_OUT') });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { api, approveAllStock, auth, checkIn, createTask, login, newTechnician, photoId, receiveSerials } from './helpers';
+import { api, approveAllStock, auth, checkIn, createTask, login, newTechnician, photoId, receiveSerials, REPORT } from './helpers';
 
 const verify = (token: string, code: string) => api().post('/api/v1/inventory/verify').set(auth(token)).send({ code });
 
@@ -52,7 +52,7 @@ describe('device labels: is this the one we issued?', () => {
     const account = `FBI-CUS-R${Date.now().toString(36).toUpperCase()}`;
     const task = await createTask(sup, tech.user.id, { customerAccount: account });
     await api().post(`/api/v1/tasks/${task.id}/start`).set(auth(tech.token)).send({ photoId: await photoId(tech.token, 'TASK_START', task.id) });
-    const done = await api().post(`/api/v1/tasks/${task.id}/complete`).set(auth(tech.token)).send({ photoId: await photoId(tech.token, 'TASK_END', task.id), notes: 'Installed and tested', serials, signature: { path: 'M1 1 L20 20 L40 5', signedBy: 'Jane' } });
+    const done = await api().post(`/api/v1/tasks/${task.id}/complete`).set(auth(tech.token)).send({ photoId: await photoId(tech.token, 'TASK_END', task.id), report: REPORT, serials, signature: { path: 'M1 1 L20 20 L40 5', signedBy: 'Jane' } });
     expect(done.status).toBe(200);
     // The install waits for the admin
     expect(await approveAllStock(admin)).toBeGreaterThanOrEqual(1);

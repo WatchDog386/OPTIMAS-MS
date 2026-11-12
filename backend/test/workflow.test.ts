@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { api, approveAllStock, auth, checkIn, createTask, itemBySku, login, newTechnician, photoId, receiveSerials } from './helpers';
+import { api, approveAllStock, auth, checkIn, createTask, itemBySku, login, newTechnician, photoId, receiveSerials, REPORT } from './helpers';
 
 describe('a technician’s day: check-in → job → completion → verification', () => {
   let admin: string;
@@ -44,9 +44,15 @@ describe('a technician’s day: check-in → job → completion → verification
     expect(second.body.error.code).toBe('TASK_IN_PROGRESS');
 
     const complete = (body: Record<string, unknown>) =>
-      photoId(tech.token, 'TASK_END', task.id).then((pid) => api().post(`/api/v1/tasks/${task.id}/complete`).set(auth(tech.token)).send({ photoId: pid, notes: 'Installed and tested', ...body }));
+      photoId(tech.token, 'TASK_END', task.id).then((pid) => api().post(`/api/v1/tasks/${task.id}/complete`).set(auth(tech.token)).send({ photoId: pid, report: REPORT, ...body }));
 
     expect((await complete({})).body.error.code).toBe('SERIAL_REQUIRED');
+    // Photos alone never complete a task: the report is required and must say something.
+    const sig = { serials: [serials[0]], signature: { path: 'M1 1 L20 20 L40 5', signedBy: 'Jane' } };
+    for (const bad of [{ report: undefined }, { report: undefined, notes: 'done' }, { report: undefined, notes: 'Job done ok' }, { report: { found: 'ok', done: 'done', result: 'ok' } }, { report: { ...REPORT, done: 'done done done done done' } }]) {
+      const r = await complete({ ...sig, ...bad });
+      expect(r.body.error?.code).toBe('REPORT_REQUIRED');
+    }
     expect((await complete({ serials: ['NOT-MY-DEVICE-1'], signature: { path: 'M1 1 L20 20 L40 5', signedBy: 'Jane' } })).body.error.code).toBe('NOT_FOUND');
     await api().post('/api/v1/inventory/accept').set(auth(tech.token)).send({});
     expect((await complete({ serials: [serials[0]] })).body.error.code).toBe('SIGNATURE_REQUIRED');
@@ -64,6 +70,7 @@ describe('a technician’s day: check-in → job → completion → verification
     expect(done.status).toBe(200);
     expect(done.body.task.status).toBe('COMPLETED');
     expect(done.body.task.signedByName).toBe('Jane');
+    expect(done.body.task.completionNotes).toBe(`Found: ${REPORT.found}\nWork done: ${REPORT.done}\nResult: ${REPORT.result}`);
     expect(done.body.task.materials).toHaveLength(2);
     expect(done.body.task.durationMinutes).toBeGreaterThanOrEqual(0);
     await new Promise((r) => setTimeout(r, 300));

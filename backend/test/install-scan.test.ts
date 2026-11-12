@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { describe, expect, it } from 'vitest';
 import { prisma } from '../src/lib/prisma';
-import { api, approveAllStock, auth, checkIn, createTask, itemBySku, login, newTechnician, photoId } from './helpers';
+import { api, approveAllStock, auth, checkIn, createTask, itemBySku, login, newTechnician, photoId, REPORT } from './helpers';
 
 /** Receives one router with the given serial (and MAC) and issues it to the technician (not yet accepted). */
 async function issueRouter(store: string, techId: string, serialNumber: string, macAddress?: string) {
@@ -30,7 +30,7 @@ describe('scanning the device installed: it leaves "in hand" and shows as instal
     const done = await api()
       .post(`/api/v1/tasks/${task.id}/complete`)
       .set(auth(tech.token))
-      .send({ photoId: await photoId(tech.token, 'TASK_END', task.id), notes: 'Installed and tested', serials: [`HWTC${tail}`], signature: { path: 'M1 1 L20 20 L40 5', signedBy: 'Jane' } });
+      .send({ photoId: await photoId(tech.token, 'TASK_END', task.id), report: REPORT, serials: [`HWTC${tail}`], signature: { path: 'M1 1 L20 20 L40 5', signedBy: 'Jane' } });
     expect(done.status).toBe(200);
     // Until an admin approves, the device stays in the technician's hands, marked as waiting
     const waiting = await api().get('/api/v1/inventory/my').set(auth(tech.token));

@@ -7,6 +7,7 @@ import { badRequest, conflict, forbidden, notFound } from '../../lib/http-error'
 import { minutesBetween, workDateOf } from '../../lib/time';
 import { ah } from '../../middleware/async';
 import { ROLES, me, requireRole } from '../../middleware/auth';
+import { NOTES_MIN_WORDS, reportProblem, taskReportProblem, taskReportSchema, taskReportText } from '../../lib/task-report';
 import { parse } from '../../middleware/validate';
 import { consumePhoto, eventTime } from '../capture/capture.service';
 import { consumeBulk, installSerial, requireHeldUnit } from '../inventory/inventory.service';
@@ -524,7 +525,9 @@ tasksRouter.post(
 
 const completeSchema = z.object({
   photoId: z.string().min(1),
-  notes: z.string().trim().min(5, 'Describe the work done').max(2000),
+  // The task report, filed after the completion photo. Older app versions send one text in notes.
+  report: taskReportSchema.optional(),
+  notes: z.string().trim().max(4000).optional(),
   customerAccount: z.string().trim().optional(),
   amountCollected: z.number().int().min(0).optional(),
   /** The task report: router signal as read on site, house number, drop cable used (m), FAT already there */
@@ -561,6 +564,17 @@ tasksRouter.post(
     }
     if (task.type === 'INSTALLATION' && !body.signature) {
       throw badRequest('Ask the customer to sign to confirm the installation', 'SIGNATURE_REQUIRED');
+    }
+    // Never completed on the photos alone: a real report of the work is required (the photo is not used up).
+    let notes: string;
+    if (body.report) {
+      const problem = taskReportProblem(body.report);
+      if (problem) throw badRequest(problem, 'REPORT_REQUIRED');
+      notes = taskReportText(body.report);
+    } else {
+      const problem = reportProblem(body.notes ?? '', 'Task report', NOTES_MIN_WORDS);
+      if (problem) throw badRequest(`${problem}. Update the app to file the full task report.`, 'REPORT_REQUIRED');
+      notes = body.notes!;
     }
 
     const customerAccount = body.customerAccount || task.customerAccount;
@@ -602,7 +616,7 @@ tasksRouter.post(
           endedAt,
           endPhotoId: body.photoId,
           durationMinutes: minutesBetween(task.startedAt!, endedAt),
-          completionNotes: body.notes,
+          completionNotes: notes,
           amountCollected: body.amountCollected,
           signal: body.signal || undefined,
           houseNo: body.houseNo || undefined,

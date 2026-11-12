@@ -3,11 +3,12 @@ import { z } from 'zod';
 import { env } from '../../config/env';
 import { prisma } from '../../lib/prisma';
 import { audit } from '../../lib/audit';
-import { forbidden, notFound } from '../../lib/http-error';
+import { badRequest, forbidden, notFound } from '../../lib/http-error';
 import { time, workDateOf } from '../../lib/time';
 import { ah } from '../../middleware/async';
 import { ROLES, me } from '../../middleware/auth';
 import { parse } from '../../middleware/validate';
+import { NOTES_MIN_WORDS, reportProblem } from '../../lib/task-report';
 import { cableUsed } from '../tasks/tasks.routes';
 import { notifyRoles } from '../notifications/notifications.service';
 
@@ -224,6 +225,11 @@ dayReportsRouter.patch(
   ah(async (req, res) => {
     const user = me(req);
     const body = parse(fixSchema, req.body);
+    // The report may be corrected, never cut down to nothing ("done").
+    if (body.completionNotes !== undefined) {
+      const problem = reportProblem(body.completionNotes, 'Task report', NOTES_MIN_WORDS);
+      if (problem) throw badRequest(problem, 'REPORT_REQUIRED');
+    }
     const task = await prisma.task.findUnique({ where: { id: req.params.id } });
     if (!task) throw notFound('Task');
     if (task.assigneeId !== user.id) throw forbidden('Only the technician (or team leader) who did this task can change its report');

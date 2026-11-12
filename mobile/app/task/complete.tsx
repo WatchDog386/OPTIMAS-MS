@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Image, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { goBack } from '../../src/utils/nav';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -7,10 +7,21 @@ import { api, ApiError } from '../../src/api/client';
 import type { BulkHolding, SerialUnit, Task } from '../../src/api/types';
 import { Button, Card, Input, ListRow, Loading, Screen, ScreenHeader, SectionHeader, Segmented, SignaturePad, Text } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
-import { requestCapture } from '../../src/store/bridge';
+import { requestCapture, type CaptureResult } from '../../src/store/bridge';
 import { colors, fonts, radius, space } from '../../src/theme';
 import { kes } from '../../src/utils/format';
 import { confirmDialog, toast, celebrate } from '../../src/store/feedback';
+
+/** The task report, filed after the completion photo. Mirrors the server's check. */
+type Report = { found: string; done: string; result: string };
+const FILLER = /^(done|ok|okay|complete|completed|finished|fixed|sorted|resolved|success|successful|good|fine|na|n\/a|nil|none|no|yes|job|task|work|the|is|was|it|and|all|well|working|works)$/i;
+const wordCount = (v: string) => v.split(/\s+/).filter((w) => /[a-z0-9]/i.test(w)).length;
+function reportProblem(part: string, what: string, minWords: number): string | undefined {
+  const words = part.split(/\s+/).filter((w) => /[a-z0-9]/i.test(w));
+  if (words.length < minWords || part.replace(/\s+/g, ' ').trim().length < minWords * 4) return `${what}: write at least ${minWords} words.`;
+  if (words.every((w) => FILLER.test(w.replace(/[^a-z/]/gi, '')))) return `${what}: describe what actually happened.`;
+  return undefined;
+}
 
 export default function CompleteTask() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -18,7 +29,9 @@ export default function CompleteTask() {
   const stock = useApi<{ units: SerialUnit[]; pending?: SerialUnit[]; bulk: BulkHolding[] }>('/inventory/my');
   const [serials, setSerials] = useState<string[]>([]);
   const [qty, setQty] = useState<Record<string, string>>({});
-  const [notes, setNotes] = useState('');
+  const [report, setReport] = useState<Report>({ found: '', done: '', result: '' });
+  // Step 2: the completion photo is taken; the task is completed only when the report is filed.
+  const [photo, setPhoto] = useState<CaptureResult | null>(null);
   const [account, setAccount] = useState<string | null>(null);
   const [collected, setCollected] = useState('');
   const [signal, setSignal] = useState('');
@@ -75,24 +88,32 @@ export default function CompleteTask() {
     }
   };
 
-  const submit = async () => {
+  /** Step 1: devices, materials and the customer's sign-off — then the completion photo. */
+  const takePhoto = async () => {
     if (needsSerial && !serials.length) return toast.warning('Device required', 'Type the serial number (SN) of the router/ONT you installed.');
     if (needsSerial && !signature) return toast.warning('Customer signature required', 'Ask the customer to sign to confirm the installation.');
     if (signature && signedBy.trim().length < 2) return toast.warning('Who signed?', 'Enter the name of the person who signed.');
-    if (needsSerial && !signal.trim()) return toast.warning('Add the signal', 'Enter the router signal reading, e.g. -27 dBm.');
-    if (needsSerial && !fat) return toast.warning('FAT pre-installed?', 'Say whether the FAT was already installed.');
-    if (notes.trim().length < 5) return toast.warning('Add notes', 'Briefly describe the work done.');
     const over = materials.find((m) => m.quantity > m.holding.quantity);
     if (over) return toast.warning('Not enough stock', `You only hold ${over.holding.quantity} ${over.holding.item.unit} of ${over.holding.item.name}.`);
+    const shot = await requestCapture('TASK_END', { taskId: t.id });
+    if (!shot) return;
+    setPhoto(shot);
+    toast.info('Now write the task report', 'The task is completed only when you submit the report.');
+  };
 
-    const photo = await requestCapture('TASK_END', { taskId: t.id });
+  /** Step 2: the task report — only then is the task completed. */
+  const submit = async () => {
     if (!photo) return;
+    if (needsSerial && !signal.trim()) return toast.warning('Add the signal', 'Enter the router signal reading, e.g. -27 dBm.');
+    if (needsSerial && !fat) return toast.warning('FAT pre-installed?', 'Say whether the FAT was already installed.');
+    const problem = reportProblem(report.found, 'What you found', 3) ?? reportProblem(report.done, 'Work done', 5) ?? reportProblem(report.result, 'Result', 3);
+    if (problem) return toast.warning('Write the task report', problem);
     setBusy(true);
     try {
       await api(`/tasks/${t.id}/complete`, {
         body: {
           photoId: photo.photoId,
-          notes: notes.trim(),
+          report: { found: report.found.trim(), done: report.done.trim(), result: report.result.trim() },
           customerAccount: (account ?? t.customerAccount) || undefined,
           amountCollected: collected ? Number(collected) : undefined,
           signal: signal.trim() || undefined,
@@ -123,8 +144,84 @@ export default function CompleteTask() {
     }
   };
 
+  if (photo) {
+    return (
+      <Screen footer={<Button label="Submit report & complete task" icon="checkmark-done" size="lg" loading={busy} onPress={submit} />}>
+        <ScreenHeader title="Task report" subtitle={`${t.code} · ${t.customerName}`} />
+        <Card style={{ flexDirection: 'row', gap: space.md, alignItems: 'center' }}>
+          <Image source={{ uri: photo.uri }} style={styles.thumb} />
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text variant="title">Completion photo taken</Text>
+            <Text variant="bodySm" color={colors.textMuted}>
+              The task is not complete yet. Fill in the report — what you found, the work done and the result — then submit.
+            </Text>
+          </View>
+        </Card>
+        <SectionHeader title="Task report" />
+        <Text variant="bodySm" color={colors.textMuted}>
+          Location: {t.address}
+        </Text>
+        <Input label="House / unit no." icon="home-outline" value={houseNo} onChangeText={setHouseNo} placeholder="e.g. D3" autoCapitalize="characters" />
+        {t.type === 'INSTALLATION' ? null : <Input label="Customer account no." icon="person-outline" value={account ?? t.customerAccount ?? ''} onChangeText={setAccount} autoCapitalize="characters" />}
+        <Input label={needsSerial ? 'Router signal (required)' : 'Router signal'} icon="cellular-outline" value={signal} onChangeText={setSignal} placeholder="As read on site, e.g. -27 dBm" />
+        <Text variant="label" color={colors.textMuted}>
+          Drop cable · the length marks printed on the cable
+        </Text>
+        <View style={{ flexDirection: 'row', gap: space.sm }}>
+          <View style={{ flex: 1 }}>
+            <Input label="Mark at start (m)" keyboardType="decimal-pad" value={markStart} onChangeText={(v) => setMarkStart(v.replace(/[^0-9.]/g, ''))} placeholder="e.g. 1240" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Input label="Mark at end (m)" keyboardType="decimal-pad" value={markEnd} onChangeText={(v) => setMarkEnd(v.replace(/[^0-9.]/g, ''))} placeholder="e.g. 1210" />
+          </View>
+        </View>
+        {marked ? (
+          <View style={styles.used}>
+            <Ionicons name="git-commit-outline" size={16} color={colors.primary} />
+            <Text variant="title" style={{ flex: 1 }}>
+              {fromMarks} m used
+            </Text>
+            <Text variant="label" color={colors.textMuted}>
+              {markStart} → {markEnd}
+            </Text>
+          </View>
+        ) : (
+          <Input label="No marks? Metres used" icon="git-commit-outline" keyboardType="decimal-pad" value={cableM} onChangeText={(v) => setCable(v.replace(/[^0-9.]/g, ''))} placeholder="0" />
+        )}
+        <Text variant="label" color={colors.textMuted}>
+          {needsSerial ? 'FAT pre-installed? (required)' : 'FAT pre-installed?'}
+        </Text>
+        <Segmented options={[{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }]} value={fat ?? ('' as 'yes')} onChange={(v) => setFat(v)} />
+        <Input label="Client paid (KES)" icon="cash-outline" keyboardType="number-pad" value={collected} onChangeText={(v) => setCollected(v.replace(/\D/g, ''))} placeholder="0" />
+        <Input
+          label={`What you found (${wordCount(report.found)}/3+ words)`}
+          multiline
+          value={report.found}
+          onChangeText={(v) => setReport((r) => ({ ...r, found: v }))}
+          placeholder="e.g. No internet, red LOS light on the ONT, drop cable cut near the gate"
+        />
+        <Input
+          label={`Work done (${wordCount(report.done)}/5+ words)`}
+          multiline
+          value={report.done}
+          onChangeText={(v) => setReport((r) => ({ ...r, done: v }))}
+          placeholder="e.g. Ran 45m drop cable from the FAT, terminated SC/APC, replaced the patch cord, configured Wi-Fi"
+        />
+        <Input
+          label={`Result (${wordCount(report.result)}/3+ words)`}
+          multiline
+          value={report.result}
+          onChangeText={(v) => setReport((r) => ({ ...r, result: v }))}
+          placeholder="e.g. ONT online, speed test 21 Mbps, client browsing"
+        />
+
+        <Button label="Retake photo" icon="camera-outline" variant="secondary" onPress={() => void requestCapture('TASK_END', { taskId: t.id }).then((p) => p && setPhoto(p))} />
+      </Screen>
+    );
+  }
+
   return (
-    <Screen scrollEnabled={!drawing} footer={<Button label="Take completion photo & submit" icon="camera" size="lg" loading={busy} onPress={submit} />}>
+    <Screen scrollEnabled={!drawing} footer={<Button label="Take completion photo" icon="camera" size="lg" onPress={() => void takePhoto()} />}>
       <ScreenHeader title="Complete task" subtitle={`${t.code} · ${t.customerName}`} />
 
       <SectionHeader title={needsSerial ? 'Installed device (required)' : 'Devices installed'} />
@@ -211,44 +308,6 @@ export default function CompleteTask() {
         </Text>
       )}
 
-      <SectionHeader title="Task report" />
-      <Text variant="bodySm" color={colors.textMuted}>
-        Location: {t.address}
-      </Text>
-      <Input label="House / unit no." icon="home-outline" value={houseNo} onChangeText={setHouseNo} placeholder="e.g. D3" autoCapitalize="characters" />
-      {t.type === 'INSTALLATION' ? null : <Input label="Customer account no." icon="person-outline" value={account ?? t.customerAccount ?? ''} onChangeText={setAccount} autoCapitalize="characters" />}
-      <Input label={needsSerial ? 'Router signal (required)' : 'Router signal'} icon="cellular-outline" value={signal} onChangeText={setSignal} placeholder="As read on site, e.g. -27 dBm" />
-      <Text variant="label" color={colors.textMuted}>
-        Drop cable · the length marks printed on the cable
-      </Text>
-      <View style={{ flexDirection: 'row', gap: space.sm }}>
-        <View style={{ flex: 1 }}>
-          <Input label="Mark at start (m)" keyboardType="decimal-pad" value={markStart} onChangeText={(v) => setMarkStart(v.replace(/[^0-9.]/g, ''))} placeholder="e.g. 1240" />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Input label="Mark at end (m)" keyboardType="decimal-pad" value={markEnd} onChangeText={(v) => setMarkEnd(v.replace(/[^0-9.]/g, ''))} placeholder="e.g. 1210" />
-        </View>
-      </View>
-      {marked ? (
-        <View style={styles.used}>
-          <Ionicons name="git-commit-outline" size={16} color={colors.primary} />
-          <Text variant="title" style={{ flex: 1 }}>
-            {fromMarks} m used
-          </Text>
-          <Text variant="label" color={colors.textMuted}>
-            {markStart} → {markEnd}
-          </Text>
-        </View>
-      ) : (
-        <Input label="No marks? Metres used" icon="git-commit-outline" keyboardType="decimal-pad" value={cableM} onChangeText={(v) => setCable(v.replace(/[^0-9.]/g, ''))} placeholder="0" />
-      )}
-      <Text variant="label" color={colors.textMuted}>
-        {needsSerial ? 'FAT pre-installed? (required)' : 'FAT pre-installed?'}
-      </Text>
-      <Segmented options={[{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }]} value={fat ?? ('' as 'yes')} onChange={(v) => setFat(v)} />
-      <Input label="Client paid (KES)" icon="cash-outline" keyboardType="number-pad" value={collected} onChangeText={(v) => setCollected(v.replace(/\D/g, ''))} placeholder="0" />
-      <Input label="Work done" multiline value={notes} onChangeText={setNotes} placeholder="e.g. Ran 45m drop cable from FAT, terminated SC/APC, configured Wi-Fi, speed test 21 Mbps" />
-
       <SectionHeader title={needsSerial ? 'Customer sign-off (required)' : 'Customer sign-off'} />
       <Text variant="bodySm" color={colors.textMuted}>
         Hand the phone to the customer to confirm the work was done to their satisfaction.
@@ -260,6 +319,7 @@ export default function CompleteTask() {
 }
 
 const styles = StyleSheet.create({
+  thumb: { width: 64, height: 64, borderRadius: radius.sm, backgroundColor: colors.surfaceAlt },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: space.md, paddingVertical: 8, borderRadius: radius.pill, backgroundColor: colors.primarySoft },
   matRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },

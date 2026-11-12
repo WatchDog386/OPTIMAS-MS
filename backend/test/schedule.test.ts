@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { prisma } from '../src/lib/prisma';
 import { workDateOf } from '../src/lib/time';
 import { releaseScheduledTasks } from '../src/modules/tasks/release';
-import { api, auth, checkIn, eventually, login, newTechnician, photoId } from './helpers';
+import { api, auth, checkIn, eventually, login, newTechnician, photoId, REPORT } from './helpers';
 
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
 const base = { type: 'INSTALLATION', title: 'Installation opp Aziel towers', customerName: 'Sato', customerPhone: '+254 740020387', address: 'Opp Aziel towers', description: 'Available Saturday, has a router' };
@@ -54,7 +54,7 @@ describe('tasks for a later day', () => {
     const done = await api()
       .post(`/api/v1/tasks/${t.body.task.id}/complete`)
       .set(auth(tech.token))
-      .send({ photoId: await photoId(tech.token, 'TASK_END', t.body.task.id), notes: 'New drop cable run', dropStartM: 1240, dropEndM: 1210 });
+      .send({ photoId: await photoId(tech.token, 'TASK_END', t.body.task.id), report: REPORT, dropStartM: 1240, dropEndM: 1210 });
     expect(done.status).toBe(200);
     expect(done.body.task).toMatchObject({ dropCableM: 30, dropStartM: 1240, dropEndM: 1210 });
     const text = (await api().get('/api/v1/day-reports/mine').set(auth(tech.token))).body.report.text as string;

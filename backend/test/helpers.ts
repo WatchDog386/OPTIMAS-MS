@@ -51,6 +51,9 @@ export async function photoId(token: string, purpose: string, taskId?: string) {
   return res.body.photoId as string;
 }
 
+/** A proper task report, filed after the completion photo. */
+export const REPORT = { found: 'No signal on the ONT, red LOS light', done: 'Replaced the damaged patch cord at the FAT and re-terminated the drop', result: 'ONT online, speed test 21 Mbps' };
+
 export const CHECKLIST = { uniform: true, idBadge: true, safetyBoots: true, groomed: true };
 
 export async function checkIn(token: string) {

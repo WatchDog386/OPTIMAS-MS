@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { api, auth, checkIn, createTask, eventually, login, newTechnician, photoId } from './helpers';
+import { api, auth, checkIn, createTask, eventually, login, newTechnician, photoId, REPORT } from './helpers';
 
 describe('customer ratings and personal performance', () => {
   let admin: string, sup: string, customer: string;
@@ -21,7 +21,7 @@ describe('customer ratings and personal performance', () => {
     const done = await api()
       .post(`/api/v1/tasks/${job.id}/complete`)
       .set(auth(tech.token))
-      .send({ photoId: await photoId(tech.token, 'TASK_END', job.id), notes: 'Replaced patch cord' });
+      .send({ photoId: await photoId(tech.token, 'TASK_END', job.id), report: REPORT });
     expect(done.status).toBe(200);
 
     expect((await rate({ rating: 6 })).status).toBe(400);

@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { prisma } from '../src/lib/prisma';
-import { api, auth, checkIn, createTask, eventually, login, newTechnician, photoId } from './helpers';
+import { api, auth, checkIn, createTask, eventually, login, newTechnician, photoId, REPORT } from './helpers';
 
 describe('the supervisor review desk', () => {
   let admin: string;
@@ -20,7 +20,7 @@ describe('the supervisor review desk', () => {
     const task = await createTask(sup, tech.user.id, { type: 'REPAIR' });
     taskId = task.id;
     expect((await api().post(`/api/v1/tasks/${task.id}/start`).set(auth(tech.token)).send({ photoId: await photoId(tech.token, 'TASK_START', task.id) })).status).toBe(200);
-    expect((await api().post(`/api/v1/tasks/${task.id}/complete`).set(auth(tech.token)).send({ photoId: await photoId(tech.token, 'TASK_END', task.id), notes: 'Replaced patch cord' })).status).toBe(200);
+    expect((await api().post(`/api/v1/tasks/${task.id}/complete`).set(auth(tech.token)).send({ photoId: await photoId(tech.token, 'TASK_END', task.id), report: REPORT })).status).toBe(200);
     expect((await api().post('/api/v1/day-reports').set(auth(tech.token)).send({})).status).toBe(201);
     expect((await api().post('/api/v1/attendance/check-out').set(auth(tech.token)).send({ photoId: await photoId(tech.token, 'CHECK_OUT') })).status).toBe(200);
   });

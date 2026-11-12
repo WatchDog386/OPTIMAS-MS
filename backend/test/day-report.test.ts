@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { api, auth, checkIn, eventually, login, newTechnician, photoId } from './helpers';
+import { api, auth, checkIn, eventually, login, newTechnician, photoId, REPORT } from './helpers';
 
 /** Starts and finishes a task with its task report (as the person given). */
 async function doTask(token: string, taskId: string, report: Record<string, unknown>) {
@@ -7,7 +7,7 @@ async function doTask(token: string, taskId: string, report: Record<string, unkn
   const done = await api()
     .post(`/api/v1/tasks/${taskId}/complete`)
     .set(auth(token))
-    .send({ photoId: await photoId(token, 'TASK_END', taskId), notes: 'Done and tested with the client', ...report });
+    .send({ photoId: await photoId(token, 'TASK_END', taskId), report: REPORT, ...report });
   expect(done.status).toBe(200);
   return done.body.task;
 }
@@ -68,7 +68,7 @@ describe('end-of-day report', () => {
     expect((await api().get('/api/v1/day-reports/mine').set(auth(tech.token))).body.report.canSubmit).toBe(false);
     // Not finished yet: cannot be changed on the form
     expect((await api().patch(`/api/v1/day-reports/tasks/${r2.body.task.id}`).set(auth(tech.token)).send({ signal: '-20' })).status).toBe(403);
-    expect((await api().post(`/api/v1/tasks/${r2.body.task.id}/complete`).set(auth(tech.token)).send({ photoId: await photoId(tech.token, 'TASK_END', r2.body.task.id), notes: 'Replaced patch cord' })).status).toBe(200);
+    expect((await api().post(`/api/v1/tasks/${r2.body.task.id}/complete`).set(auth(tech.token)).send({ photoId: await photoId(tech.token, 'TASK_END', r2.body.task.id), report: REPORT })).status).toBe(200);
 
     const fixed = await api().patch(`/api/v1/day-reports/tasks/${r2.body.task.id}`).set(auth(tech.token)).send({ signal: '-22 dBm', houseNo: 'B12', amountCollected: 500, dropCableM: 5, fatPreinstalled: false });
     expect(fixed.status).toBe(200);

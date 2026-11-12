@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { workDateOf } from '../src/lib/time';
-import { api, auth, createTask, jpeg, login, newTechnician, CHECKLIST } from './helpers';
+import { api, auth, createTask, jpeg, login, newTechnician, CHECKLIST, REPORT } from './helpers';
 
 /** A photo taken with no signal and sent later: same camera-only proof, but stamped with when it really happened. */
 async function offlinePhoto(token: string, purpose: string, takenAt: Date | null, taskId?: string) {
@@ -64,7 +64,7 @@ describe('work done offline is recorded when it happened, not when it was sent',
 
     const endAt = ago(5);
     const endPhoto = await offlinePhoto(tech.token, 'TASK_END', endAt, task.id);
-    const done = await api().post(`/api/v1/tasks/${task.id}/complete`).set(auth(tech.token)).send({ photoId: endPhoto.body.photoId, notes: 'Replaced the patch cord' });
+    const done = await api().post(`/api/v1/tasks/${task.id}/complete`).set(auth(tech.token)).send({ photoId: endPhoto.body.photoId, report: REPORT });
     expect(done.status).toBe(200);
     expect(done.body.task.durationMinutes).toBe(15);
     expect(new Date(done.body.task.endedAt).getTime()).toBe(endAt.getTime());
