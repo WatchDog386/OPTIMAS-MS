@@ -23,8 +23,11 @@ type StockReq = {
   reviewNote: string | null;
   requestedBy: { id: string; name: string; staffNo: string; role: string };
   reviewedBy: { id: string; name: string } | null;
+  /** A customer's router: its task and the photo of its label */
+  task?: { id: string; code: string; ownRouterPhoto: ProofPhoto | null } | null;
 };
 const STOCK_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
+  CUSTOMER_ROUTER: 'home-outline',
   INSTALL: 'checkmark-done-outline',
   MARK_INSTALLED: 'checkmark-done-outline',
   RETURN: 'arrow-down-circle-outline',
@@ -217,6 +220,19 @@ export default function Approvals() {
               <Glass strong style={styles.card}>
                 <Header name={r.requestedBy.name} sub={`${humanize(r.type)} · ${dateTime(r.createdAt)}`} userId={r.requestedBy.id} right={<Ionicons name={STOCK_ICON[r.type] ?? 'cube-outline'} size={22} color={colors.brand} />} />
                 <Text variant="title">{r.summary}</Text>
+                {r.type === 'CUSTOMER_ROUTER' && r.task ? (
+                  <View style={{ gap: 8 }}>
+                    <Text variant="bodySm" color={colors.textMuted}>
+                      The technician says this is the customer's own router. Check the label photo shows this SN before approving.
+                    </Text>
+                    {r.task.ownRouterPhoto ? (
+                      <View style={{ maxWidth: 220 }}>
+                        <AuthImage photoId={r.task.ownRouterPhoto.id} title="Router label" flagged={r.task.ownRouterPhoto.flags.length > 0} />
+                      </View>
+                    ) : null}
+                    <Button label={`Open task ${r.task.code}`} icon="open-outline" variant="ghost" onPress={() => router.push(`/task/${r.task!.id}`)} />
+                  </View>
+                ) : null}
                 {show === 'PENDING' ? (
                   isAdmin ? (
                     <Actions

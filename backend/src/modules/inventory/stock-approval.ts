@@ -16,6 +16,25 @@ type Payload = Record<string, any>; // eslint-disable-line @typescript-eslint/no
  * person who asked. An admin's own changes count as approved.
  */
 
+/**
+ * A customer's own router, confirmed: on record as the customer's device installed at that customer
+ * (under a hidden catalogue entry, outside stock counts). Refused if the SN turns out to be Optimas stock.
+ */
+export async function recordCustomerRouter(tx: Tx, p: Payload) {
+  const known = await tx.serialUnit.findFirst({ where: { serialNumber: { in: svc.codeVariants(p.sn) } } });
+  if (known && !known.customerOwned) throw conflict(`${known.serialNumber} is an Optimas device (${known.status.toLowerCase().replace('_', ' ')}), not the customer's`, 'OPTIMAS_DEVICE');
+  const item = await tx.inventoryItem.upsert({
+    where: { sku: 'CUSTOMER-ROUTER' },
+    update: {},
+    create: { sku: 'CUSTOMER-ROUTER', name: "Customer's own router", category: 'ROUTER', tracking: 'SERIALIZED', unit: 'pcs', unitPrice: 0, active: false },
+  });
+  const place = { status: 'INSTALLED' as const, customerOwned: true, holderId: null, heldSince: null, taskId: p.taskId ?? null, customerAccount: p.customerAccount ?? null, installedAt: new Date(), installLocation: p.location ?? null, macAddress: p.mac || undefined };
+  if (known) await tx.serialUnit.update({ where: { id: known.id }, data: place });
+  else await tx.serialUnit.create({ data: { ...place, serialNumber: p.sn, itemId: item.id } });
+  if (p.taskId) await tx.task.update({ where: { id: p.taskId }, data: { ownRouterVerdict: 'APPROVED' } });
+  return { serialNumber: p.sn, status: 'INSTALLED' };
+}
+
 /** Carries out one kind of change. `actorId` is the person who asked for it. */
 const EXECUTE: Record<StockRequestType, (tx: Tx, actorId: string, p: Payload) => Promise<unknown>> = {
   RECEIVE: (tx, actor, p) => svc.receiveStock(tx, actor, p as Parameters<typeof svc.receiveStock>[2]),
@@ -47,6 +66,7 @@ const EXECUTE: Record<StockRequestType, (tx: Tx, actorId: string, p: Payload) =>
     });
     return { serial: unit.serialNumber, status };
   },
+  CUSTOMER_ROUTER: (tx, _actor, p) => recordCustomerRouter(tx, p),
   ADJUST: async (tx, actor, p) => {
     const it = await tx.inventoryItem.findUnique({ where: { id: p.itemId } });
     if (!it) throw badRequest('Item not found', 'NOT_FOUND');
@@ -203,6 +223,8 @@ export async function reject(id: string, admin: { id: string; name: string }, no
   const claimed = await prisma.stockRequest.updateMany({ where: { id, status: 'PENDING' }, data: { status: 'REJECTED', reviewedById: admin.id, reviewedAt: new Date(), reviewNote: note } });
   if (!claimed.count) throw conflict('This request was already decided', 'ALREADY_DECIDED');
   const r = await prisma.stockRequest.findUniqueOrThrow({ where: { id } });
+  // The customer's router was not confirmed: the task says so
+  if (r.type === 'CUSTOMER_ROUTER' && r.taskId) await prisma.task.update({ where: { id: r.taskId }, data: { ownRouterVerdict: 'REJECTED' } });
   await audit(admin.id, 'STOCK_REJECTED', 'StockRequest', id, `Rejected: ${r.summary} — ${note}`);
   void notify([r.requestedById], { type: 'STOCK_APPROVAL', title: 'Not approved', body: `${r.summary} — ${note}`, data: { stockRequestId: id } });
   return r;

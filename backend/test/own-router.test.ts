@@ -25,14 +25,20 @@ describe("installing with the customer's own router", () => {
     const label = await photoId(tech.token, 'ROUTER_LABEL', t.id);
     const done = await complete({ ownRouter: { model: 'TP-Link Archer C6', sn: sn.toLowerCase(), mac: 'aa:bb:cc:dd:ee:ff', photoId: label } });
     expect(done.status).toBe(200);
-    expect(done.body.task).toMatchObject({ status: 'COMPLETED', ownRouterModel: 'TP-Link Archer C6', ownRouterSn: sn, ownRouterMac: 'AA:BB:CC:DD:EE:FF', ownRouterPhoto: { id: label } });
+    expect(done.body.task).toMatchObject({ status: 'COMPLETED', ownRouterModel: 'TP-Link Archer C6', ownRouterSn: sn, ownRouterMac: 'AA:BB:CC:DD:EE:FF', ownRouterPhoto: { id: label }, ownRouterVerdict: 'PENDING' });
 
-    // On record as the customer's device; no stock approval filed; not in the store's items
+    // Waiting for the office: not on record yet; the request points to the task and its label photo
+    expect((await api().get(`/api/v1/inventory/units/${sn}/history`).set(auth(admin))).status).not.toBe(200);
+    const req = (await api().get('/api/v1/inventory/requests').set(auth(admin))).body.requests.find((r: { summary: string }) => r.summary.includes(sn));
+    expect(req).toMatchObject({ type: 'CUSTOMER_ROUTER', taskId: t.id });
+    expect((await api().post(`/api/v1/inventory/requests/${req.id}/approve`).set(auth(admin)).send({})).status).toBe(200);
+    expect((await api().get(`/api/v1/tasks/${t.id}`).set(auth(admin))).body.task.ownRouterVerdict).toBe('APPROVED');
+
+    // Approved: on record as the customer's device; not in the store's items
     const trail = await api().get(`/api/v1/inventory/units/${sn}/history`).set(auth(admin));
     expect(trail.body.unit).toMatchObject({ status: 'INSTALLED', customerOwned: true, holderId: null });
     const check = await api().post('/api/v1/inventory/verify').set(auth(admin)).send({ code: sn });
     expect(check.body.verdict.title).toContain("Customer's own router");
-    expect((await api().get('/api/v1/inventory/requests').set(auth(admin))).body.requests.some((r: { summary: string }) => r.summary.includes(sn))).toBe(false);
     expect((await api().get('/api/v1/inventory/items').set(auth(admin))).body.items.some((i: { sku: string }) => i.sku === 'CUSTOMER-ROUTER')).toBe(false);
 
     // The daily report lists it
@@ -54,5 +60,31 @@ describe("installing with the customer's own router", () => {
       .send({ photoId: await photoId(tech.token, 'TASK_END', t.id), report: REPORT, signature: sig, ...fields, ownRouter: { model: 'Huawei', sn: stockSn, photoId: await photoId(tech.token, 'ROUTER_LABEL', t.id) } });
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe('OPTIMAS_DEVICE');
+  });
+
+  it('the office can refuse the claim: the task says so and the technician is told', async () => {
+    const admin = (await login('FBI-ADM-001')).token;
+    const tech = await newTechnician(admin);
+    await checkIn(tech.token);
+    const t = (await api().post('/api/v1/tasks').set(auth(admin)).send({ type: 'INSTALLATION', title: 'Install', customerName: 'Wambui', address: 'Zimmerman', assigneeId: tech.user.id })).body.task;
+    await api().post(`/api/v1/tasks/${t.id}/start`).set(auth(tech.token)).send({ photoId: await photoId(tech.token, 'TASK_START', t.id) });
+    const sn = `OWN${Date.now().toString(36).toUpperCase()}X`;
+    const res = await api()
+      .post(`/api/v1/tasks/${t.id}/complete`)
+      .set(auth(tech.token))
+      .send({ photoId: await photoId(tech.token, 'TASK_END', t.id), report: REPORT, signature: sig, ...fields, ownRouter: { model: 'Tenda', sn, photoId: await photoId(tech.token, 'ROUTER_LABEL', t.id) } });
+    expect(res.status).toBe(200);
+    const req = (await api().get('/api/v1/inventory/requests').set(auth(admin))).body.requests.find((r: { summary: string }) => r.summary.includes(sn));
+    expect((await api().post(`/api/v1/inventory/requests/${req.id}/reject`).set(auth(admin)).send({ note: 'Label photo does not show this SN' })).status).toBe(200);
+    expect((await api().get(`/api/v1/tasks/${t.id}`).set(auth(admin))).body.task.ownRouterVerdict).toBe('REJECTED');
+    expect((await api().get(`/api/v1/inventory/units/${sn}/history`).set(auth(admin))).status).not.toBe(200);
+  });
+
+  it('says plainly when an SN typed is not one of the technician\'s devices', async () => {
+    const admin = (await login('FBI-ADM-001')).token;
+    const tech = await newTechnician(admin);
+    const r = await api().get('/api/v1/inventory/my/find?code=ZZTOP12345').set(auth(tech.token));
+    expect(r.body.error.code).toBe('NOT_ISSUED');
+    expect(r.body.error.message).toContain("customer's own router");
   });
 });

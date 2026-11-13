@@ -291,8 +291,14 @@ export default function TaskDetail() {
         <>
           <SectionHeader title="Customer's own router" />
           <Card style={[styles.flat, { gap: space.md }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Badge
+                label={task.ownRouterVerdict === 'APPROVED' ? 'Confirmed by the office' : task.ownRouterVerdict === 'REJECTED' ? 'Not confirmed by the office' : 'Waiting for the office to confirm'}
+                tone={task.ownRouterVerdict === 'APPROVED' ? 'success' : task.ownRouterVerdict === 'REJECTED' ? 'danger' : 'warning'}
+              />
+            </View>
             <Text variant="bodySm" color={colors.textMuted}>
-              Not from stock: the customer's router, recorded at the installation with a live photo of its label.
+              Not issued by the office: the customer's own router, recorded with a live photo of its label. Admins confirm it in Approvals → Stock.
             </Text>
             <Fact label="Make and model" value={task.ownRouterModel ?? '—'} />
             <Fact label="Serial number" value={task.ownRouterSn} />

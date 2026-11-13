@@ -11,7 +11,7 @@ import { NOTES_MIN_WORDS, reportProblem, taskReportProblem, taskReportSchema, ta
 import { parse } from '../../middleware/validate';
 import { consumePhoto, eventTime } from '../capture/capture.service';
 import { codeVariants, consumeBulk, installSerial, requireHeldUnit } from '../inventory/inventory.service';
-import { fileRequest, tellAdmins } from '../inventory/stock-approval';
+import { fileRequest, recordCustomerRouter, tellAdmins } from '../inventory/stock-approval';
 import { notify, notifyRoles } from '../notifications/notifications.service';
 import { notifyCustomer } from '../customer/customer.service';
 import { audit } from '../../lib/audit';
@@ -42,15 +42,6 @@ const detailInclude = {
   materials: { include: { item: { select: { name: true, sku: true, unit: true, category: true } }, unit: { select: { serialNumber: true } } } },
   team: { include: teamInclude },
 } satisfies Prisma.TaskInclude;
-
-/** The catalogue entry customers' own routers are recorded under (hidden: never in the store or catalogue). */
-async function customerRouterItem(tx: Prisma.TransactionClient) {
-  return tx.inventoryItem.upsert({
-    where: { sku: 'CUSTOMER-ROUTER' },
-    update: {},
-    create: { sku: 'CUSTOMER-ROUTER', name: "Customer's own router", category: 'ROUTER', tracking: 'SERIALIZED', unit: 'pcs', unitPrice: 0, active: false },
-  });
-}
 
 /** Drop cable used: the difference between the length marks when both are given, otherwise as entered. */
 export function cableUsed(b: { dropCableM?: number | null; dropStartM?: number | null; dropEndM?: number | null }) {
@@ -605,16 +596,19 @@ tasksRouter.post(
     const customerAccount = body.customerAccount || task.customerAccount;
     const endedAt = await eventTime(body.photoId);
 
+    let ownRouterFiled = false;
     await prisma.$transaction(async (tx) => {
       await consumePhoto(tx, body.photoId, userId, 'TASK_END', task.id);
       if (body.ownRouter && ownSn) {
-        // The label photo, taken live at the site, proves the router is there
+        // The label photo, taken live at the site, is the proof the office judges by
         await consumePhoto(tx, body.ownRouter.photoId, userId, 'ROUTER_LABEL', task.id);
-        // On record as the customer's device installed here (outside stock: no approval, no stock count)
-        const item = await customerRouterItem(tx);
-        const place = { status: 'INSTALLED' as const, customerOwned: true, holderId: null, heldSince: null, taskId: task.id, customerAccount: customerAccount ?? null, installedAt: new Date(), installLocation: [task.address, body.houseNo && `House ${body.houseNo}`, task.customerName].filter(Boolean).join(' · '), macAddress: body.ownRouter.mac?.toUpperCase() || undefined };
-        if (known) await tx.serialUnit.update({ where: { id: known.id }, data: place });
-        else await tx.serialUnit.create({ data: { ...place, serialNumber: ownSn, itemId: item.id } });
+        const payload = { taskId: task.id, sn: ownSn, model: body.ownRouter.model, mac: body.ownRouter.mac?.toUpperCase() || null, customerAccount: customerAccount ?? null, location: [task.address, body.houseNo && `House ${body.houseNo}`, task.customerName].filter(Boolean).join(' · ') };
+        // An admin's own word stands; anyone else's goes to the office to confirm before it is on record
+        if (me(req).role === 'ADMIN') await recordCustomerRouter(tx, payload);
+        else {
+          await fileRequest(tx, 'CUSTOMER_ROUTER', me(req), payload, { summary: `Customer's own router ${body.ownRouter.model} (SN ${ownSn}) at ${task.customerName} — task ${task.code}, label photo on the task`, taskId: task.id });
+          ownRouterFiled = true;
+        }
       }
 
       for (const serial of body.serials) {
@@ -651,7 +645,7 @@ tasksRouter.post(
           endPhotoId: body.photoId,
           durationMinutes: minutesBetween(task.startedAt!, endedAt),
           completionNotes: notes,
-          ...(body.ownRouter && ownSn ? { ownRouterModel: body.ownRouter.model, ownRouterSn: ownSn, ownRouterMac: body.ownRouter.mac?.toUpperCase() || null, ownRouterPhotoId: body.ownRouter.photoId } : {}),
+          ...(body.ownRouter && ownSn ? { ownRouterModel: body.ownRouter.model, ownRouterSn: ownSn, ownRouterMac: body.ownRouter.mac?.toUpperCase() || null, ownRouterPhotoId: body.ownRouter.photoId, ownRouterVerdict: me(req).role === 'ADMIN' ? 'APPROVED' : 'PENDING' } : {}),
           amountCollected: body.amountCollected,
           signal: body.signal || undefined,
           houseNo: body.houseNo || undefined,
@@ -666,6 +660,7 @@ tasksRouter.post(
         },
       });
     });
+    if (ownRouterFiled) tellAdmins(me(req), `Customer's own router (SN ${ownSn}) on task ${task.code} (${task.customerName}): check the label photo and approve`);
     if (body.serials.length && me(req).role !== 'ADMIN') tellAdmins(me(req), `${body.serials.length} device(s) installed on task ${task.code} (${task.customerName}) — approve to move them to Installed`);
     void notifyCustomer(task, { title: 'Task completed', body: `"${task.title}" was completed by ${lead(task)}. Thank you for choosing Optimas.` });
     // The job report goes to the office: supervisors, admins and customer care

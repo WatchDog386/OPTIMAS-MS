@@ -365,7 +365,7 @@ inventoryRouter.get(
     if (!unit) {
       const elsewhere = await prisma.serialUnit.findFirst({ where: { serialNumber: { in: svc.codeVariants(code) } }, include: { holder: { select: { name: true } } } });
       if (elsewhere) throw conflict(`${elsewhere.serialNumber} is not one of your devices${elsewhere.holder ? ` (${elsewhere.holder.name} holds it)` : ` (${elsewhere.status.toLowerCase().replace('_', ' ')})`}`, 'NOT_IN_CUSTODY');
-      throw notFound('That code among your devices. Scan the code marked SN, or pick the device from your list');
+      throw badRequest(`${code.trim().toUpperCase()} is not among the devices issued to you. Check the SN, or if it is the customer's own router, record it as the customer's router`, 'NOT_ISSUED');
     }
     res.json({ unit: { id: unit.id, serialNumber: unit.serialNumber, status: unit.status, item: { name: unit.item.name } } });
   }),
@@ -450,7 +450,10 @@ inventoryRouter.get(
       take: done ? 100 : 300,
       include: requestInclude,
     });
-    res.json({ requests });
+    // A customer's router: the label photo and the task, for the admin to judge the claim
+    const ids = requests.filter((r) => r.type === 'CUSTOMER_ROUTER' && r.taskId).map((r) => r.taskId!);
+    const tasks = ids.length ? await prisma.task.findMany({ where: { id: { in: ids } }, select: { id: true, code: true, ownRouterPhoto: { select: { id: true, flags: true, lat: true, lng: true, receivedAt: true } } } }) : [];
+    res.json({ requests: requests.map((r) => ({ ...r, task: tasks.find((t) => t.id === r.taskId) ?? null })) });
   }),
 );
 

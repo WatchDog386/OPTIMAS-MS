@@ -124,6 +124,7 @@ export interface Task {
   ownRouterSn?: string | null;
   ownRouterMac?: string | null;
   ownRouterPhoto?: PhotoRef | null;
+  ownRouterVerdict?: 'PENDING' | 'APPROVED' | 'REJECTED' | null;
   verificationNote: string | null;
   customerSignature: string | null;
   signedByName: string | null;

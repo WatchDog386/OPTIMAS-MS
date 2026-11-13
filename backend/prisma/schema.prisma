@@ -254,6 +254,8 @@ model Task {
   ownRouterSn      String?
   ownRouterMac     String?
   ownRouterPhotoId String?   @unique
+  /// The office's decision on the customer's router: PENDING, APPROVED or REJECTED
+  ownRouterVerdict String?
 
   assigneeId  String? // empty while the job is OPEN (not assigned yet)
   createdById String
@@ -745,6 +747,8 @@ enum StockRequestType {
   RECEIVE
   ISSUE
   ADJUST
+  /// A customer's own router recorded at a task: the office confirms it before it goes on record
+  CUSTOMER_ROUTER
 }
 
 enum StockRequestStatus {

@@ -7,7 +7,7 @@ import { api, ApiError } from '../../src/api/client';
 import type { BulkHolding, SerialUnit, Task } from '../../src/api/types';
 import { Button, Card, Input, ListRow, Loading, Screen, ScreenHeader, SectionHeader, Segmented, SignaturePad, Text } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
-import { requestCapture, type CaptureResult } from '../../src/store/bridge';
+import { requestCapture, requestScan, type CaptureResult } from '../../src/store/bridge';
 import { colors, fonts, radius, space } from '../../src/theme';
 import { kes } from '../../src/utils/format';
 import { confirmDialog, toast, celebrate } from '../../src/store/feedback';
@@ -87,7 +87,21 @@ export default function CompleteTask() {
       setTyped('');
       toast.success(unit.item.name, `S/N ${unit.serialNumber} added`);
     } catch (e) {
-      toast.error('Not one of your devices', e instanceof ApiError ? e.message : 'Check the SN and try again');
+      if (e instanceof ApiError && (e.code === 'NOT_ISSUED' || e.code === 'NOT_FOUND')) {
+        // Not one issued to them: probably the customer's own router — switch, with the SN filled in
+        const theirs = await confirmDialog({
+          title: 'Not a router issued to you',
+          message: `${code} is not among the devices the office issued to you. Is it the customer's own router?`,
+          emoji: '🏠',
+          confirmLabel: "Yes, customer's router",
+          cancelLabel: 'No, retype',
+        });
+        if (theirs) {
+          setRouterFrom('customer');
+          setOwn((o) => ({ ...o, sn: code }));
+          setTyped('');
+        }
+      } else toast.error('Not one of your devices', e instanceof ApiError ? e.message : 'Check the SN and try again');
     } finally {
       setChecking(false);
     }
@@ -96,7 +110,7 @@ export default function CompleteTask() {
   /** Step 1: devices, materials and the customer's sign-off — then the completion photo. */
   const takePhoto = async () => {
     if (needsSerial && routerFrom === 'stock' && !serials.length) return toast.warning('Device required', "Type the serial number (SN) of the router/ONT you installed, or choose \"Customer's own router\".");
-    if (needsSerial && routerFrom === 'customer') {
+    if (routerFrom === 'customer') {
       if (own.model.trim().length < 2) return toast.warning("The customer's router", 'Enter its make and model, e.g. TP-Link Archer C6.');
       if (own.sn.trim().length < 4) return toast.warning("The customer's router", 'Type its serial number (SN) exactly as on the label.');
       if (!label) return toast.warning('Photo of the label', "Take a photo of the router's label so the office can confirm the installation.");
@@ -132,14 +146,14 @@ export default function CompleteTask() {
           ...(marked ? { dropStartM: Number(markStart), dropEndM: Number(markEnd) } : {}),
           fatPreinstalled: fat ? fat === 'yes' : undefined,
           serials: routerFrom === 'customer' ? [] : serials,
-          ...(needsSerial && routerFrom === 'customer' && label
+          ...(routerFrom === 'customer' && label
             ? { ownRouter: { model: own.model.trim(), sn: own.sn.trim().toUpperCase(), mac: own.mac.trim() || undefined, photoId: label.photoId } }
             : {}),
           materials: materials.map((m) => ({ itemId: m.holding.item.id, quantity: m.quantity })),
           signature: signature ? { path: signature, signedBy: signedBy.trim() } : undefined,
         },
       });
-      celebrate('Task completed', routerFrom === 'customer' && needsSerial ? "Your task report has been sent for verification, with the customer's router on record." : serials.length ? 'Your task report has been sent for verification, and the device for admin approval.' : 'Your task report has been sent for verification.');
+      celebrate('Task completed', routerFrom === 'customer' ? "Your task report has been sent for verification, and the customer's router to the office to confirm." : serials.length ? 'Your task report has been sent for verification, and the device for admin approval.' : 'Your task report has been sent for verification.');
       // Last task of the day? The daily report goes to the office (on team tasks, from the leader)
       const now = await confirmDialog({
         title: 'Daily report',
@@ -238,23 +252,36 @@ export default function CompleteTask() {
       <ScreenHeader title="Complete task" subtitle={`${t.code} · ${t.customerName}`} />
 
       <SectionHeader title={needsSerial ? 'Installed device (required)' : 'Devices installed'} />
-      {needsSerial ? (
-        <Segmented
-          options={[
-            { value: 'stock', label: 'Router from my stock' },
-            { value: 'customer', label: "Customer's own router" },
-          ]}
-          value={routerFrom}
-          onChange={setRouterFrom}
-        />
-      ) : null}
-      {needsSerial && routerFrom === 'customer' ? (
+      {/* Which router: one issued to the technician by the office, or the customer's own */}
+      <Segmented
+        options={[
+          { value: 'stock', label: 'Router issued to me' },
+          { value: 'customer', label: "Customer's router" },
+        ]}
+        value={routerFrom}
+        onChange={setRouterFrom}
+      />
+      {routerFrom === 'customer' ? (
         <Card style={{ gap: space.md }}>
           <Text variant="bodySm" color={colors.textMuted}>
-            The customer already has a router: it is not from stock, so record it here. Its details and a photo of its label prove the installation; it is kept on record as the customer's device.
+            The customer already has a router, not one issued to you. Scan or type its SN, add the model and photograph its label: the office checks the photo and approves it, then it is kept on record as the customer's device.
           </Text>
           <Input label="Make and model" icon="hardware-chip-outline" value={own.model} onChangeText={(v) => setOwn((o) => ({ ...o, model: v }))} placeholder="e.g. TP-Link Archer C6" />
-          <Input label="Serial number (SN)" icon="barcode-outline" autoCapitalize="characters" autoCorrect={false} value={own.sn} onChangeText={(v) => setOwn((o) => ({ ...o, sn: v }))} placeholder="As printed on the label, next to SN" />
+          <View style={{ flexDirection: 'row', gap: space.sm, alignItems: 'flex-end' }}>
+            <View style={{ flex: 1 }}>
+              <Input label="Serial number (SN)" icon="barcode-outline" autoCapitalize="characters" autoCorrect={false} value={own.sn} onChangeText={(v) => setOwn((o) => ({ ...o, sn: v }))} placeholder="As printed on the label, next to SN" />
+            </View>
+            <Button
+              label="Scan"
+              icon="scan-outline"
+              variant="secondary"
+              onPress={() =>
+                void requestScan({ title: "Scan the customer's router SN" }).then((codes) => {
+                  if (codes?.[0]) setOwn((o) => ({ ...o, sn: codes[0].toUpperCase() }));
+                })
+              }
+            />
+          </View>
           <Input label="MAC address (optional)" icon="git-network-outline" autoCapitalize="characters" autoCorrect={false} value={own.mac} onChangeText={(v) => setOwn((o) => ({ ...o, mac: v }))} placeholder="e.g. A4:2B:B0:12:34:56" />
           {label ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
