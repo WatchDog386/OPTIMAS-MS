@@ -10,7 +10,7 @@ import { ROLES, me, requireRole } from '../../middleware/auth';
 import { NOTES_MIN_WORDS, reportProblem, taskReportProblem, taskReportSchema, taskReportText } from '../../lib/task-report';
 import { parse } from '../../middleware/validate';
 import { consumePhoto, eventTime } from '../capture/capture.service';
-import { consumeBulk, installSerial, requireHeldUnit } from '../inventory/inventory.service';
+import { codeVariants, consumeBulk, installSerial, requireHeldUnit } from '../inventory/inventory.service';
 import { fileRequest, tellAdmins } from '../inventory/stock-approval';
 import { notify, notifyRoles } from '../notifications/notifications.service';
 import { notifyCustomer } from '../customer/customer.service';
@@ -38,9 +38,19 @@ const detailInclude = {
   verifiedBy: person,
   startPhoto: photo,
   endPhoto: photo,
+  ownRouterPhoto: photo,
   materials: { include: { item: { select: { name: true, sku: true, unit: true, category: true } }, unit: { select: { serialNumber: true } } } },
   team: { include: teamInclude },
 } satisfies Prisma.TaskInclude;
+
+/** The catalogue entry customers' own routers are recorded under (hidden: never in the store or catalogue). */
+async function customerRouterItem(tx: Prisma.TransactionClient) {
+  return tx.inventoryItem.upsert({
+    where: { sku: 'CUSTOMER-ROUTER' },
+    update: {},
+    create: { sku: 'CUSTOMER-ROUTER', name: "Customer's own router", category: 'ROUTER', tracking: 'SERIALIZED', unit: 'pcs', unitPrice: 0, active: false },
+  });
+}
 
 /** Drop cable used: the difference between the length marks when both are given, otherwise as entered. */
 export function cableUsed(b: { dropCableM?: number | null; dropStartM?: number | null; dropEndM?: number | null }) {
@@ -539,6 +549,15 @@ const completeSchema = z.object({
   dropEndM: z.number().min(0).max(100_000).optional(),
   fatPreinstalled: z.boolean().optional(),
   serials: z.array(z.string().trim().min(1)).default([]),
+  /** Installed with the customer's own router (not from stock): its make/model, SN, MAC and the live photo of its label */
+  ownRouter: z
+    .object({
+      model: z.string().trim().min(2, "Enter the router's make and model").max(80),
+      sn: z.string().trim().min(4, "Enter the router's serial number (SN)").max(60),
+      mac: z.string().trim().max(40).optional(),
+      photoId: z.string().min(1, "Take a photo of the router's label"),
+    })
+    .optional(),
   materials: z
     .array(z.object({ itemId: z.string().min(1), quantity: z.number().positive(), unitPrice: z.number().int().min(0).optional() }))
     .default([]),
@@ -559,8 +578,14 @@ tasksRouter.post(
     const task = await loadTask(req.params.id);
     mustBeAssignee(task, userId);
     if (task.status !== 'IN_PROGRESS' || !task.startedAt) throw conflict('Start the task before completing it');
-    if (task.type === 'INSTALLATION' && body.serials.length === 0) {
-      throw badRequest('Enter the serial number (SN) of the router/ONT installed for this customer', 'SERIAL_REQUIRED');
+    if (task.type === 'INSTALLATION' && body.serials.length === 0 && !body.ownRouter) {
+      throw badRequest("Enter the serial number (SN) of the router/ONT installed, or record the customer's own router", 'SERIAL_REQUIRED');
+    }
+    // The customer's own router must not be one of ours (a stock router passed off as the customer's)
+    const ownSn = body.ownRouter ? body.ownRouter.sn.toUpperCase().replace(/\s+/g, '') : null;
+    const known = ownSn ? await prisma.serialUnit.findFirst({ where: { serialNumber: { in: codeVariants(ownSn) } } }) : null;
+    if (known && !known.customerOwned) {
+      throw conflict(`${known.serialNumber} is an Optimas device (${known.status.toLowerCase().replace('_', ' ')}), not the customer's: pick it from your stock instead`, 'OPTIMAS_DEVICE');
     }
     if (task.type === 'INSTALLATION' && !body.signature) {
       throw badRequest('Ask the customer to sign to confirm the installation', 'SIGNATURE_REQUIRED');
@@ -582,6 +607,15 @@ tasksRouter.post(
 
     await prisma.$transaction(async (tx) => {
       await consumePhoto(tx, body.photoId, userId, 'TASK_END', task.id);
+      if (body.ownRouter && ownSn) {
+        // The label photo, taken live at the site, proves the router is there
+        await consumePhoto(tx, body.ownRouter.photoId, userId, 'ROUTER_LABEL', task.id);
+        // On record as the customer's device installed here (outside stock: no approval, no stock count)
+        const item = await customerRouterItem(tx);
+        const place = { status: 'INSTALLED' as const, customerOwned: true, holderId: null, heldSince: null, taskId: task.id, customerAccount: customerAccount ?? null, installedAt: new Date(), installLocation: [task.address, body.houseNo && `House ${body.houseNo}`, task.customerName].filter(Boolean).join(' · '), macAddress: body.ownRouter.mac?.toUpperCase() || undefined };
+        if (known) await tx.serialUnit.update({ where: { id: known.id }, data: place });
+        else await tx.serialUnit.create({ data: { ...place, serialNumber: ownSn, itemId: item.id } });
+      }
 
       for (const serial of body.serials) {
         // The device installed: an admin approves it before it leaves the technician's stock (an admin's own counts now)
@@ -617,6 +651,7 @@ tasksRouter.post(
           endPhotoId: body.photoId,
           durationMinutes: minutesBetween(task.startedAt!, endedAt),
           completionNotes: notes,
+          ...(body.ownRouter && ownSn ? { ownRouterModel: body.ownRouter.model, ownRouterSn: ownSn, ownRouterMac: body.ownRouter.mac?.toUpperCase() || null, ownRouterPhotoId: body.ownRouter.photoId } : {}),
           amountCollected: body.amountCollected,
           signal: body.signal || undefined,
           houseNo: body.houseNo || undefined,

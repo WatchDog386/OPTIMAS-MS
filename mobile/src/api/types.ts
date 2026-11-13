@@ -1,5 +1,5 @@
 export type Role = 'ADMIN' | 'SUPERVISOR' | 'STOREKEEPER' | 'TECHNICIAN' | 'CUSTOMER' | 'CUSTOMER_CARE';
-export type CapturePurpose = 'CHECK_IN' | 'CHECK_OUT' | 'TASK_START' | 'TASK_END';
+export type CapturePurpose = 'CHECK_IN' | 'CHECK_OUT' | 'TASK_START' | 'TASK_END' | 'ROUTER_LABEL';
 export type TaskStatus = 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'VERIFIED' | 'REJECTED' | 'CANCELLED';
 export type TaskType = 'INSTALLATION' | 'REPAIR' | 'MAINTENANCE' | 'RELOCATION' | 'SURVEY';
 export type TaskPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
@@ -119,6 +119,11 @@ export interface Task {
   seenAt?: string | null;
   /** The technician could not do it and handed it back, with this reason */
   returnNote?: string | null;
+  /** Installed with the customer's own router: its details and the photo of its label */
+  ownRouterModel?: string | null;
+  ownRouterSn?: string | null;
+  ownRouterMac?: string | null;
+  ownRouterPhoto?: PhotoRef | null;
   verificationNote: string | null;
   customerSignature: string | null;
   signedByName: string | null;

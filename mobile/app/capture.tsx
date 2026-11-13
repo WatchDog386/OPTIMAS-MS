@@ -28,6 +28,7 @@ const copy: Record<CapturePurpose, { title: string; hint: string; facing: 'front
   CHECK_OUT: { title: 'Evening check-out', hint: 'Face and uniform clearly visible', facing: 'front' },
   TASK_START: { title: 'Task start photo', hint: 'Show the site / equipment before you begin work', facing: 'back' },
   TASK_END: { title: 'Task completion photo', hint: 'Show the finished installation — router, cabling and labels', facing: 'back' },
+  ROUTER_LABEL: { title: "Customer's router label", hint: 'The sticker under the router: brand, model, SN and MAC readable', facing: 'back' },
 };
 
 async function deviceId() {

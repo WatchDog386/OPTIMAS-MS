@@ -96,6 +96,8 @@ enum CapturePurpose {
   CHECK_OUT
   TASK_START
   TASK_END
+  /// The label sticker of a customer's own router, photographed at the installation
+  ROUTER_LABEL
 }
 
 model CaptureChallenge {
@@ -138,6 +140,7 @@ model Photo {
   attendanceOut Attendance? @relation("CheckOutPhoto")
   taskStart     Task?       @relation("TaskStartPhoto")
   taskEnd       Task?       @relation("TaskEndPhoto")
+  taskRouter    Task?       @relation("TaskRouterPhoto")
 
   @@index([userId, receivedAt])
 }
@@ -245,6 +248,12 @@ model Task {
   escalated       String?
   /// The technician could not do it and gave it back to the office, with this reason
   returnNote      String?
+  /// Installed with the customer's own router (not from stock): its make/model, SN, MAC and a live photo
+  /// of its label taken at the site, as proof
+  ownRouterModel   String?
+  ownRouterSn      String?
+  ownRouterMac     String?
+  ownRouterPhotoId String?   @unique
 
   assigneeId  String? // empty while the job is OPEN (not assigned yet)
   createdById String
@@ -284,6 +293,7 @@ model Task {
   request    ServiceRequest? @relation(fields: [requestId], references: [id])
   startPhoto Photo?          @relation("TaskStartPhoto", fields: [startPhotoId], references: [id])
   endPhoto   Photo?          @relation("TaskEndPhoto", fields: [endPhotoId], references: [id])
+  ownRouterPhoto Photo?      @relation("TaskRouterPhoto", fields: [ownRouterPhotoId], references: [id])
   materials  TaskMaterial[]
   units      SerialUnit[]
   movements  StockMovement[]
@@ -375,6 +385,8 @@ model SerialUnit {
   installNote     String?
   installLat      Float?
   installLng      Float?
+  /// The customer's own router, recorded at an installation (never Optimas stock)
+  customerOwned   Boolean    @default(false)
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 

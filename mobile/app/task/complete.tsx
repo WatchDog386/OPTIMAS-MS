@@ -46,6 +46,11 @@ export default function CompleteTask() {
   const [signedBy, setSignedBy] = useState('');
   const [drawing, setDrawing] = useState(false);
   const [typed, setTyped] = useState('');
+  // Installations: a router from the technician's stock, or the customer's own router (recorded with
+  // its make/model, SN and a live photo of its label, as proof)
+  const [routerFrom, setRouterFrom] = useState<'stock' | 'customer'>('stock');
+  const [own, setOwn] = useState({ model: '', sn: '', mac: '' });
+  const [label, setLabel] = useState<CaptureResult | null>(null);
   const [checking, setChecking] = useState(false);
 
   // Devices accepted and devices still waiting to be accepted: both can be installed
@@ -90,7 +95,12 @@ export default function CompleteTask() {
 
   /** Step 1: devices, materials and the customer's sign-off — then the completion photo. */
   const takePhoto = async () => {
-    if (needsSerial && !serials.length) return toast.warning('Device required', 'Type the serial number (SN) of the router/ONT you installed.');
+    if (needsSerial && routerFrom === 'stock' && !serials.length) return toast.warning('Device required', "Type the serial number (SN) of the router/ONT you installed, or choose \"Customer's own router\".");
+    if (needsSerial && routerFrom === 'customer') {
+      if (own.model.trim().length < 2) return toast.warning("The customer's router", 'Enter its make and model, e.g. TP-Link Archer C6.');
+      if (own.sn.trim().length < 4) return toast.warning("The customer's router", 'Type its serial number (SN) exactly as on the label.');
+      if (!label) return toast.warning('Photo of the label', "Take a photo of the router's label so the office can confirm the installation.");
+    }
     if (needsSerial && !signature) return toast.warning('Customer signature required', 'Ask the customer to sign to confirm the installation.');
     if (signature && signedBy.trim().length < 2) return toast.warning('Who signed?', 'Enter the name of the person who signed.');
     const over = materials.find((m) => m.quantity > m.holding.quantity);
@@ -121,12 +131,15 @@ export default function CompleteTask() {
           dropCableM: cableM ? Number(cableM) : undefined,
           ...(marked ? { dropStartM: Number(markStart), dropEndM: Number(markEnd) } : {}),
           fatPreinstalled: fat ? fat === 'yes' : undefined,
-          serials,
+          serials: routerFrom === 'customer' ? [] : serials,
+          ...(needsSerial && routerFrom === 'customer' && label
+            ? { ownRouter: { model: own.model.trim(), sn: own.sn.trim().toUpperCase(), mac: own.mac.trim() || undefined, photoId: label.photoId } }
+            : {}),
           materials: materials.map((m) => ({ itemId: m.holding.item.id, quantity: m.quantity })),
           signature: signature ? { path: signature, signedBy: signedBy.trim() } : undefined,
         },
       });
-      celebrate('Task completed', serials.length ? 'Your task report has been sent for verification, and the device for admin approval.' : 'Your task report has been sent for verification.');
+      celebrate('Task completed', routerFrom === 'customer' && needsSerial ? "Your task report has been sent for verification, with the customer's router on record." : serials.length ? 'Your task report has been sent for verification, and the device for admin approval.' : 'Your task report has been sent for verification.');
       // Last task of the day? The daily report goes to the office (on team tasks, from the leader)
       const now = await confirmDialog({
         title: 'Daily report',
@@ -225,6 +238,43 @@ export default function CompleteTask() {
       <ScreenHeader title="Complete task" subtitle={`${t.code} · ${t.customerName}`} />
 
       <SectionHeader title={needsSerial ? 'Installed device (required)' : 'Devices installed'} />
+      {needsSerial ? (
+        <Segmented
+          options={[
+            { value: 'stock', label: 'Router from my stock' },
+            { value: 'customer', label: "Customer's own router" },
+          ]}
+          value={routerFrom}
+          onChange={setRouterFrom}
+        />
+      ) : null}
+      {needsSerial && routerFrom === 'customer' ? (
+        <Card style={{ gap: space.md }}>
+          <Text variant="bodySm" color={colors.textMuted}>
+            The customer already has a router: it is not from stock, so record it here. Its details and a photo of its label prove the installation; it is kept on record as the customer's device.
+          </Text>
+          <Input label="Make and model" icon="hardware-chip-outline" value={own.model} onChangeText={(v) => setOwn((o) => ({ ...o, model: v }))} placeholder="e.g. TP-Link Archer C6" />
+          <Input label="Serial number (SN)" icon="barcode-outline" autoCapitalize="characters" autoCorrect={false} value={own.sn} onChangeText={(v) => setOwn((o) => ({ ...o, sn: v }))} placeholder="As printed on the label, next to SN" />
+          <Input label="MAC address (optional)" icon="git-network-outline" autoCapitalize="characters" autoCorrect={false} value={own.mac} onChangeText={(v) => setOwn((o) => ({ ...o, mac: v }))} placeholder="e.g. A4:2B:B0:12:34:56" />
+          {label ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+              <Image source={{ uri: label.uri }} style={styles.thumb} />
+              <View style={{ flex: 1 }}>
+                <Text variant="title" style={{ fontSize: 14 }}>
+                  Label photo taken
+                </Text>
+                <Text variant="label" color={colors.textMuted}>
+                  With the time and place it was taken.
+                </Text>
+              </View>
+              <Button label="Retake" variant="ghost" onPress={() => void requestCapture('ROUTER_LABEL', { taskId: t.id }).then((p) => p && setLabel(p))} />
+            </View>
+          ) : (
+            <Button label="Photograph the router's label" icon="camera-outline" variant="secondary" onPress={() => void requestCapture('ROUTER_LABEL', { taskId: t.id }).then((p) => p && setLabel(p))} />
+          )}
+        </Card>
+      ) : (
+        <>
       <Text variant="bodySm" color={colors.textMuted}>
         Type the serial number (SN) printed on the router/ONT left at the customer — not the MAC address — or tap it in your list below. After you submit, an admin approves it and it moves from In hand to Installed.
       </Text>
@@ -268,6 +318,8 @@ export default function CompleteTask() {
             ))}
         </View>
       ) : null}
+        </>
+      )}
 
       <SectionHeader title="Materials used" />
       {bulk.length ? (

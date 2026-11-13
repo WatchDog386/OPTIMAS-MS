@@ -666,7 +666,9 @@ inventoryRouter.post(
         else verdict = { tone: 'danger', title: 'Not yours', detail: `This device was issued to ${unit.holder?.name ?? 'another technician'}. Do not install it; return it to them or to the store.` };
         break;
       case 'INSTALLED':
-        verdict = { tone: 'info', title: `Installed at ${unit.customerAccount ?? (staffView ? unit.installLocation : null) ?? 'a customer'}`, detail: `Installed${unit.installedAt ? ` on ${fmt(unit.installedAt)}` : ''}${unit.task ? ` on task ${unit.task.code}` : ''}.` };
+        verdict = unit.customerOwned
+          ? { tone: 'info', title: `Customer's own router at ${unit.customerAccount ?? (staffView ? unit.installLocation : null) ?? 'a customer'}`, detail: `Not Optimas stock: the customer's router, recorded${unit.installedAt ? ` on ${fmt(unit.installedAt)}` : ''}${unit.task ? ` on task ${unit.task.code}` : ''} with a photo of its label.` }
+          : { tone: 'info', title: `Installed at ${unit.customerAccount ?? (staffView ? unit.installLocation : null) ?? 'a customer'}`, detail: `Installed${unit.installedAt ? ` on ${fmt(unit.installedAt)}` : ''}${unit.task ? ` on task ${unit.task.code}` : ''}.` };
         break;
       case 'FAULTY':
         verdict = { tone: 'warning', title: 'Marked faulty', detail: 'This device came back faulty. It should not be issued or installed.' };

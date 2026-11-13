@@ -86,7 +86,7 @@ async function buildReport(user: { id: string; name: string }, workDate = workDa
   extra = extra.map(withCable);
   const collected = tasks.reduce((n, t) => n + (t.amountCollected ?? 0), 0) + extra.reduce((n, e) => n + (e.paid ?? 0), 0);
   const cable = tasks.reduce((n, t) => n + (t.dropCableM ?? 0), 0) + extra.reduce((n, e) => n + (e.cableM ?? 0), 0);
-  const routers = tasks.reduce((n, t) => n + t.materials.filter((m) => m.unit).length, 0);
+  const routers = tasks.reduce((n, t) => n + t.materials.filter((m) => m.unit).length + (t.ownRouterSn ? 1 : 0), 0);
   const date = new Date(dayStart(workDate).getTime() + 12 * 3600_000).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Africa/Nairobi' });
 
   const lines: string[] = [];
@@ -103,10 +103,13 @@ async function buildReport(user: { id: string; name: string }, workDate = workDa
     lines.push(`Status: ${t.status === 'VERIFIED' ? 'Complete · verified' : 'Complete'}${t.endedAt ? ` at ${time(t.endedAt)}` : ''}${t.durationMinutes != null ? ` (${mins(t.durationMinutes)})` : ''}`);
     if (t.signal) lines.push(`Signal: ${t.signal}`);
     lines.push(`Client paid: ${t.amountCollected ? kes(t.amountCollected) : 'Nothing'}`);
-    if (t.materials.length) {
+    // The customer's own router (not from stock), with its SN
+    const own = t.ownRouterSn ? [`1 Customer's own router: ${t.ownRouterModel ?? 'router'} (SN ${t.ownRouterSn})`] : [];
+    if (t.materials.length || own.length) {
       lines.push('Materials used:');
+      own.forEach((m, k) => lines.push(`  ${k + 1}. ${m}`));
       // Devices one by one with their SN; bulk items with their quantity
-      t.materials.forEach((m, k) => lines.push(`  ${k + 1}. ${m.unit ? `1 ${m.item.name} (SN ${m.unit.serialNumber})` : `${qty(m.quantity)} ${m.item.unit === 'pcs' || m.item.unit === 'pc' ? '' : `${m.item.unit} `}${m.item.name}`.replace(/\s+/g, ' ')}`));
+      t.materials.forEach((m, k) => lines.push(`  ${k + 1 + own.length}. ${m.unit ? `1 ${m.item.name} (SN ${m.unit.serialNumber})` : `${qty(m.quantity)} ${m.item.unit === 'pcs' || m.item.unit === 'pc' ? '' : `${m.item.unit} `}${m.item.name}`.replace(/\s+/g, ' ')}`));
     } else lines.push('Materials used: none');
     lines.push(`Drop cable: ${cableLine(t.dropCableM, t.dropStartM, t.dropEndM)}`);
     lines.push(`FAT pre-installed: ${t.fatPreinstalled == null ? 'not recorded' : t.fatPreinstalled ? 'Yes' : 'No'}`);

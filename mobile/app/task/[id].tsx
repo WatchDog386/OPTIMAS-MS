@@ -287,6 +287,25 @@ export default function TaskDetail() {
         </>
       ) : null}
 
+      {task.ownRouterSn ? (
+        <>
+          <SectionHeader title="Customer's own router" />
+          <Card style={[styles.flat, { gap: space.md }]}>
+            <Text variant="bodySm" color={colors.textMuted}>
+              Not from stock: the customer's router, recorded at the installation with a live photo of its label.
+            </Text>
+            <Fact label="Make and model" value={task.ownRouterModel ?? '—'} />
+            <Fact label="Serial number" value={task.ownRouterSn} />
+            {task.ownRouterMac ? <Fact label="MAC address" value={task.ownRouterMac} /> : null}
+            {task.ownRouterPhoto ? (
+              <View style={{ maxWidth: 220 }}>
+                <ProofPhoto label="Router label" photo={task.ownRouterPhoto} />
+              </View>
+            ) : null}
+          </Card>
+        </>
+      ) : null}
+
       {task.materials?.length ? (
         <>
           <SectionHeader title="Materials used" />

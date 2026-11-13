@@ -64,7 +64,7 @@ captureRouter.post(
  */
 function canSee(role: string, userId: string, photo: { userId: string; purpose: string }) {
   if (photo.userId === userId || ROLES.MANAGERS.includes(role as never)) return true;
-  return role === 'STOREKEEPER' && photo.purpose.startsWith('TASK_');
+  return role === 'STOREKEEPER' && (photo.purpose.startsWith('TASK_') || photo.purpose === 'ROUTER_LABEL');
 }
 
 captureRouter.get(
