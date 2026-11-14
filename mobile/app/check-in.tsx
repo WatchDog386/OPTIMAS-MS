@@ -38,7 +38,7 @@ export default function CheckIn() {
   // Reports and hand-backs saved on this phone (no signal yet) count: they reach the office before the check-out
   const outbox = useOutbox();
   const reportedHere = new Set(outbox.filter((i) => i.state !== 'failed' && /\/tasks\/[^/]+\/(complete|unable)$/.test(i.path)).map((i) => i.taskId));
-  const dayReportHere = outbox.some((i) => i.state !== 'failed' && i.path === '/day-reports' && new Date(i.createdAt).toDateString() === new Date().toDateString());
+  const dayReportHere = outbox.some((i) => i.state !== 'failed' && (i.path === '/day-reports' || i.path === '/day-reports/upload') && new Date(i.createdAt).toDateString() === new Date().toDateString());
   const tasksLeft = (ready.data?.tasks ?? []).filter((t) => !reportedHere.has(t.id));
   // Tasks not reported stop check-out; the daily report does not: it opens on the way
   const blocked = !isIn && !!ready.data && tasksLeft.length > 0;

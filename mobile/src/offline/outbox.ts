@@ -51,6 +51,8 @@ export interface OutboxItem {
   /** A photo waiting to be sent; `ref` is how later changes refer to it until it has a server id. */
   photo?: OutboxPhoto;
   ref?: string;
+  /** A document to upload (customer care's call-centre report), with the form's other fields. */
+  file?: { dataUri: string; name: string; type: string; fields: Record<string, string> };
   taskId?: string;
   createdAt: string;
   state: OutboxState;
@@ -137,6 +139,34 @@ export async function submit<T>(
   return { queued: true, id };
 }
 
+/**
+ * Uploads a document now, or keeps it in the outbox (the file itself is kept on the phone) to send when
+ * the signal returns.
+ */
+export async function submitFile<T>(path: string, file: Blob & { name?: string }, name: string, fields: Record<string, string>, label: string): Promise<Submitted<T>> {
+  await ready();
+  const id = newKey();
+  if (!mine().some(isOpen) && !phoneOffline()) {
+    try {
+      const form = new FormData();
+      form.append('file', file, name);
+      Object.entries(fields).forEach(([k, v]) => form.append(k, v));
+      return { queued: false, data: await api<T>(path, { body: form, key: id }) };
+    } catch (e) {
+      if (!(e instanceof ApiError && e.code === 'NETWORK')) throw e;
+    }
+  }
+  const dataUri = await new Promise<string>((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(file);
+  });
+  await add({ id, label, method: 'POST', path, file: { dataUri, name, type: file.type, fields } });
+  toast.info('Saved on this phone', 'No internet now. The file is sent as soon as you are back online.');
+  return { queued: true, id };
+}
+
 /** A photo taken with no signal: kept on the phone and sent first when the signal returns. */
 export async function keepPhoto(photo: Omit<OutboxPhoto, 'dataUri'> & { uri: string }, label: string): Promise<string> {
   const { uri, ...rest } = photo;
@@ -183,6 +213,12 @@ async function sendOne(item: OutboxItem): Promise<Outcome> {
     if (item.photo) {
       refs[item.ref!] = await sendPhoto(item);
       item.photo = { ...item.photo, dataUri: '' }; // the photo is on the server now; free the space
+    } else if (item.file) {
+      const form = new FormData();
+      form.append('file', await uriToBlob(item.file.dataUri), item.file.name);
+      Object.entries(item.file.fields).forEach(([k, v]) => form.append(k, v));
+      await api(item.path, { body: form, key: item.id });
+      item.file = { ...item.file, dataUri: '' }; // on the server now; free the space
     } else {
       await api(item.path, { method: item.method, body: resolveRefs(item.body) as Record<string, unknown> | undefined, key: item.id });
     }

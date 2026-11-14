@@ -799,6 +799,11 @@ model DayReport {
   extra         Json?
   tasksDone     Int
   collected     Int
+  /// Customer care: the report exported from the call-centre system, uploaded as a file
+  fileKey       String?
+  fileName      String?
+  fileType      String?
+  fileSize      Int?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

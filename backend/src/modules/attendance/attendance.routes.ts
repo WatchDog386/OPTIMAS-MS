@@ -107,6 +107,9 @@ attendanceRouter.post(
   }),
 );
 
+/** Whether a customer-care person sent today's report. */
+const careReportSent = async (userId: string) => !!(await prisma.dayReport.findUnique({ where: { submittedById_workDate: { submittedById: userId, workDate: workDateOf() } }, select: { id: true } }));
+
 attendanceRouter.post(
   '/check-out',
   ah(async (req, res) => {
@@ -119,6 +122,8 @@ attendanceRouter.post(
       if (b.tasks.length) throw conflict(`Finish and report ${b.tasks.length === 1 ? `${b.tasks[0].code} (${b.tasks[0].title})` : `your ${b.tasks.length} tasks`} before checking out, or tell the office you cannot do ${b.tasks.length === 1 ? 'it' : 'them'}`, 'TASKS_NOT_REPORTED');
       if (b.needsDayReport) throw conflict('Send your daily report before checking out', 'DAY_REPORT_MISSING');
     }
+    // Customer care send the call-centre report (an uploaded file) before going home
+    if (me(req).role === 'CUSTOMER_CARE' && !(await careReportSent(userId))) throw conflict('Upload your call-centre report before checking out', 'DAY_REPORT_MISSING');
     const now = await eventTime(photoId);
     const workDate = workDateOf(now);
 
@@ -142,6 +147,10 @@ attendanceRouter.post(
 attendanceRouter.get(
   '/checkout-ready',
   ah(async (req, res) => {
+    if (me(req).role === 'CUSTOMER_CARE') {
+      const needsDayReport = !(await careReportSent(me(req).id));
+      return void res.json({ ready: !needsDayReport, tasks: [], needsDayReport });
+    }
     if (me(req).role !== 'TECHNICIAN') return void res.json({ ready: true, tasks: [], needsDayReport: false });
     const b = await checkoutBlockers(me(req).id);
     res.json({ ready: !b.tasks.length && !b.needsDayReport, ...b });

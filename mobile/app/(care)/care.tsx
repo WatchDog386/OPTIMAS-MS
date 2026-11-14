@@ -89,6 +89,7 @@ export default function CareHome() {
           { key: 'assign', title: 'Tasks to assign', status: waitingJobs ? `${waitingJobs} waiting for a technician` : 'Nothing waiting', icon: 'time-outline', badge: waitingJobs, onPress: () => router.push('/care-jobs') },
           { key: 'in', title: 'Who is in', status: `${techsIn} technicians in · ${techsOut} not in`, icon: 'people-outline', onPress: () => router.push('/team-today') },
           { key: 'jobs', title: 'Tasks today', status: `${jobs.data?.tasks.length ?? 0} open · ${onRoad} in progress`, icon: 'navigate-outline', onPress: () => router.push('/care-jobs') },
+          { key: 'report', title: 'Daily report', status: 'Upload the call-centre report', icon: 'cloud-upload-outline', onPress: () => router.push('/day-report') },
           { key: 'new', title: 'New customer login', status: 'Make an account and send it', icon: 'person-add-outline', onPress: () => router.push('/admin/user-new?role=CUSTOMER') },
         ]}
       />

@@ -1,4 +1,7 @@
 import { Router } from 'express';
+import multer from 'multer';
+import path from 'path';
+import { storage } from '../../lib/storage';
 import { z } from 'zod';
 import { env } from '../../config/env';
 import { prisma } from '../../lib/prisma';
@@ -191,7 +194,7 @@ dayReportsRouter.get(
     const user = me(req);
     const r = await buildReport(user);
     const sent = await prisma.dayReport.findUnique({ where: { submittedById_workDate: { submittedById: user.id, workDate: workDateOf() } } });
-    res.json({ report: view(r), sent: sent ? { id: sent.id, at: sent.updatedAt, tasksDone: sent.tasksDone, extra: sent.extra ?? [] } : null });
+    res.json({ report: view(r), sent: sent ? { id: sent.id, at: sent.updatedAt, tasksDone: sent.tasksDone, extra: sent.extra ?? [], fileName: sent.fileName, fileSize: sent.fileSize } : null });
   }),
 );
 
@@ -272,6 +275,79 @@ dayReportsRouter.post(
     }, user.id);
     await audit(user.id, 'DAY_REPORT_SENT', 'DayReport', saved.id, `${done} tasks · ${kes(r.collected)}`);
     res.status(201).json({ report: saved });
+  }),
+);
+
+/*
+ * Customer care's daily report comes from the call-centre system: they export it there (PDF, Excel, CSV,
+ * Word or a screenshot) and upload the file here, with a comment. It goes to the office like any daily
+ * report and opens on the check-out path. Sending again the same day replaces the file.
+ */
+const REPORT_FILE_MB = 15;
+const REPORT_TYPES: Record<string, string> = {
+  '.pdf': 'application/pdf',
+  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  '.xls': 'application/vnd.ms-excel',
+  '.csv': 'text/csv',
+  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  '.doc': 'application/msword',
+  '.txt': 'text/plain',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+};
+const reportUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: REPORT_FILE_MB * 1024 * 1024, files: 1 } });
+const sizeLabel = (n: number) => (n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
+
+dayReportsRouter.post(
+  '/upload',
+  reportUpload.single('file'),
+  ah(async (req, res) => {
+    const user = me(req);
+    if (user.role !== 'CUSTOMER_CARE' && user.role !== 'ADMIN' && user.role !== 'SUPERVISOR') throw forbidden('Only customer care uploads a report file');
+    const file = req.file;
+    if (!file || !file.size) throw badRequest('Choose the report file exported from the call-centre system', 'FILE_REQUIRED');
+    // The name as on the phone, without folders or odd characters
+    const original = path.basename(file.originalname || 'report').replace(/[^\w .()-]+/g, '_').slice(0, 120) || 'report';
+    const ext = path.extname(original).toLowerCase();
+    if (!REPORT_TYPES[ext]) throw badRequest('Upload the report as PDF, Excel (xlsx/xls), CSV, Word (docx/doc), text or a picture', 'FILE_TYPE');
+    const note = parse(z.object({ note: z.string().trim().max(1000).optional() }), req.body).note || undefined;
+    const workDate = workDateOf();
+    const day = workDate.toISOString().slice(0, 10);
+    const key = `day-reports/${day}/${user.id}-${Date.now().toString(36)}${ext}`;
+    await storage.save(key, file.buffer);
+    const prev = await prisma.dayReport.findUnique({ where: { submittedById_workDate: { submittedById: user.id, workDate } } });
+    const text = [`*Daily report — ${user.name} (customer care)*`, `${day} · call-centre report attached`, '', `File: ${original} (${sizeLabel(file.size)})`, ...(note ? ['', '*Comments*', note] : [])].join('\n');
+    const data = { text, teamId: null, taskIds: [], extra: [], tasksDone: 0, collected: 0, fileKey: key, fileName: original, fileType: REPORT_TYPES[ext], fileSize: file.size };
+    const saved = await prisma.dayReport.upsert({
+      where: { submittedById_workDate: { submittedById: user.id, workDate } },
+      create: { ...data, workDate, submittedById: user.id },
+      update: data,
+    });
+    if (prev?.fileKey && prev.fileKey !== key) void storage.remove(prev.fileKey).catch(() => undefined);
+    void notifyRoles(['ADMIN', 'SUPERVISOR'], {
+      type: 'DAY_REPORT',
+      title: `Daily report — ${user.name} (customer care)`,
+      body: `Call-centre report: ${original}${note ? ` · ${note.slice(0, 80)}` : ''}`,
+      data: { dayReportId: saved.id },
+    }, user.id);
+    await audit(user.id, 'DAY_REPORT_SENT', 'DayReport', saved.id, `File ${original} (${sizeLabel(file.size)})`);
+    res.status(201).json({ report: saved });
+  }),
+);
+
+/** The uploaded report file: the person who sent it and the office. */
+dayReportsRouter.get(
+  '/:id/file',
+  ah(async (req, res) => {
+    const r = await prisma.dayReport.findUnique({ where: { id: req.params.id } });
+    if (!r || !r.fileKey) throw notFound('Report file');
+    if (r.submittedById !== me(req).id && !ROLES.MANAGERS.includes(me(req).role)) throw forbidden('Not your report');
+    res.setHeader('Content-Type', r.fileType ?? 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${(r.fileName ?? 'report').replace(/"/g, '')}"`);
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.sendFile(storage.absolutePath(r.fileKey));
   }),
 );
 

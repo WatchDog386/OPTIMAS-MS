@@ -12,6 +12,8 @@ import { fonts, isDark, space } from '../src/theme';
 import { whatsapp } from '../src/utils/contact';
 import { phoneOffline, submit as outboxSend, useOutbox } from '../src/offline/outbox';
 import { apiCache } from '../src/api/cache';
+import { useAuth } from '../src/store/auth';
+import { CareDayReport } from '../src/components/CareDayReport';
 import type { Task } from '../src/api/types';
 import { humanize, kes, time } from '../src/utils/format';
 
@@ -159,6 +161,13 @@ const TYPES = ['Installation', 'Repair', 'Relocation', 'Maintenance'];
  * office's template, sent to the office and shareable on WhatsApp. On team tasks the leader sends it.
  */
 export default function DayReport() {
+  // Customer care upload the report exported from the call-centre system instead
+  const care = useAuth((s) => s.user?.role === 'CUSTOMER_CARE');
+  const { then } = useLocalSearchParams<{ then?: string }>();
+  return care ? <CareDayReport checkingOut={then === 'checkout'} /> : <TechDayReport />;
+}
+
+function TechDayReport() {
   // Opened on the way to check out: once it is sent, carry on to the check-out
   const { then } = useLocalSearchParams<{ then?: string }>();
   const checkingOut = then === 'checkout';

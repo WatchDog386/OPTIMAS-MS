@@ -15,6 +15,7 @@ interface Row {
   updatedAt: string;
   submittedBy: { id: string; name: string; staffNo: string };
   team: { id: string; name: string } | null;
+  fileName?: string | null;
 }
 
 const iso = (d: Date) => d.toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' });
@@ -48,14 +49,14 @@ export default function DayReports() {
           <Ionicons name="chevron-forward" size={18} color={SME.fg} />
         </Pressable>
       </View>
-      {!loading && !reports.length ? <EmptyState icon="document-text-outline" title="No reports" message={today ? 'Reports come in as technicians and team leaders finish their day.' : 'No reports were sent that day.'} /> : null}
+      {!loading && !reports.length ? <EmptyState icon="document-text-outline" title="No reports" message={today ? 'Reports come in as technicians, team leaders and customer care finish their day.' : 'No reports were sent that day.'} /> : null}
       <View style={{ gap: 8 }}>
         {reports.map((r) => (
           <SmeRow
             key={r.id}
-            icon={r.team ? 'people' : 'person'}
+            icon={r.fileName ? 'headset' : r.team ? 'people' : 'person'}
             title={r.team ? `${r.team.name} · ${r.submittedBy.name}` : r.submittedBy.name}
-            sub={`${r.tasksDone} task${r.tasksDone === 1 ? '' : 's'} · ${kes(r.collected)} paid · sent ${new Date(r.updatedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Nairobi' })}`}
+            sub={r.fileName ? `Customer care · 📎 ${r.fileName} · sent ${new Date(r.updatedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Nairobi' })}` : `${r.tasksDone} task${r.tasksDone === 1 ? '' : 's'} · ${kes(r.collected)} paid · sent ${new Date(r.updatedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Nairobi' })}`}
             onPress={() => router.push(`/admin/day-report/${r.id}`)}
           />
         ))}
