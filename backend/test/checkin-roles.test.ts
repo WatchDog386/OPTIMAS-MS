@@ -15,6 +15,8 @@ describe('who checks in', () => {
     await api().post('/api/v1/users').set(auth(admin)).send({ staffNo, name: 'Care Shift', role: 'CUSTOMER_CARE', password: 'Care-pass-123' });
     const care = (await login(staffNo, 'Care-pass-123')).token;
     expect((await checkIn(care)).status).toMatch(/PRESENT|LATE/);
+    // Customer care upload the call-centre report before going home
+    expect((await api().post('/api/v1/day-reports/upload').set(auth(care)).attach('file', Buffer.from('Calls,48'), 'calls.csv')).status).toBe(201);
     const checkout = await api()
       .post('/api/v1/attendance/check-out')
       .set(auth(care))
