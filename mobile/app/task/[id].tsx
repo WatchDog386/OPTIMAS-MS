@@ -49,9 +49,24 @@ export default function TaskDetail() {
   };
 
   const start = async () => {
+    // The length mark printed on the drop cable before any is run; the mark after is asked at the end
+    const cableTask = task.type === 'INSTALLATION' || task.type === 'RELOCATION';
+    const mark = await promptDialog({
+      title: 'Drop cable: length before',
+      message: cableTask
+        ? 'Read the length mark printed on the drop cable before you run any (in metres). You give the mark after when you finish, and the app works out the cable used.'
+        : 'If you will run drop cable, read the length mark printed on it now (in metres). Leave it empty if this task uses no cable.',
+      emoji: '📏',
+      confirmLabel: 'Next: start photo',
+      cancelLabel: 'Cancel',
+      input: { placeholder: 'e.g. 1240', required: cableTask },
+    });
+    if (mark === null) return;
+    const value = mark.trim() ? Number(mark.replace(/[^0-9.]/g, '')) : undefined;
+    if (mark.trim() && (value === undefined || Number.isNaN(value))) return toast.warning('Cable mark', 'Type the number printed on the cable, e.g. 1240.');
     const photo = await requestCapture('TASK_START', { taskId: task.id });
     if (!photo) return;
-    await run(() => api<{ task: Task }>(`/tasks/${task.id}/start`, { body: { photoId: photo.photoId } }));
+    await run(() => api<{ task: Task }>(`/tasks/${task.id}/start`, { body: { photoId: photo.photoId, ...(value !== undefined ? { dropStartM: value } : {}) } }));
   };
   const verify = async (decision: 'VERIFIED' | 'REJECTED') => {
     const ok = await run(() => api(`/tasks/${task.id}/verify`, { body: { decision, note: note || undefined } }));

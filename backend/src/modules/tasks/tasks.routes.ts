@@ -499,7 +499,9 @@ tasksRouter.post(
   '/:id/start',
   ah(async (req, res) => {
     const userId = me(req).id;
-    const { photoId } = parse(z.object({ photoId: z.string().min(1) }), req.body);
+    // The length mark on the drop cable before any is run (read off the cable at the start); the mark after
+    // is given when the task is finished, and the difference is the cable used
+    const { photoId, dropStartM } = parse(z.object({ photoId: z.string().min(1), dropStartM: z.number().min(0).max(100_000).optional() }), req.body);
     const task = await loadTask(req.params.id);
     mustBeAssignee(task, userId);
     if (task.status !== 'ASSIGNED') throw conflict(`Task is already ${task.status.toLowerCase().replace('_', ' ')}`);
@@ -516,7 +518,7 @@ tasksRouter.post(
 
     await prisma.$transaction(async (tx) => {
       await consumePhoto(tx, photoId, userId, 'TASK_START', task.id);
-      await tx.task.update({ where: { id: task.id }, data: { status: 'IN_PROGRESS', startedAt, startPhotoId: photoId } });
+      await tx.task.update({ where: { id: task.id }, data: { status: 'IN_PROGRESS', startedAt, startPhotoId: photoId, ...(dropStartM !== undefined ? { dropStartM } : {}) } });
     });
     void notifyCustomer(task, { title: 'Your technician has started', body: `${task.team ? `${task.team.name}, led by ${lead(task)}, is` : `${lead(task)} is`} now working on "${task.title}".` });
     if (helpersOf(task).length) void notify(helpersOf(task), { type: 'JOB_UPDATE', title: `${task.code} started`, body: `${lead(task)} started the task for ${task.team!.name}.`, data: { taskId: task.id } });
@@ -593,6 +595,8 @@ tasksRouter.post(
       notes = body.notes!;
     }
 
+    // The mark at the start, recorded when the task was started, unless given again now
+    if (body.dropStartM === undefined && task.dropStartM != null) body.dropStartM = task.dropStartM;
     const customerAccount = body.customerAccount || task.customerAccount;
     const endedAt = await eventTime(body.photoId);
 

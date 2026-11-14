@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { goBack } from '../../src/utils/nav';
@@ -66,6 +66,11 @@ export default function CompleteTask() {
   const total = materials.reduce((n, m) => n + Math.round(m.quantity * m.holding.item.unitPrice), 0);
   // Drop cable: filled in from the cable taken from stock above (metres), and can be changed
   const cableFromStock = materials.filter((m) => /cable/i.test(m.holding.item.name) && /^m(etres?)?$/i.test(m.holding.item.unit)).reduce((n, m) => n + m.quantity, 0);
+  // The mark before was recorded when the task was started: filled in, only the mark after is asked now
+  const startRecorded = task.data?.task.dropStartM ?? null;
+  useEffect(() => {
+    if (startRecorded != null) setMarkStart((m) => (m === '' ? String(startRecorded) : m));
+  }, [startRecorded]);
   const marked = markStart !== '' && markEnd !== '';
   const fromMarks = marked ? Math.round(Math.abs(Number(markStart) - Number(markEnd)) * 10) / 10 : null;
   const cableM = fromMarks != null ? String(fromMarks) : (cable ?? (cableFromStock ? String(cableFromStock) : ''));
@@ -196,10 +201,19 @@ export default function CompleteTask() {
         </Text>
         <View style={{ flexDirection: 'row', gap: space.sm }}>
           <View style={{ flex: 1 }}>
-            <Input label="Mark at start (m)" keyboardType="decimal-pad" value={markStart} onChangeText={(v) => setMarkStart(v.replace(/[^0-9.]/g, ''))} placeholder="e.g. 1240" />
+            {startRecorded != null ? (
+              <View style={styles.startMark}>
+                <Text variant="label" color={colors.textMuted}>
+                  Mark before (at the start)
+                </Text>
+                <Text variant="title">{startRecorded} m</Text>
+              </View>
+            ) : (
+              <Input label="Mark before (m)" keyboardType="decimal-pad" value={markStart} onChangeText={(v) => setMarkStart(v.replace(/[^0-9.]/g, ''))} placeholder="e.g. 1240" />
+            )}
           </View>
           <View style={{ flex: 1 }}>
-            <Input label="Mark at end (m)" keyboardType="decimal-pad" value={markEnd} onChangeText={(v) => setMarkEnd(v.replace(/[^0-9.]/g, ''))} placeholder="e.g. 1210" />
+            <Input label="Mark after (m)" keyboardType="decimal-pad" value={markEnd} onChangeText={(v) => setMarkEnd(v.replace(/[^0-9.]/g, ''))} placeholder="e.g. 1210" />
           </View>
         </View>
         {marked ? (
@@ -398,6 +412,7 @@ export default function CompleteTask() {
 }
 
 const styles = StyleSheet.create({
+  startMark: { gap: 2, paddingHorizontal: 14, paddingVertical: 10, borderRadius: radius.md, backgroundColor: colors.surfaceAlt, marginTop: 22 },
   thumb: { width: 64, height: 64, borderRadius: radius.sm, backgroundColor: colors.surfaceAlt },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: space.md, paddingVertical: 8, borderRadius: radius.pill, backgroundColor: colors.primarySoft },

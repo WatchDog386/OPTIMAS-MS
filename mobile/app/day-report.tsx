@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { api, ApiError } from '../src/api/client';
 import { Button, EmptyState, Input, Loading, Screen, ScreenHeader, Segmented, Text } from '../src/components';
 import { SME } from '../src/components/SmeKit';
@@ -114,6 +114,9 @@ const TYPES = ['Installation', 'Repair', 'Relocation', 'Maintenance'];
  * office's template, sent to the office and shareable on WhatsApp. On team tasks the leader sends it.
  */
 export default function DayReport() {
+  // Opened on the way to check out: once it is sent, carry on to the check-out
+  const { then } = useLocalSearchParams<{ then?: string }>();
+  const checkingOut = then === 'checkout';
   const { data, reload } = useApi<{ report: Report; sent: { id: string; at: string; tasksDone: number; extra: Extra[] } | null }>('/day-reports/mine');
   const [step, setStep] = useState<'form' | 'report'>('form');
   const [fields, setFields] = useState<Record<string, Fields>>({});
@@ -178,6 +181,7 @@ export default function DayReport() {
     try {
       await api('/day-reports', { body: { note: note.trim() || undefined, extra: extras.map(toExtra) } });
       celebrate('Report sent', r.team ? `${r.team.name}'s report is with the office.` : 'Your report is with the office.');
+      if (checkingOut) return void router.replace('/check-in?mode=out&go=1');
       await reload();
     } catch (e) {
       toast.error('Not sent', e instanceof ApiError ? e.message : 'Try again');
@@ -210,6 +214,14 @@ export default function DayReport() {
       }
     >
       <ScreenHeader title="Daily report" subtitle={r.team ? `${r.team.name} · you send it as team leader` : 'Your tasks today'} />
+      {checkingOut ? (
+        <View style={styles.sent}>
+          <Ionicons name="log-out-outline" size={18} color={isDark ? '#6EE7B7' : '#047857'} />
+          <Text variant="bodySm" color={isDark ? '#6EE7B7' : '#047857'} fixedColor style={{ fontFamily: fonts.medium, flex: 1 }}>
+            Before you check out: fill in the form, generate the report and send it. The check-out photo comes next.
+          </Text>
+        </View>
+      ) : null}
 
       <View style={styles.steps}>
         <StepPill n={1} label="Report form" on={step === 'form'} onPress={() => setStep('form')} />
@@ -348,10 +360,10 @@ function TemplateFields({ f, on }: { f: Fields; on: (k: keyof Fields, v: string)
       </View>
       <View style={styles.pair}>
         <View style={{ flex: 1 }}>
-          <Input label="Cable mark at start" keyboardType="decimal-pad" value={f.markStart} onChangeText={(v) => on('markStart', num(v))} placeholder="e.g. 1240" />
+          <Input label="Cable mark before" keyboardType="decimal-pad" value={f.markStart} onChangeText={(v) => on('markStart', num(v))} placeholder="e.g. 1240" />
         </View>
         <View style={{ flex: 1 }}>
-          <Input label="Cable mark at end" keyboardType="decimal-pad" value={f.markEnd} onChangeText={(v) => on('markEnd', num(v))} placeholder="e.g. 1210" />
+          <Input label="Cable mark after" keyboardType="decimal-pad" value={f.markEnd} onChangeText={(v) => on('markEnd', num(v))} placeholder="e.g. 1210" />
         </View>
       </View>
       <Text variant="label" color={SME.fg3} fixedColor>

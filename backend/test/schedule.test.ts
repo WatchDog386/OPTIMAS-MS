@@ -62,4 +62,19 @@ describe('tasks for a later day', () => {
     const preview = await api().post('/api/v1/day-reports/preview').set(auth(tech.token)).send({ extra: [{ type: 'Installation', location: 'Kware', cableStart: 500, cableEnd: 455 }] });
     expect(preview.body.report.text).toContain('Drop cable: 45 m (marks 500 m → 455 m)');
   });
+
+  it('takes the cable mark before at the start and the mark after at the end', async () => {
+    const admin = (await login('FBI-ADM-001')).token;
+    const tech = await newTechnician(admin);
+    const t = await api().post('/api/v1/tasks').set(auth(admin)).send({ ...base, type: 'REPAIR', title: 'New drop run', assigneeId: tech.user.id });
+    await checkIn(tech.token);
+    const started = await api().post(`/api/v1/tasks/${t.body.task.id}/start`).set(auth(tech.token)).send({ photoId: await photoId(tech.token, 'TASK_START', t.body.task.id), dropStartM: 860 });
+    expect(started.body.task.dropStartM).toBe(860);
+    const done = await api()
+      .post(`/api/v1/tasks/${t.body.task.id}/complete`)
+      .set(auth(tech.token))
+      .send({ photoId: await photoId(tech.token, 'TASK_END', t.body.task.id), report: REPORT, amountCollected: 0, signal: '-22 dBm', dropEndM: 815 });
+    expect(done.status).toBe(200);
+    expect(done.body.task).toMatchObject({ dropStartM: 860, dropEndM: 815, dropCableM: 45 });
+  });
 });

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { goBack } from '../src/utils/nav';
@@ -23,7 +23,8 @@ const DRESS_CODE = [
 type Key = (typeof DRESS_CODE)[number]['key'];
 
 export default function CheckIn() {
-  const { mode } = useLocalSearchParams<{ mode: 'in' | 'out' }>();
+  // `go`: back from the daily report on the way to check out — carry on straight to the photo
+  const { mode, go } = useLocalSearchParams<{ mode: 'in' | 'out'; go?: string }>();
   const isIn = mode !== 'out';
   const today = useApi<{ record: Attendance | null; shiftStart: string; shiftEnd: string; graceMinutes: number; custody: Custody }>('/attendance/today');
   const [checks, setChecks] = useState<Record<Key, boolean>>({ uniform: false, idBadge: false, safetyBoots: false, groomed: false });
@@ -32,7 +33,9 @@ export default function CheckIn() {
   const allChecked = Object.values(checks).every(Boolean);
   // Check-out waits for the work to be reported: tasks given to them, then the daily report
   const ready = useApi<{ ready: boolean; tasks: { id: string; code: string; title: string; status: string; customerName: string }[]; needsDayReport: boolean }>(isIn ? null : '/attendance/checkout-ready');
-  const blocked = !isIn && !!ready.data && !ready.data.ready;
+  // Tasks not reported stop check-out; the daily report does not: it opens on the way
+  const blocked = !isIn && !!ready.data && ready.data.tasks.length > 0;
+  const needsReport = !isIn && !!ready.data && !blocked && ready.data.needsDayReport;
   const where = useOfficeCheck();
 
   /** Says plainly when this check-in will not count as at the office, before the photo is taken. */
@@ -69,6 +72,8 @@ export default function CheckIn() {
   };
 
   const submit = async () => {
+    // Daily report first: the form opens, and once it is sent the check-out carries on
+    if (needsReport) return void router.push('/day-report?then=checkout');
     if (!(await confirmPlace())) return;
     const photo = await requestCapture(isIn ? 'CHECK_IN' : 'CHECK_OUT');
     if (!photo) return;
@@ -86,6 +91,16 @@ export default function CheckIn() {
     }
   };
 
+
+  // Back from the daily report: go on to the check-out photo once the server agrees
+  const went = useRef(false);
+  useEffect(() => {
+    if (go === '1' && !isIn && ready.data?.ready && !went.current) {
+      went.current = true;
+      void submit();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [go, ready.data?.ready]);
 
   if (done) {
     return (
@@ -117,8 +132,8 @@ export default function CheckIn() {
     <Screen
       footer={
         <Button
-          label={isIn ? 'Take check-in photo' : 'Take check-out photo'}
-          icon="camera"
+          label={isIn ? 'Take check-in photo' : needsReport ? 'Daily report, then check out' : 'Take check-out photo'}
+          icon={needsReport ? 'document-text' : 'camera'}
           size="lg"
           loading={busy}
           disabled={(isIn && !allChecked) || blocked || (!isIn && !ready.data)}
@@ -157,14 +172,6 @@ export default function CheckIn() {
                   onPress={() => router.push(`/task/${t.id}`)}
                 />
               ))}
-            </>
-          ) : null}
-          {ready.data.needsDayReport ? (
-            <>
-              <Text variant="bodySm" color={colors.textMuted}>
-                You finished tasks today: send the office your daily report.
-              </Text>
-              <Button label="Open daily report" icon="document-text-outline" onPress={() => router.push('/day-report')} />
             </>
           ) : null}
         </Card>
