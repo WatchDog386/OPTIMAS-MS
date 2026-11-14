@@ -8,6 +8,8 @@ import type { ChatMessage, ConversationDetail, Tick } from '../../src/api/field'
 import { Avatar, HeaderButton, Loading, Text } from '../../src/components';
 import { Ticks, chatTime } from '../../src/components/ChatInbox';
 import { useAuth } from '../../src/store/auth';
+import { apiCache } from '../../src/api/cache';
+import { submit as outboxSend, useOutbox } from '../../src/offline/outbox';
 import { toast } from '../../src/store/feedback';
 import { colors, fonts, isDark, space } from '../../src/theme';
 import { call } from '../../src/utils/contact';
@@ -43,10 +45,18 @@ export default function Conversation() {
   const input = useRef<ComponentRef<typeof TextInput>>(null);
   const fresh = useRef(new Set<string>());
 
+  // Messages typed with no signal wait in the outbox and show here with a clock, as in WhatsApp
+  const outbox = useOutbox();
   const load = useCallback(async () => {
+    const path = `/chat/conversations/${id}`;
     try {
-      setData(await api<ConversationDetail>(`/chat/conversations/${id}`));
+      const res = await api<ConversationDetail>(path);
+      apiCache.set(path, { data: res, at: Date.now() });
+      setData(res);
     } catch (e) {
+      // Offline: the conversation as it was last seen on this phone
+      const saved = apiCache.get(path)?.data as ConversationDetail | undefined;
+      if (saved && e instanceof ApiError && e.code === 'NETWORK') return setData(saved);
       setError(e instanceof ApiError ? e.message : 'Could not open this conversation');
     }
   }, [id]);
@@ -100,8 +110,10 @@ export default function Conversation() {
     setReplyTo(null);
     setSending(true);
     try {
-      const { message } = await api<{ message: ChatMessage }>(`/chat/conversations/${id}/messages`, { body: { body, replyToId: quoting?.id } });
-      setData((prev) => (prev ? { ...prev, messages: prev.messages.map((m) => (m.id === temp.id ? message : m)) } : prev));
+      const r = await outboxSend<{ message: ChatMessage }>(`/chat/conversations/${id}/messages`, { body, replyToId: quoting?.id }, { label: `Message: ${body.length > 48 ? `${body.slice(0, 48)}…` : body}` });
+      // Kept for later: shown from the outbox (with its clock) until it is sent
+      if (r.queued) setData((prev) => (prev ? { ...prev, messages: prev.messages.filter((m) => m.id !== temp.id) } : prev));
+      else setData((prev) => (prev ? { ...prev, messages: prev.messages.map((m) => (m.id === temp.id ? r.data.message : m)) } : prev));
       haptic.tap();
     } catch (e) {
       // Put the text back so nothing typed is lost
@@ -133,6 +145,11 @@ export default function Conversation() {
     );
   }
   if (!data) return <Loading />;
+  const waitingHere: ChatMessage[] = outbox
+    .filter((i) => i.path === `/chat/conversations/${id}/messages` && i.state !== 'sent')
+    .reverse()
+    .map((i) => ({ id: `out-${i.id}`, body: String(i.body?.body ?? ''), createdAt: i.createdAt, mine: true, sender: { id: 'me', name: 'You', role: role ?? 'TECHNICIAN' }, replyTo: null, pending: true }) as ChatMessage);
+  const shown = [...data.messages, ...waitingHere];
   const c = data.conversation;
   const support = c.kind === 'SUPPORT';
   const group = c.kind === 'TEAM';
@@ -199,15 +216,15 @@ export default function Conversation() {
               🔒 Only the people in this chat{support || group ? ' and the Optimas office' : ''} can read these messages. They are kept with Optimas work records. Long-press a message to reply to it.
             </Text>
           </View>
-          {data.messages.length === 0 ? (
+          {shown.length === 0 ? (
             <View style={styles.empty}>
               <Text variant="bodySm" color={WA.meta} align="center">
                 {support && role === 'CUSTOMER' ? 'Write to the Optimas office. Someone will reply here and you will get a notification.' : group ? `Say hello to ${c.title}.` : `Say hello to ${c.title.split(' ')[0]}.`}
               </Text>
             </View>
           ) : null}
-          {data.messages.map((m, i) => {
-            const prev = data.messages[i - 1];
+          {shown.map((m, i) => {
+            const prev = shown[i - 1];
             const newDay = !prev || dayLabel(prev.createdAt) !== dayLabel(m.createdAt);
             const grouped = !!prev && !newDay && prev.mine === m.mine && prev.sender.id === m.sender.id && Date.parse(m.createdAt) - Date.parse(prev.createdAt) < 5 * 60_000;
             // Groups and the support line say who wrote it

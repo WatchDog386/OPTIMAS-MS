@@ -11,7 +11,9 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Font from 'expo-font';
 import { OPENED_ON_DESKTOP } from '../src/theme/desktop';
 import { DesktopShell } from '../src/components/desktop/DesktopShell';
-import { OfflineBar, clearOfflineLeftovers } from '../src/components/OfflineBar';
+import { OfflineBar } from '../src/components/OfflineBar';
+import { startOutbox } from '../src/offline/outbox';
+import { startWarming } from '../src/offline/warm';
 import { useAuth } from '../src/store/auth';
 import { api } from '../src/api/client';
 import type { User } from '../src/api/types';
@@ -106,8 +108,16 @@ export default function RootLayout() {
   const ready = fontsLoaded && hydrated;
   const userId = useAuth((s) => s.user?.id);
 
-  // Online only: clear what older versions of the app kept on the phone for offline use
-  useEffect(() => clearOfflineLeftovers(), []);
+  // Offline work: send what waits in the outbox, and keep the day's work on the phone
+  useEffect(() => {
+    if (!userId) return;
+    const stopOutbox = startOutbox();
+    const stopWarming = startWarming();
+    return () => {
+      stopOutbox();
+      stopWarming();
+    };
+  }, [userId]);
 
   useEffect(() => {
     void useAuth.getState().hydrate();

@@ -171,10 +171,10 @@ export default function Overview() {
       onPress: () => router.push('/admin/task-new'),
     },
     managers && {
-      label: 'Requests',
-      icon: 'chatbubbles-outline',
-      onPress: () => router.push('/admin/requests'),
-      badge: d?.requests?.open,
+      label: 'Approvals',
+      icon: 'checkmark-done-circle-outline',
+      onPress: () => router.push('/admin/approvals'),
+      badge: approvals.data?.total,
     },
     managers && {
       label: 'Daily reports',
@@ -427,7 +427,7 @@ export default function Overview() {
             title="Insights"
             items={[
               { label: 'Daily reports', icon: 'document-text-outline', onPress: () => router.push('/admin/day-reports') },
-              { label: 'Approvals', icon: 'checkmark-done-circle-outline', onPress: () => router.push('/admin/approvals'), badge: approvals.data?.total },
+              { label: 'Requests', icon: 'chatbubbles-outline', onPress: () => router.push('/admin/requests'), badge: d?.requests?.open },
               { label: 'Activity', icon: 'time-outline', onPress: () => router.push('/admin/activity') },
               { label: 'Leaderboard', icon: 'trophy-outline', onPress: () => router.push('/admin/leaderboard') },
               { label: 'Live map', icon: 'map-outline', onPress: () => router.push('/admin/map') },

@@ -13,6 +13,8 @@ import { duration, flagLabel, time } from '../src/utils/format';
 import { celebrate, confirmDialog, toast } from '../src/store/feedback';
 import { OfficeCheckCard, useOfficeCheck } from '../src/components/OfficeCheck';
 import { distanceLabel } from '../src/utils/location';
+import { submit as send, useOutbox } from '../src/offline/outbox';
+import { patchCache } from '../src/api/cache';
 
 const DRESS_CODE = [
   { key: 'uniform', icon: 'shirt-outline', label: 'Full company uniform', hint: 'Branded Optimas shirt / reflector jacket, clean and tucked in' },
@@ -29,13 +31,20 @@ export default function CheckIn() {
   const today = useApi<{ record: Attendance | null; shiftStart: string; shiftEnd: string; graceMinutes: number; custody: Custody }>('/attendance/today');
   const [checks, setChecks] = useState<Record<Key, boolean>>({ uniform: false, idBadge: false, safetyBoots: false, groomed: false });
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState<{ record: Attendance; flags: string[] } | null>(null);
+  const [done, setDone] = useState<{ record: Attendance; flags: string[]; queued?: boolean } | null>(null);
   const allChecked = Object.values(checks).every(Boolean);
   // Check-out waits for the work to be reported: tasks given to them, then the daily report
   const ready = useApi<{ ready: boolean; tasks: { id: string; code: string; title: string; status: string; customerName: string }[]; needsDayReport: boolean }>(isIn ? null : '/attendance/checkout-ready');
+  // Reports and hand-backs saved on this phone (no signal yet) count: they reach the office before the check-out
+  const outbox = useOutbox();
+  const reportedHere = new Set(outbox.filter((i) => i.state !== 'failed' && /\/tasks\/[^/]+\/(complete|unable)$/.test(i.path)).map((i) => i.taskId));
+  const dayReportHere = outbox.some((i) => i.state !== 'failed' && i.path === '/day-reports' && new Date(i.createdAt).toDateString() === new Date().toDateString());
+  const tasksLeft = (ready.data?.tasks ?? []).filter((t) => !reportedHere.has(t.id));
   // Tasks not reported stop check-out; the daily report does not: it opens on the way
-  const blocked = !isIn && !!ready.data && ready.data.tasks.length > 0;
-  const needsReport = !isIn && !!ready.data && !blocked && ready.data.needsDayReport;
+  const blocked = !isIn && !!ready.data && tasksLeft.length > 0;
+  // A task finished today on this phone needs the daily report too, even before the office has it
+  const finishedHere = outbox.some((i) => i.state !== 'failed' && /\/tasks\/[^/]+\/complete$/.test(i.path) && new Date(i.createdAt).toDateString() === new Date().toDateString());
+  const needsReport = !isIn && !!ready.data && !blocked && (ready.data.needsDayReport || finishedHere) && !dayReportHere;
   const where = useOfficeCheck();
 
   /** Says plainly when this check-in will not count as at the office, before the photo is taken. */
@@ -79,11 +88,23 @@ export default function CheckIn() {
     if (!photo) return;
     setBusy(true);
     try {
-      const res = await api<{ record: Attendance }>(isIn ? '/attendance/check-in' : '/attendance/check-out', {
-        body: { ...(isIn ? { checklist: checks } : {}), photoId: photo.photoId },
-      });
-      setDone({ record: res.record, flags: photo.flags });
-      celebrate(isIn ? 'Checked in' : 'Checked out', isIn ? 'Have a good shift.' : 'See you tomorrow.');
+      const res = await send<{ record: Attendance }>(
+        isIn ? '/attendance/check-in' : '/attendance/check-out',
+        { ...(isIn ? { checklist: checks } : {}), photoId: photo.photoId },
+        { label: isIn ? 'Checked in' : 'Checked out' },
+      );
+      let record: Attendance;
+      if (res.queued) {
+        // Shown as done now, with the time the photo was taken; the office gets it when the signal returns
+        const now = new Date().toISOString();
+        const prev = today.data?.record;
+        record = isIn
+          ? ({ id: 'local', userId: '', workDate: now.slice(0, 10), status: 'PRESENT', checkInAt: now, checkOutAt: null, workedMinutes: null, dressReview: 'PENDING', reviewNote: null } as Attendance)
+          : ({ ...(prev as Attendance), checkOutAt: now, workedMinutes: prev ? Math.round((Date.now() - Date.parse(prev.checkInAt)) / 60_000) : null } as Attendance);
+        patchCache<{ record: Attendance | null }>('/attendance/today', (d) => ({ ...d, record }));
+      } else record = res.data.record;
+      setDone({ record, flags: photo.flags, queued: res.queued });
+      celebrate(isIn ? 'Checked in' : 'Checked out', res.queued ? 'Saved on this phone. It is sent by itself when you are back online.' : isIn ? 'Have a good shift.' : 'See you tomorrow.');
     } catch (e) {
       toast.error(isIn ? 'Check-in failed' : 'Check-out failed', e instanceof ApiError ? e.message : 'Please try again.');
     } finally {
@@ -95,12 +116,12 @@ export default function CheckIn() {
   // Back from the daily report: go on to the check-out photo once the server agrees
   const went = useRef(false);
   useEffect(() => {
-    if (go === '1' && !isIn && ready.data?.ready && !went.current) {
+    if (go === '1' && !isIn && ready.data && !blocked && !needsReport && !went.current) {
       went.current = true;
       void submit();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [go, ready.data?.ready]);
+  }, [go, ready.data, blocked, needsReport]);
 
   if (done) {
     return (
@@ -118,6 +139,7 @@ export default function CheckIn() {
               : `Recorded at ${time(done.record.checkOutAt)} · ${duration(done.record.workedMinutes)} worked today.`}
           </Text>
           {isIn && done.record.status === 'LATE' ? <Badge label="Marked late" tone="warning" /> : null}
+          {done.queued ? <Badge label="Saved on this phone · sends when online" tone="info" /> : null}
           {done.flags.map((f) => (
             <Badge key={f} label={flagLabel[f] ?? f} tone="warning" />
           ))}
@@ -158,12 +180,12 @@ export default function CheckIn() {
               Report your work before checking out
             </Text>
           </View>
-          {ready.data.tasks.length ? (
+          {tasksLeft.length ? (
             <>
               <Text variant="bodySm" color={colors.textMuted}>
                 Each task given to you needs its start photo, completion photo and task report. Can’t do one? Open it and tap “Can’t do it today”.
               </Text>
-              {ready.data.tasks.map((t) => (
+              {tasksLeft.map((t) => (
                 <ListRow
                   key={t.id}
                   icon={t.status === 'IN_PROGRESS' ? 'play-circle' : 'briefcase-outline'}

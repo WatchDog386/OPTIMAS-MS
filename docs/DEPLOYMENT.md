@@ -148,12 +148,20 @@ The nightly database dump and photo archive are kept in `deploy/backups` on the 
 
 It alerts when the site or database stops answering, the disk is nearly full, or a backup is late or missing, and again when the problem clears. For a view from outside your network, also add the site address to a free uptime service (e.g. UptimeRobot).
 
-## Working offline
+## Working offline (like WhatsApp)
 
-Check-in, check-out, starting a job and completing a job keep working with no signal: the camera takes the photo, the phone saves it with the action, and it is sent automatically when the signal returns (a "waiting to send" pill shows at the top meanwhile). The server records the time the photo was really taken and flags it **Taken offline** so supervisors can see which records were sent late. Offline photos are accepted up to 48 hours after they were taken.
+The app works with no signal and catches up by itself when the signal returns, the way WhatsApp lets you open your chats and send a message in a dead zone.
 
-A technician's phone also keeps today's jobs (with details), stock and attendance and refreshes them every 5 minutes while online, so those screens open even in a dead zone. A "No signal · showing saved data" pill shows when the server can't be reached.
+| Step | What happens | Where in the code |
+|---|---|---|
+| 1. The app opens | The app itself (page, code, fonts, icons) is kept on the phone by the service worker and refreshed whenever there is a signal. | `mobile/public/sw.js` |
+| 2. Data shows | Every answer from the server is kept on the phone for the signed-in person (the newest 200), and a technician's working set (today's tasks and each open task, stock, attendance, today's report) is fetched in the background every 5 minutes and right after each change. Offline, screens open on that copy. | `mobile/src/api/cache.ts`, `mobile/src/offline/warm.ts` |
+| 3. Work is saved | Check-in/out, task start, finish with report, "can't do it", daily report, report corrections, "used N items" and chat messages are tried at once; with no signal they go into the **outbox** on the phone (IndexedDB) and the screen shows them done, "waiting to send". Photos taken offline wait there too, with the time and GPS position they were really taken. | `mobile/src/offline/outbox.ts` |
+| 4. It is sent in order | When the signal returns (and every 15 s while anything waits), the outbox is sent oldest first: the photo, then the step that uses it, then the next. A check-out never overtakes its daily report. | `syncNow()` in `outbox.ts` |
+| 5. Never twice | Each change carries an `Idempotency-Key` that is the same on every try. The server keeps the first answer for 7 days and repeats it, so a weak signal that loses an answer never makes a second check-in or a second "used 2 ATB boxes". | `backend/src/lib/idempotency.ts` |
+| 6. Ticks | The bar at the top says "Offline · 3 waiting to send", then "Sending 3…". The **Outbox** page shows each item with WhatsApp's marks: a clock while waiting, one tick while sending, two ticks once the office has it, a red mark with the reason (and Retry / Remove) if the office refused it. | `mobile/app/outbox.tsx`, `OfflineBar.tsx` |
 
+The server records the time a photo was really taken and flags it **Taken offline**, so a 08:05 check-in sent at 10:00 is on time and a task's duration is real. Offline photos are accepted up to 48 hours after they were taken. The fingerprint lock opens with the phone's own sensor when there is no signal. Signing in for the first time on a phone needs a signal (as WhatsApp's first sign-in does); after that the app opens offline. Signing out with work still waiting warns first; the work stays on the phone and is sent after the next sign-in.
 
 ## Push notifications on the web app
 

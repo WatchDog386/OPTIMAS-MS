@@ -9,6 +9,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { goBack } from '../src/utils/nav';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api, ApiError } from '../src/api/client';
+import { keepPhoto, phoneOffline } from '../src/offline/outbox';
 import type { CapturePurpose } from '../src/api/types';
 import { Button, Text } from '../src/components';
 import { resolveCapture, type CaptureResult } from '../src/store/bridge';
@@ -103,10 +104,19 @@ export default function Capture() {
     setError(null);
     setBusy(true);
     try {
-      // 1. Ask the server for a fresh single-use challenge (the app works online only)
-      const challenge = await api<{ challengeId: string; nonce: string }>('/capture/challenge', {
-        body: { purpose, taskId: params.taskId || undefined },
-      });
+      // 1. Ask the server for a fresh single-use challenge. With no signal the photo is still taken, and
+      //    kept on the phone (with when and where it was taken) until it can be sent (see offline/outbox.ts)
+      let challenge: { challengeId: string; nonce: string } | null = null;
+      if (!phoneOffline()) {
+        try {
+          challenge = await api<{ challengeId: string; nonce: string }>('/capture/challenge', {
+            body: { purpose, taskId: params.taskId || undefined },
+          });
+        } catch (e) {
+          if (!(e instanceof ApiError && e.code === 'NETWORK')) throw e;
+        }
+      }
+      const takenAt = new Date().toISOString();
       // 2. Take the photo live.
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
       // Web: the frame straight from the live picture as a JPEG file; phones: the camera's own photo
@@ -118,20 +128,37 @@ export default function Capture() {
       if (!ready) setGpsWait(true);
       const loc = ready ? location.current : await waitForFix(atOffice ? 12_000 : 10_000);
       setGpsWait(false);
+      const id = await deviceId();
+      const keepOffline = async () => {
+        const ref = await keepPhoto(
+          { uri: frame ? await frame.dataUri() : photo.uri, purpose, taskId: params.taskId || undefined, capturedAt: takenAt, lat: loc?.lat, lng: loc?.lng, accuracyM: loc?.accuracy ?? undefined, deviceId: id },
+          `${meta.title} (taken offline)`,
+        );
+        done.current = true;
+        resolveCapture({ photoId: ref, uri: photo.uri, flags: ['OFFLINE_CAPTURE'], offline: true } satisfies CaptureResult);
+        goBack();
+      };
+      if (!challenge) return void (await keepOffline());
       const form = new FormData();
       if (frame) form.append('photo', frame.blob, 'capture.jpg');
       else await appendFile(form, 'photo', photo.uri, 'capture.jpg', 'image/jpeg');
       form.append('challengeId', challenge.challengeId);
       form.append('nonce', challenge.nonce);
-      form.append('deviceTime', new Date().toISOString());
+      form.append('deviceTime', takenAt);
       if (loc) {
         form.append('lat', String(loc.lat));
         form.append('lng', String(loc.lng));
         if (loc.accuracy != null) form.append('accuracyM', String(loc.accuracy));
       }
-      const id = await deviceId();
       if (id) form.append('deviceId', id);
-      const result = await api<{ photoId: string; flags: string[] }>('/capture/upload', { body: form });
+      let result: { photoId: string; flags: string[] };
+      try {
+        result = await api<{ photoId: string; flags: string[] }>('/capture/upload', { body: form });
+      } catch (e) {
+        // The signal dropped while sending: keep it on the phone instead
+        if (e instanceof ApiError && e.code === 'NETWORK') return void (await keepOffline());
+        throw e;
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
       done.current = true;
       resolveCapture({ photoId: result.photoId, uri: photo.uri, flags: result.flags } satisfies CaptureResult);

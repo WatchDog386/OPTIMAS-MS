@@ -11,6 +11,7 @@ import { collectDevice, markInstalled } from '../../src/utils/devices';
 import { colors, space } from '../../src/theme';
 import { dateTime } from '../../src/utils/format';
 import { promptDialog, toast } from '../../src/store/feedback';
+import { submit as outboxSend } from '../../src/offline/outbox';
 import { isPending, toastPending } from '../../src/utils/stockApproval';
 
 interface MyStock {
@@ -92,7 +93,9 @@ export default function MyStock() {
     });
     if (!note) return;
     try {
-      const r = await api('/inventory/use', { body: { itemId: b.item.id, quantity, note } });
+      const sent = await outboxSend('/inventory/use', { itemId: b.item.id, quantity, note }, { label: `Used ${quantity} ${b.item.unit} of ${b.item.name}` });
+      if (sent.queued) return;
+      const r = sent.data;
       if (isPending(r)) toastPending(r);
       else toast.success('Recorded', `${quantity} ${b.item.unit} of ${b.item.name} used.`);
       await reload();

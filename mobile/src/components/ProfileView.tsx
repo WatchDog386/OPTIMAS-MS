@@ -12,13 +12,19 @@ import { Button } from './Button';
 import { Card } from './Card';
 import { Text } from './Text';
 import { ProfileInstallCard } from './InstallPrompt';
+import { unsentCount } from '../offline/outbox';
 import { FingerprintRow } from './PrivacyRows';
 
 /** Shared profile header + sign-out used by both technician and manager apps. */
 export function ProfileView({ children }: { children?: ReactNode }) {
   const user = useAuth((s) => s.user)!;
   const signOut = async () => {
-    if (!(await confirmAction('Sign out', 'Are you sure you want to sign out?', 'Sign out'))) return;
+    // Work saved offline stays on this phone and is sent after the next sign-in, but say so first
+    const unsent = unsentCount();
+    const ask = unsent
+      ? `${unsent} thing${unsent === 1 ? '' : 's'} you did offline ha${unsent === 1 ? 's' : 've'} not reached the office yet. They stay on this phone and are sent when you sign in again. Sign out anyway?`
+      : 'Are you sure you want to sign out?'
+    if (!(await confirmAction('Sign out', ask, 'Sign out'))) return;
     await unregisterPush();
     await useAuth.getState().logout();
     router.replace('/login');

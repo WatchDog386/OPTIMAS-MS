@@ -32,6 +32,7 @@ import { passkeyLoginRouter, passkeyRouter } from './modules/auth/passkey.routes
 import { activityFeed } from './lib/activity';
 import { invalidateOnWrite } from './lib/cache';
 import { batch } from './lib/batch';
+import { idempotency } from './lib/idempotency';
 import { ah } from './middleware/async';
 
 export function createApp() {
@@ -90,6 +91,8 @@ export function createApp() {
     message: { error: { message: 'Too many sign-in attempts. Try again in 15 minutes.', code: 'RATE_LIMITED' } },
   });
   // Any successful change empties the in-memory answer cache (so cached reads are never out of date)
+  // The same change sent twice (saved offline and sent later, or retried) is done once
+  api.use(idempotency);
   api.use(invalidateOnWrite);
   // Every action taken in the app is told to the admins and supervisors (the activity feed)
   api.use(activityFeed);

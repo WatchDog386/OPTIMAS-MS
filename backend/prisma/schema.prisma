@@ -808,3 +808,20 @@ model DayReport {
   @@unique([submittedById, workDate])
   @@index([workDate])
 }
+
+/// A change sent from the app with an Idempotency-Key (work saved offline and sent later, or a retry after
+/// a lost answer): the first answer is kept, so sending the same change again repeats that answer instead
+/// of doing the work twice.
+model IdempotentRequest {
+  userId    String
+  key       String
+  method    String
+  path      String
+  /// Null while the first request is still being worked on
+  status    Int?
+  body      Json?
+  createdAt DateTime @default(now())
+
+  @@id([userId, key])
+  @@index([createdAt])
+}

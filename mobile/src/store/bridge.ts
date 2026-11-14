@@ -9,6 +9,8 @@ export interface CaptureResult {
   photoId: string;
   uri: string;
   flags: string[];
+  /** Taken with no signal: `photoId` is a local:… reference until the outbox has sent the photo. */
+  offline?: boolean;
 }
 
 let captureResolver: ((r: CaptureResult | null) => void) | null = null;

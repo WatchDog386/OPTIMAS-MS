@@ -10,6 +10,9 @@ import { useApi } from '../src/hooks/useApi';
 import { celebrate, toast } from '../src/store/feedback';
 import { fonts, isDark, space } from '../src/theme';
 import { whatsapp } from '../src/utils/contact';
+import { phoneOffline, submit as outboxSend, useOutbox } from '../src/offline/outbox';
+import { apiCache } from '../src/api/cache';
+import type { Task } from '../src/api/types';
 import { humanize, kes, time } from '../src/utils/format';
 
 interface DayTask {
@@ -105,6 +108,48 @@ const toExtra = (f: ExtraForm): Extra => ({
   notes: f.notes.trim() || undefined,
 });
 const num = (v: string) => v.replace(/[^0-9.]/g, '');
+
+/** The report as the office will see it, put together on the phone when there is no signal to ask the server. */
+/** A task finished on this phone with no signal: its saved details and the report waiting in the outbox. */
+type OfflineDone = { code: string; type: string; address: string; customerName: string; body: Record<string, unknown> };
+
+function offlineText(r: Report, fields: Record<string, Fields>, extras: ExtraForm[], note: string, offline: OfflineDone[] = []) {
+  const lines = [`*Daily report — ${r.team ? r.team.name : 'today'}*`, `${new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })} · made offline`];
+  if (r.members.length > 1) {
+    lines.push('', '*Members*');
+    r.members.forEach((m, i) => lines.push(`${i + 1}. ${m.name}${m.leader ? ' (leader)' : ''}`));
+  }
+  const cableOf = (f: Fields) => (f.markStart !== '' && f.markEnd !== '' ? `${usedFrom(f)} m (marks ${f.markStart} → ${f.markEnd})` : f.cable ? `${f.cable} m` : 'none');
+  const one = (n: number, head: string, location: string, f: Fields, materials: string[]) => {
+    lines.push('', `*Task ${n} — ${head}*`, `Location: ${location}${f.houseNo ? ` · House ${f.houseNo}` : ''}`, 'Status: Complete');
+    if (f.signal) lines.push(`Signal: ${f.signal}`);
+    lines.push(`Client paid: ${f.paid ? `KES ${Number(f.paid).toLocaleString()}` : 'Nothing'}`);
+    lines.push(materials.length ? `Materials used:\n${materials.map((m, k) => `  ${k + 1}. ${m}`).join('\n')}` : 'Materials used: none');
+    lines.push(`Drop cable: ${cableOf(f)}`, `FAT pre-installed: ${f.fat === '' ? 'not recorded' : f.fat === 'yes' ? 'Yes' : 'No'}`);
+    if (f.notes.trim()) lines.push(`Notes: ${f.notes.trim()}`);
+  };
+  r.tasks.forEach((t, i) => one(i + 1, `${t.type.charAt(0)}${t.type.slice(1).toLowerCase()} · ${t.code}`, t.address, fields[t.id] ?? fieldsOf(t), t.materials));
+  offline.forEach((o, i) => {
+    const b = o.body;
+    const f: Fields = {
+      houseNo: String(b.houseNo ?? ''),
+      signal: String(b.signal ?? ''),
+      paid: b.amountCollected ? String(b.amountCollected) : '',
+      cable: b.dropCableM != null ? String(b.dropCableM) : '',
+      markStart: b.dropStartM != null ? String(b.dropStartM) : '',
+      markEnd: b.dropEndM != null ? String(b.dropEndM) : '',
+      fat: b.fatPreinstalled == null ? '' : b.fatPreinstalled ? 'yes' : 'no',
+      notes: '',
+    };
+    const rep = b.report as { found?: string; done?: string; result?: string } | undefined;
+    if (rep) f.notes = [rep.found, rep.done, rep.result].filter(Boolean).join('. ');
+    one(r.tasks.length + i + 1, `${o.type.charAt(0)}${o.type.slice(1).toLowerCase()} · ${o.code} (finished offline)`, o.address, f, []);
+  });
+  extras.forEach((e, i) => one(r.tasks.length + offline.length + i + 1, e.type, e.location, e, e.materials.split('\n').map((m) => m.trim()).filter(Boolean)));
+  if (note.trim()) lines.push('', '*Comments*', note.trim());
+  lines.push('', `_Made on the phone with no signal. The office's copy is put together when it arrives, with every task report._`);
+  return lines.join('\n');
+}
 const TYPES = ['Installation', 'Repair', 'Relocation', 'Maintenance'];
 
 /**
@@ -125,6 +170,10 @@ export default function DayReport() {
   const [preview, setPreview] = useState<Report | null>(null);
   const [busy, setBusy] = useState<'gen' | 'send' | null>(null);
   const [loaded, setLoaded] = useState(false);
+  // Tasks finished today with no signal: still on this phone, so not in the office's list yet
+  const outbox = useOutbox();
+  const finishedOffline = outbox.filter((i) => i.state !== 'sent' && /\/tasks\/[^/]+\/complete$/.test(i.path));
+  const doneOffline = finishedOffline.length;
 
   // Fill the form once from the task reports (and the hand-added tasks of a report already sent today)
   useEffect(() => {
@@ -144,17 +193,19 @@ export default function DayReport() {
   const generate = async () => {
     const bad = extras.findIndex((e) => e.location.trim().length < 2);
     if (bad >= 0) return toast.warning('Where was it?', `Fill in the location of added task ${bad + 1}.`);
-    if (!r.tasks.length && !extras.length) return toast.warning('Nothing to report', 'Finish a task in the app, or add one with "Add a task".');
+    if (!r.tasks.length && !extras.length && !doneOffline) return toast.warning('Nothing to report', 'Finish a task in the app, or add one with "Add a task".');
     setBusy('gen');
+    let corrected = false;
     try {
       // Save corrections to today's tasks first, so the report and the tasks agree
       for (const t of r.tasks) {
         const f = fields[t.id];
         const was = fieldsOf(t);
         if (!f || JSON.stringify(f) === JSON.stringify(was)) continue;
-        await api(`/day-reports/tasks/${t.id}`, {
-          method: 'PATCH',
-          body: {
+        corrected = true;
+        await outboxSend(
+          `/day-reports/tasks/${t.id}`,
+          {
             houseNo: f.houseNo.trim() || null,
             signal: f.signal.trim() || null,
             amountCollected: f.paid ? Number(f.paid) : null,
@@ -164,10 +215,29 @@ export default function DayReport() {
             fatPreinstalled: f.fat ? f.fat === 'yes' : null,
             ...(f.notes.trim().length >= 5 && f.notes !== was.notes ? { completionNotes: f.notes.trim() } : {}),
           },
-        });
+          { label: `Report details for ${t.code}`, method: 'PATCH', taskId: t.id },
+        );
       }
-      const res = await api<{ report: Report }>('/day-reports/preview', { body: { note: note.trim() || undefined, extra: extras.map(toExtra) } });
-      setPreview(res.report);
+      // No signal: the report is put together on the phone; the office's copy is built when it arrives
+      let res: { report: Report } | null = null;
+      if (!phoneOffline()) {
+        try {
+          res = await api<{ report: Report }>('/day-reports/preview', { body: { note: note.trim() || undefined, extra: extras.map(toExtra) } });
+        } catch (e) {
+          if (!(e instanceof ApiError && e.code === 'NETWORK')) throw e;
+        }
+      }
+      const offline: OfflineDone[] = finishedOffline.map((i) => {
+        const t = (apiCache.get(`/tasks/${i.taskId}`)?.data as { task?: Task } | undefined)?.task;
+        return { code: t?.code ?? i.label.replace(/^Completed task (\S+).*$/, '$1'), type: t?.type ?? 'TASK', address: t?.address ?? '', customerName: t?.customerName ?? '', body: i.body ?? {} };
+      });
+      const offlinePaid = offline.reduce((n, o) => n + Number(o.body.amountCollected ?? 0), 0);
+      const offlineCable = offline.reduce((n, o) => n + Number(o.body.dropCableM ?? 0), 0);
+      setPreview(
+        res && !corrected && !offline.length
+          ? res.report
+          : { ...r, text: offlineText(r, fields, extras, note, offline), tasksDone: r.tasks.length + offline.length + extras.length, collected: r.collected + offlinePaid, cable: r.cable + offlineCable },
+      );
       setStep('report');
     } catch (e) {
       toast.error('Could not generate', e instanceof ApiError ? e.message : 'Try again');
@@ -179,8 +249,9 @@ export default function DayReport() {
   const send = async () => {
     setBusy('send');
     try {
-      await api('/day-reports', { body: { note: note.trim() || undefined, extra: extras.map(toExtra) } });
-      celebrate('Report sent', r.team ? `${r.team.name}'s report is with the office.` : 'Your report is with the office.');
+      const sent = await outboxSend('/day-reports', { note: note.trim() || undefined, extra: extras.map(toExtra) }, { label: r.team ? `Daily report for ${r.team.name}` : 'Daily report' });
+      if (sent.queued) celebrate('Report saved', 'It is on this phone and goes to the office by itself as soon as you are back online.');
+      else celebrate('Report sent', r.team ? `${r.team.name}'s report is with the office.` : 'Your report is with the office.');
       if (checkingOut) return void router.replace('/check-in?mode=out&go=1');
       await reload();
     } catch (e) {
@@ -254,6 +325,15 @@ export default function DayReport() {
                   {m.leader ? ' (leader)' : ''}
                 </Text>
               ))}
+            </View>
+          ) : null}
+
+          {finishedOffline.length ? (
+            <View style={styles.sent}>
+              <Ionicons name="time-outline" size={18} color={SME.fg3} />
+              <Text variant="bodySm" color={SME.fg2} fixedColor style={{ flex: 1 }}>
+                Finished with no signal, waiting on this phone: {finishedOffline.map((i) => i.label.replace(/^Completed task (\S+).*$/, '$1')).join(', ')}. They reach the office first and are put in this report with their task reports.
+              </Text>
             </View>
           ) : null}
 

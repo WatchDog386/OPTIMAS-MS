@@ -16,6 +16,7 @@ import { dateTime, dayLabel, duration, firstName, isLaterDay, flagLabel, humaniz
 import { celebrate, promptDialog, toast } from '../../src/store/feedback';
 import { openChatWith } from '../../src/utils/chat';
 import { collectDevice } from '../../src/utils/devices';
+import { showTaskLocally, submit, useTaskOutbox } from '../../src/offline/outbox';
 
 export default function TaskDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -26,6 +27,8 @@ export default function TaskDetail() {
   const { data, setData, refresh, refreshing } = useApi<{ task: Task }>(`/tasks/${id}`);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
+  // Steps done on this phone that have not reached the office yet (no signal)
+  const unsent = useTaskOutbox(id);
   const task = data?.task;
   if (!task) return <Loading />;
 
@@ -35,6 +38,25 @@ export default function TaskDetail() {
   // Team jobs: the whole team works it; the leader (the assignee) starts it and files the report
   const team = task.team && 'members' in task.team ? task.team : null;
   const helper = !mine && !!team?.members.some((m) => m.userId === user.id);
+  /** A field step: sent now, or kept on the phone and shown as done until there is a signal. */
+  const field = async (path: string, body: Record<string, unknown>, label: string, local: Partial<Task>) => {
+    setBusy(true);
+    try {
+      const r = await submit<{ task: Task }>(path, body, { label, taskId: task.id });
+      if (r.queued) {
+        showTaskLocally(task.id, local);
+        setData({ task: { ...task, ...local } });
+        return 'queued' as const;
+      }
+      setData(r.data);
+      return 'sent' as const;
+    } catch (e) {
+      toast.error('Action failed', e instanceof ApiError ? e.message : 'Try again');
+      return null;
+    } finally {
+      setBusy(false);
+    }
+  };
   const run = async (fn: () => Promise<{ task: Task }>) => {
     setBusy(true);
     try {
@@ -66,7 +88,11 @@ export default function TaskDetail() {
     if (mark.trim() && (value === undefined || Number.isNaN(value))) return toast.warning('Cable mark', 'Type the number printed on the cable, e.g. 1240.');
     const photo = await requestCapture('TASK_START', { taskId: task.id });
     if (!photo) return;
-    await run(() => api<{ task: Task }>(`/tasks/${task.id}/start`, { body: { photoId: photo.photoId, ...(value !== undefined ? { dropStartM: value } : {}) } }));
+    await field(`/tasks/${task.id}/start`, { photoId: photo.photoId, ...(value !== undefined ? { dropStartM: value } : {}) }, `Started task ${task.code}`, {
+      status: 'IN_PROGRESS',
+      startedAt: new Date().toISOString(),
+      ...(value !== undefined ? { dropStartM: value } : {}),
+    } as Partial<Task>);
   };
   const verify = async (decision: 'VERIFIED' | 'REJECTED') => {
     const ok = await run(() => api(`/tasks/${task.id}/verify`, { body: { decision, note: note || undefined } }));
@@ -93,8 +119,8 @@ export default function TaskDetail() {
     });
     if (!reason) return;
     if (reason.trim().length < 5) return toast.warning('Say a bit more', 'Give the office a reason they can act on.');
-    const ok = await run(() => api<{ task: Task }>(`/tasks/${task.id}/unable`, { body: { reason } }));
-    if (ok) toast.success('Handed back', 'The office has been told.');
+    const ok = await field(`/tasks/${task.id}/unable`, { reason }, `Handed back task ${task.code}`, { status: 'OPEN', returnNote: reason } as Partial<Task>);
+    if (ok === 'sent') toast.success('Handed back', 'The office has been told.');
   };
   const later = isLaterDay(task.scheduledFor);
 
@@ -152,6 +178,20 @@ export default function TaskDetail() {
   return (
     <Screen refreshing={refreshing} onRefresh={refresh} footer={footer}>
       <ScreenHeader title={task.code} subtitle={humanize(task.type)} right={<Badge label={statusLabel(task.status)} tone={taskStatusTone[task.status]} />} />
+      {unsent.length ? (
+        <Pressable onPress={() => router.push('/outbox')} style={styles.unsent} accessibilityRole="button">
+          <Ionicons name="time-outline" size={18} color={SME.fg3} />
+          <View style={{ flex: 1 }}>
+            <Text variant="body" color={SME.fg} fixedColor style={{ fontFamily: fonts.semibold, fontSize: 13 }}>
+              Saved on this phone · waiting to send
+            </Text>
+            <Text variant="label" color={SME.fg4} fixedColor style={{ fontSize: 12 }} numberOfLines={2}>
+              {unsent.map((u) => (u.state === 'failed' ? `${u.label} (not sent)` : u.label)).join(' · ')}. It goes to the office by itself when you are back online.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={SME.fg4} />
+        </Pressable>
+      ) : null}
 
       {/* The job opens on the colour of the state it is in now, with that state in words */}
       <View style={[styles.hero, { backgroundColor: state.bg }]}>
@@ -484,6 +524,7 @@ function ProofPhoto({ label, photo }: { label: string; photo?: PhotoRef | null }
 }
 
 const styles = StyleSheet.create({
+  unsent: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 14, backgroundColor: SME.surface },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm, justifyContent: 'space-between' },
   leadNote: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: radius.md, backgroundColor: colors.brandSoft },
   hero: { gap: space.md, padding: space.xl, borderRadius: radius.xl },

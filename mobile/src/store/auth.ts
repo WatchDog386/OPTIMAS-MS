@@ -1,4 +1,4 @@
-import { clearApiCache } from '../api/cache';
+import { clearApiCache, restoreApiCache } from '../api/cache';
 import { create } from 'zustand';
 import type { Role, User } from '../api/types';
 import { secureStorage } from './storage';
@@ -25,6 +25,8 @@ export const useAuth = create<AuthState>((set) => ({
       const raw = await secureStorage.get(KEY);
       if (raw) {
         const { token, user } = JSON.parse(raw) as { token: string; user: User };
+        // What this person saw last time, so the app opens on it even with no signal
+        await restoreApiCache(user.id).catch(() => undefined);
         set({ token, user });
       }
     } finally {
@@ -32,6 +34,7 @@ export const useAuth = create<AuthState>((set) => ({
     }
   },
   setSession: async (token, user) => {
+    await restoreApiCache(user.id).catch(() => undefined);
     set({ token, user });
     await secureStorage.set(KEY, JSON.stringify({ token, user }));
   },

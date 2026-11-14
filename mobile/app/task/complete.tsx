@@ -11,6 +11,7 @@ import { requestCapture, requestScan, type CaptureResult } from '../../src/store
 import { colors, fonts, radius, space } from '../../src/theme';
 import { kes } from '../../src/utils/format';
 import { confirmDialog, toast, celebrate } from '../../src/store/feedback';
+import { showTaskLocally, submit as send } from '../../src/offline/outbox';
 
 /** The task report, filed after the completion photo. Mirrors the server's check. */
 type Report = { found: string; done: string; result: string };
@@ -92,6 +93,15 @@ export default function CompleteTask() {
       setTyped('');
       toast.success(unit.item.name, `S/N ${unit.serialNumber} added`);
     } catch (e) {
+      // No signal: checked against the devices saved on this phone; the office checks it again on arrival
+      if (e instanceof ApiError && e.code === 'NETWORK') {
+        const known = units.find((u) => u.serialNumber.toUpperCase() === code);
+        addSerials([known?.serialNumber ?? code]);
+        setTyped('');
+        if (known) toast.success(known.item?.name ?? 'Device added', `S/N ${known.serialNumber} added (offline)`);
+        else toast.info('Added offline', `${code} is checked against your devices when you are back online.`);
+        return;
+      }
       if (e instanceof ApiError && (e.code === 'NOT_ISSUED' || e.code === 'NOT_FOUND')) {
         // Not one issued to them: probably the customer's own router — switch, with the SN filled in
         const theirs = await confirmDialog({
@@ -139,8 +149,9 @@ export default function CompleteTask() {
     if (problem) return toast.warning('Write the task report', problem);
     setBusy(true);
     try {
-      await api(`/tasks/${t.id}/complete`, {
-        body: {
+      const sent = await send(
+        `/tasks/${t.id}/complete`,
+        {
           photoId: photo.photoId,
           report: { found: report.found.trim(), done: report.done.trim(), result: report.result.trim() },
           customerAccount: (account ?? t.customerAccount) || undefined,
@@ -157,8 +168,11 @@ export default function CompleteTask() {
           materials: materials.map((m) => ({ itemId: m.holding.item.id, quantity: m.quantity })),
           signature: signature ? { path: signature, signedBy: signedBy.trim() } : undefined,
         },
-      });
-      celebrate('Task completed', routerFrom === 'customer' ? "Your task report has been sent for verification, and the customer's router to the office to confirm." : serials.length ? 'Your task report has been sent for verification, and the device for admin approval.' : 'Your task report has been sent for verification.');
+        { label: `Completed task ${t.code} with its report`, taskId: t.id },
+      );
+      if (sent.queued) showTaskLocally(t.id, { status: 'COMPLETED', completedAt: new Date().toISOString(), report: { found: report.found.trim(), done: report.done.trim(), result: report.result.trim() } });
+      if (sent.queued) celebrate('Task completed', 'Saved on this phone. The report goes to the office by itself as soon as you are back online.');
+      else celebrate('Task completed', routerFrom === 'customer' ? "Your task report has been sent for verification, and the customer's router to the office to confirm." : serials.length ? 'Your task report has been sent for verification, and the device for admin approval.' : 'Your task report has been sent for verification.');
       // Last task of the day? The daily report goes to the office (on team tasks, from the leader)
       const now = await confirmDialog({
         title: 'Daily report',

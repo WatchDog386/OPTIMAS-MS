@@ -1,23 +1,110 @@
-/* Optimas MS service worker. The app works online only (the server is the one database), so nothing
-   is cached here: every page, file and API call comes straight from the server. The worker is kept for
-   installing the app on phones and for push notifications. */
+/* Optimas MS service worker. The app opens with no signal, as WhatsApp does: the app itself (its page,
+   code, fonts and pictures) is kept on the phone and refreshed whenever there is a signal. The data
+   (tasks, stock, reports) is kept by the app itself, and work done offline waits in its outbox until
+   it can be sent (see src/offline). API calls are never cached here. */
 
-self.addEventListener('install', () => self.skipWaiting());
+const SHELL = 'optimas-shell-v2';
 
-// Remove what older versions cached for offline use
+// On install: the app's page, its start-up code and every page's code file, so it opens offline
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    (async () => {
+      const cache = await caches.open(SHELL);
+      try {
+        const page = await fetch('/', { cache: 'no-cache' });
+        if (page.ok) {
+          const html = await page.clone().text();
+          await cache.put('/', page);
+          const refs = [...html.matchAll(/(?:src|href)="(\/[^"]+\.(?:js|css|png|webp|ico|json))"/g)].map((m) => m[1]);
+          let chunks = [];
+          try {
+            const r = await fetch('/chunks.json', { cache: 'no-cache' });
+            if (r.ok) chunks = await r.json();
+          } catch {
+            /* the page code is still cached as it is opened */
+          }
+          await Promise.all([...new Set([...refs, ...chunks])].map((u) => cache.add(u).catch(() => undefined)));
+        }
+      } catch {
+        /* installed with no signal: everything is cached as it is used */
+      }
+      await self.skipWaiting();
+    })(),
+  );
+});
+
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k !== SHELL).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   );
 });
 
-// Phones on older Chrome only offer to install an app whose worker answers page requests. Pages always
-// come straight from the server (nothing is cached), so installing works on those phones too.
+/** Waits at most `ms` for the network (a weak signal can hang for a minute), then gives up. */
+const fetchWithin = (req, ms) =>
+  new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error('slow')), ms);
+    fetch(req).then(
+      (r) => (clearTimeout(t), resolve(r)),
+      (e) => (clearTimeout(t), reject(e)),
+    );
+  });
+
 self.addEventListener('fetch', (event) => {
-  if (event.request.mode === 'navigate') event.respondWith(fetch(event.request));
+  const req = event.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
+
+  // Pages: the newest from the server when it answers within 4 s, otherwise the copy on the phone
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      (async () => {
+        const cache = await caches.open(SHELL);
+        try {
+          const res = await fetchWithin(req, 4000);
+          if (res.ok) await cache.put('/', res.clone());
+          return res;
+        } catch {
+          return (await cache.match('/')) || Response.error();
+        }
+      })(),
+    );
+    return;
+  }
+
+  // Code files have a new name for every build, so a kept copy is always right: phone first
+  if (url.pathname.startsWith('/_expo/static/') || url.pathname.startsWith('/assets/')) {
+    event.respondWith(
+      (async () => {
+        const cache = await caches.open(SHELL);
+        const hit = await cache.match(req);
+        if (hit) return hit;
+        const res = await fetch(req);
+        if (res.ok) await cache.put(req, res.clone());
+        return res;
+      })(),
+    );
+    return;
+  }
+
+  // Everything else (icons, manifest, early scripts): the server, else the kept copy
+  if (/\.(js|css|png|webp|ico|json|wasm|svg|ttf|woff2?)$/.test(url.pathname)) {
+    event.respondWith(
+      (async () => {
+        const cache = await caches.open(SHELL);
+        try {
+          const res = await fetchWithin(req, 4000);
+          if (res.ok) await cache.put(req, res.clone());
+          return res;
+        } catch {
+          return (await cache.match(req)) || Response.error();
+        }
+      })(),
+    );
+  }
 });
 
 // ── Push notifications (the server sends { title, body, type, data }) ──────────────────────────────

@@ -22,11 +22,23 @@ function settle<T>(status: number, json: { error?: { message?: string; code?: st
   return (json ?? {}) as T;
 }
 
+/** A fresh key for one change (sent as Idempotency-Key). */
+export const newKey = () =>
+  typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+
 /** When this phone last changed something (a successful write): reads made before it are not reused. */
 let lastWriteAt = 0;
 export const lastWrite = () => lastWriteAt;
+const writeListeners = new Set<(path: string) => void>();
+/** Called after each successful change (the offline copy of the day's work is refreshed then). */
+export const onWrite = (fn: (path: string) => void) => {
+  writeListeners.add(fn);
+  return () => void writeListeners.delete(fn);
+};
 
-async function send<T>(path: string, options: { method?: string; body?: Body }): Promise<T> {
+type SendOptions = { method?: string; body?: Body; /** Same on every try of one change: the server does it once (see offline/outbox.ts) */ key?: string };
+
+async function send<T>(path: string, options: SendOptions): Promise<T> {
   const token = useAuth.getState().token;
   const isForm = typeof FormData !== 'undefined' && options.body instanceof FormData;
   let res: Response;
@@ -37,6 +49,7 @@ async function send<T>(path: string, options: { method?: string; body?: Body }):
         Accept: 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(options.body && !isForm ? { 'Content-Type': 'application/json' } : {}),
+        ...(options.key ? { 'Idempotency-Key': options.key } : {}),
       },
       body: isForm ? (options.body as FormData) : options.body ? JSON.stringify(options.body) : undefined,
     });
@@ -87,11 +100,14 @@ function flush() {
   );
 }
 
-export async function api<T>(path: string, options: { method?: string; body?: Body } = {}): Promise<T> {
+export async function api<T>(path: string, options: SendOptions = {}): Promise<T> {
   const isRead = !options.body && (options.method ?? 'GET') === 'GET';
   if (!isRead) {
     const result = await send<T>(path, options);
-    if (path !== '/batch') lastWriteAt = Date.now();
+    if (path !== '/batch') {
+      lastWriteAt = Date.now();
+      writeListeners.forEach((l) => l(path));
+    }
     return result;
   }
   const shared = inFlight.get(path);

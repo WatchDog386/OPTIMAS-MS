@@ -76,6 +76,7 @@ export async function enableBiometricLock(userId: string) {
   const device = typeof navigator !== 'undefined' ? navigator.userAgent.replace(/\s*\(.*?\)\s*/g, ' ').slice(0, 70) : undefined;
   const { id } = await api<{ id: string }>('/auth/passkeys/register', { body: { response: response as unknown as Record<string, unknown>, deviceName: device } });
   storage()?.setItem(KEY(userId), id);
+  storage()?.setItem(CRED(userId), response.id);
   const u = useAuth.getState().user;
   if (u?.id === userId) rememberFingerprintAccount(u);
 }
@@ -111,12 +112,50 @@ export async function disableBiometricLock(userId: string) {
   if (id) await api(`/auth/passkeys/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => undefined);
 }
 
-/** Asks for the fingerprint and has the server check it. Resolves true when unlocked. */
+/** The fingerprint key's id on this phone, so it can be asked for with no signal. */
+const CRED = (userId: string) => `optimas.lock.cred.${userId}`;
+
+/**
+ * Asks for the fingerprint and has the server check it. Resolves true when unlocked. With no signal the
+ * phone's own sensor decides, as WhatsApp's fingerprint lock does (the server is not needed to open the
+ * app; nothing reaches the office until there is a signal, and then with the sign-in it already has).
+ */
 export async function unlockWithBiometric(): Promise<boolean> {
-  const optionsJSON = (await take('unlock')) as AuthOptions;
+  const userId = useAuth.getState().user?.id;
+  let optionsJSON: AuthOptions | null = null;
+  try {
+    optionsJSON = (await take('unlock')) as AuthOptions;
+  } catch (e) {
+    if (!(e instanceof ApiError && e.code === 'NETWORK')) throw e;
+  }
+  if (!optionsJSON) return unlockOffline(userId);
   excuseLeaving(60_000);
   const response = await startAuthentication({ optionsJSON }).finally(endExcuse);
-  await api('/auth/passkeys/unlock', { body: { response: response as unknown as Record<string, unknown> } });
+  try {
+    await api('/auth/passkeys/unlock', { body: { response: response as unknown as Record<string, unknown> } });
+  } catch (e) {
+    // The signal went while checking: the phone already accepted the finger
+    if (!(e instanceof ApiError && e.code === 'NETWORK')) throw e;
+  }
+  if (userId) storage()?.setItem(CRED(userId), response.id);
+  return true;
+}
+
+async function unlockOffline(userId?: string): Promise<boolean> {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  const challenge = btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const id = userId ? storage()?.getItem(CRED(userId)) : null;
+  excuseLeaving(60_000);
+  await startAuthentication({
+    optionsJSON: {
+      challenge,
+      rpId: location.hostname,
+      userVerification: 'required',
+      timeout: 60_000,
+      allowCredentials: id ? [{ id, type: 'public-key', transports: ['internal', 'hybrid'] }] : [],
+    } as AuthOptions,
+  }).finally(endExcuse);
   return true;
 }
 

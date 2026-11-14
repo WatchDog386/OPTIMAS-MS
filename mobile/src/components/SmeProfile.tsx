@@ -19,6 +19,7 @@ import { usePrivacyItems } from './PrivacyRows';
 import { TAB_BAR_CLEARANCE } from './Screen';
 import { ShiftCard } from './ShiftCard';
 import { ProfileRing, SME, SmeAppBar, useScrolledBar, SmeLogOut, SmeRow, SmeSection } from './SmeKit';
+import { unsentCount } from '../offline/outbox';
 import { Text } from './Text';
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -66,7 +67,12 @@ export function SmeProfilePage({ tools = [], children, tabs = true }: { tools?: 
     ? [...tools, { key: 'edit', icon: 'create-outline', title: 'Edit my details', sub: 'Name, phone, e-mail and region', onPress: () => router.push(`/admin/user-edit?id=${user.id}` as never) }]
     : tools;
   const signOut = async () => {
-    if (!(await confirmAction('Log out', 'Are you sure you want to log out?', 'Log out'))) return;
+    // Work saved offline stays on this phone and is sent after the next sign-in, but say so first
+    const unsent = unsentCount();
+    const ask = unsent
+      ? `${unsent} thing${unsent === 1 ? '' : 's'} you did offline ha${unsent === 1 ? 's' : 've'} not reached the office yet. They stay on this phone and are sent when you sign in again. Log out anyway?`
+      : 'Are you sure you want to log out?'
+    if (!(await confirmAction('Log out', ask, 'Log out'))) return;
     await unregisterPush();
     await useAuth.getState().logout();
     router.replace('/login');
