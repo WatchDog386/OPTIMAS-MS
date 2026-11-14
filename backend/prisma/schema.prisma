@@ -369,6 +369,8 @@ enum UnitStatus {
   INSTALLED
   FAULTY
   LOST
+  /// Its item is now tracked by count (labels never printed): this serial is no longer used
+  RETIRED
 }
 
 model SerialUnit {
@@ -749,6 +751,8 @@ enum StockRequestType {
   ADJUST
   /// A customer's own router recorded at a task: the office confirms it before it goes on record
   CUSTOMER_ROUTER
+  /// A technician says they used some of an item counted by quantity (not on a task report)
+  USE
 }
 
 enum StockRequestStatus {

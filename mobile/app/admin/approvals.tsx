@@ -28,6 +28,7 @@ type StockReq = {
 };
 const STOCK_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
   CUSTOMER_ROUTER: 'home-outline',
+  USE: 'remove-circle-outline',
   INSTALL: 'checkmark-done-outline',
   MARK_INSTALLED: 'checkmark-done-outline',
   RETURN: 'arrow-down-circle-outline',

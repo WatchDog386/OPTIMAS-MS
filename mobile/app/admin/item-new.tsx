@@ -5,12 +5,13 @@ import { router } from 'expo-router';
 import { api, ApiError } from '../../src/api/client';
 import type { Item, Label } from '../../src/api/types';
 import { Badge, Button, Input, PageHeader, QrCode, Screen, SectionHeader, Text } from '../../src/components';
+import { isPending } from '../../src/utils/stockApproval';
 import { requestScan } from '../../src/store/bridge';
 import { colors, fonts, radius, space } from '../../src/theme';
 import { toast } from '../../src/store/feedback';
 
 type Category = Item['category'];
-type Mode = 'serialised' | 'bulk';
+type Mode = 'serialised' | 'bulk' | 'count';
 
 const CATEGORIES: { value: Category; label: string }[] = [
   { value: 'ROUTER', label: 'Router' },
@@ -74,12 +75,19 @@ export default function CatalogEntry() {
       if (!serials.length) { setErrors({ serials: 'Scan at least one serial number' }); return; }
     } else {
       const qty = Number(form.quantity);
-      if (!qty || qty < 1 || qty > 500) { setErrors({ quantity: 'Enter a quantity between 1 and 500' }); return; }
+      if (!qty || qty < 1 || (mode === 'bulk' && qty > 500)) { setErrors({ quantity: mode === 'bulk' ? 'Enter a quantity between 1 and 500' : 'Enter how many are in the store' }); return; }
     }
 
     setBusy(true);
     try {
-      if (mode === 'serialised') {
+      if (mode === 'count') {
+        // Counted by quantity, no labels: issued by number, used and approved by number
+        const sku = `${form.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '-').replace(/-+/g, '-').slice(0, 20)}-${Date.now().toString().slice(-4)}`;
+        const { item } = await api<{ item: Item }>('/inventory/items', { body: { sku, name: form.name.trim(), category, tracking: 'BULK', unit: 'pcs', reorderLevel: reorder } });
+        const r = await api('/inventory/receive', { body: { itemId: item.id, quantity: Number(form.quantity), note: 'Opening stock' } });
+        toast.success('Saved', isPending(r) ? `${form.name} added; the ${form.quantity} in stock wait for admin approval.` : `${form.quantity} × ${form.name} added to the store, counted by quantity.`);
+        router.replace(`/admin/item/${item.id}`);
+      } else if (mode === 'serialised') {
         await api<{ item: Item; count: number }>('/inventory/items/catalog-entry', {
           body: { name: form.name, category, reorderLevel: reorder, serials },
         });
@@ -114,29 +122,43 @@ export default function CatalogEntry() {
   }, []);
 
   return (
-    <Screen footer={<Button label={mode === 'serialised' ? 'Save product' : 'Generate serials + labels'} icon={mode === 'serialised' ? 'save' : 'barcode-outline'} size="lg" loading={busy} disabled={!form.name.trim() || (mode === 'serialised' ? !serials.length : !Number(form.quantity)) || busy} onPress={submit} />}>
+    <Screen footer={<Button label={mode === 'bulk' ? 'Generate serials + labels' : 'Save product'} icon={mode === 'bulk' ? 'barcode-outline' : 'save'} size="lg" loading={busy} disabled={!form.name.trim() || (mode === 'serialised' ? !serials.length : !Number(form.quantity)) || busy} onPress={submit} />}>
       <PageHeader title="Add product" subtitle="Serialised items: scan each. Bulk items: enter quantity, auto-generate labels" />
 
       <SectionHeader title="Product" />
       <View style={styles.card}>
         <View style={styles.modeRow}>
-          <Pressable style={[styles.modeChip, mode === 'serialised' && styles.modeChipOn]} onPress={() => setMode('serialised')}>
-            <Text variant="label">Scan each serial</Text>
-          </Pressable>
-          <Pressable style={[styles.modeChip, mode === 'bulk' && styles.modeChipOn]} onPress={() => setMode('bulk')}>
-            <Text variant="label">Bulk · auto-generate serials</Text>
-          </Pressable>
+          {(
+            [
+              ['serialised', 'Scan each serial'],
+              ['bulk', 'Bulk · auto-generate serials'],
+              ['count', 'Count only (no labels)'],
+            ] as const
+          ).map(([m, label]) => (
+            <Pressable key={m} style={[styles.modeChip, mode === m && styles.modeChipOn]} onPress={() => setMode(m)} accessibilityRole="radio" accessibilityState={{ selected: mode === m }}>
+              <Text variant="label" color={mode === m ? colors.onPrimary : colors.text} fixedColor>
+                {label}
+              </Text>
+            </Pressable>
+          ))}
         </View>
         <Input label="Product name" icon="pricetag-outline" placeholder="Huawei AX3 Router" value={form.name} onChangeText={set('name')} error={errors.name} />
         <SectionHeader title="Category" />
         <View style={styles.categoryRow}>
           {CATEGORIES.map((c) => (
             <Pressable key={c.value} style={[styles.chip, category === c.value && styles.chipOn]} onPress={() => setCategory(c.value)}>
-              <Text variant="label">{c.label}</Text>
+              <Text variant="label" color={category === c.value ? colors.onPrimary : colors.text} fixedColor>
+                {c.label}
+              </Text>
             </Pressable>
           ))}
         </View>
-        {mode === 'bulk' ? (
+        {mode === 'count' ? (
+          <Text variant="bodySm" color={colors.textMuted}>
+            No serial numbers or labels: the store issues it by number (to whom, how many), and technicians record how many they used for the admin to approve.
+          </Text>
+        ) : null}
+        {mode !== 'serialised' ? (
           <Input label="Quantity" icon="cube-outline" keyboardType="number-pad" placeholder="How many units" value={form.quantity} onChangeText={(v) => set('quantity')(v.replace(/\D/g, ''))} error={errors.quantity} />
         ) : null}
         <Input label="Reorder level" icon="trending-down-outline" keyboardType="number-pad" placeholder="Reorder when stock drops to" value={form.reorderLevel} onChangeText={(v) => set('reorderLevel')(v.replace(/\D/g, ''))} error={errors.reorderLevel} />
@@ -170,7 +192,7 @@ export default function CatalogEntry() {
             )}
           </View>
         </>
-      ) : (
+      ) : mode === 'count' ? null : (
         <View style={{ gap: 10 }}>
           <SectionHeader title="Bulk serials" />
           <Text variant="bodySm" color={colors.textMuted}>
@@ -215,8 +237,9 @@ export default function CatalogEntry() {
 
 const styles = StyleSheet.create({
   card: { gap: 10, padding: space.md, borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  modeRow: { flexDirection: 'row', gap: 10, marginBottom: 6 },
-  modeChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: space.md, paddingVertical: 8, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, backgroundColor: '#fff' },
+  modeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 6 },
+  // Theme colours (a fixed white made the choices unreadable in dark mode)
+  modeChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: space.md, paddingVertical: 8, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceAlt },
   modeChipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
   scanRow: { flexDirection: 'row', alignItems: 'flex-end', gap: space.md, flexWrap: 'wrap' },
   categoryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },

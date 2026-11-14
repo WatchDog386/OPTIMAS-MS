@@ -10,7 +10,8 @@ import { requestScan } from '../../src/store/bridge';
 import { collectDevice, markInstalled } from '../../src/utils/devices';
 import { colors, space } from '../../src/theme';
 import { dateTime } from '../../src/utils/format';
-import { toast } from '../../src/store/feedback';
+import { promptDialog, toast } from '../../src/store/feedback';
+import { isPending, toastPending } from '../../src/utils/stockApproval';
 
 interface MyStock {
   pending: SerialUnit[];
@@ -66,6 +67,37 @@ export default function MyStock() {
       toast.error('Stock count failed', e instanceof ApiError ? e.message : 'Try again');
     } finally {
       setBusy(null);
+    }
+  };
+
+  // Items counted by number: say how many were used and for what; the admin approves it
+  const recordUsed = async (b: BulkHolding) => {
+    const n = await promptDialog({
+      title: `Used ${b.item.name}`,
+      message: `How many did you use? You hold ${b.quantity} ${b.item.unit}.`,
+      emoji: '📦',
+      confirmLabel: 'Next',
+      input: { placeholder: `Number of ${b.item.unit}`, required: true },
+    });
+    if (!n) return;
+    const quantity = Number(n.replace(/[^0-9.]/g, ''));
+    if (!quantity || quantity <= 0) return toast.warning('How many?', 'Type the number you used.');
+    if (quantity > b.quantity) return toast.warning('Too many', `You hold only ${b.quantity} ${b.item.unit}.`);
+    const note = await promptDialog({
+      title: 'Used for what?',
+      message: 'Which customer or task, and what it was for.',
+      emoji: '📝',
+      confirmLabel: 'Send for approval',
+      input: { placeholder: 'e.g. Call-out at Roysambu, Hse 9: replaced the ATB', required: true },
+    });
+    if (!note) return;
+    try {
+      const r = await api('/inventory/use', { body: { itemId: b.item.id, quantity, note } });
+      if (isPending(r)) toastPending(r);
+      else toast.success('Recorded', `${quantity} ${b.item.unit} of ${b.item.name} used.`);
+      await reload();
+    } catch (e) {
+      toast.error('Not sent', e instanceof ApiError ? e.message : 'Try again');
     }
   };
 
@@ -147,10 +179,18 @@ export default function MyStock() {
         <EmptyState icon="wifi-outline" title="No devices in hand" message="Devices issued to you by the store appear here." />
       )}
 
-      <SectionHeader title="Materials" />
+      <SectionHeader title="Materials & items counted by number" />
       {data?.bulk.length ? (
         data.bulk.map((b) => (
-          <ListRow key={b.id} icon="git-commit-outline" iconTint={colors.accent} title={b.item.name} subtitle={b.item.sku} right={<Text variant="title">{`${b.quantity} ${b.item.unit}`}</Text>} />
+          <ListRow
+            key={b.id}
+            icon="git-commit-outline"
+            iconTint={colors.accent}
+            title={b.item.name}
+            subtitle={`${b.quantity} ${b.item.unit} in hand · tap to record what you used`}
+            right={<Text variant="title">{`${b.quantity} ${b.item.unit}`}</Text>}
+            onPress={b.quantity > 0 ? () => void recordUsed(b) : undefined}
+          />
         ))
       ) : (
         <Text variant="bodySm" color={colors.textMuted}>

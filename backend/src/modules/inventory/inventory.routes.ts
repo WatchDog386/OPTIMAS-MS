@@ -70,6 +70,78 @@ inventoryRouter.post(
   }),
 );
 
+/**
+ * Track an item by count instead of serial numbers (its labels were generated but never printed): what is
+ * in the store becomes the store count, what each technician holds becomes their count, and the serials not
+ * yet installed are retired. Installed, faulty and lost units keep their history. Admins only.
+ */
+inventoryRouter.post(
+  '/items/:id/track-by-count',
+  requireRole(ROLES.ADMIN),
+  ah(async (req, res) => {
+    const item = await prisma.inventoryItem.findUnique({ where: { id: req.params.id } });
+    if (!item) throw notFound('Item');
+    if (item.tracking === 'BULK') throw conflict(`${item.name} is already tracked by count`, 'ALREADY_BULK');
+    const unitIds = (await prisma.serialUnit.findMany({ where: { itemId: item.id }, select: { id: true } })).map((u) => u.id);
+    const waiting = unitIds.length ? await prisma.stockRequest.count({ where: { status: 'PENDING', serialUnitId: { in: unitIds } } }) : 0;
+    if (waiting) throw conflict(`${waiting} stock change(s) for ${item.name} are waiting for approval: decide them first`, 'APPROVAL_PENDING');
+    const actor = me(req).id;
+    const result = await prisma.$transaction(async (tx) => {
+      const units = await tx.serialUnit.findMany({ where: { itemId: item.id, status: { in: ['IN_STORE', 'IN_TRANSIT', 'WITH_TECHNICIAN'] } } });
+      const inStore = units.filter((u) => u.status === 'IN_STORE').length;
+      const held = new Map<string, number>();
+      for (const u of units) if (u.status !== 'IN_STORE' && u.holderId) held.set(u.holderId, (held.get(u.holderId) ?? 0) + 1);
+      await tx.inventoryItem.update({ where: { id: item.id }, data: { tracking: 'BULK', storeQuantity: inStore } });
+      for (const [userId, quantity] of held) {
+        await tx.bulkHolding.upsert({ where: { itemId_userId: { itemId: item.id, userId } }, create: { itemId: item.id, userId, quantity }, update: { quantity: { increment: quantity } } });
+        await tx.stockMovement.create({ data: { type: 'ADJUST', itemId: item.id, quantity, toUserId: userId, actorId: actor, note: 'Now tracked by count: units already with this technician' } });
+      }
+      await tx.serialUnit.updateMany({ where: { id: { in: units.map((u) => u.id) } }, data: { status: 'RETIRED', holderId: null, heldSince: null } });
+      await tx.stockMovement.create({ data: { type: 'ADJUST', itemId: item.id, quantity: inStore, actorId: actor, note: `Now tracked by count: ${inStore} in the store, ${units.length} serial(s) retired` } });
+      return { inStore, withTechnicians: [...held.values()].reduce((a, b) => a + b, 0), retired: units.length };
+    });
+    await audit(actor, 'ITEM_TRACK_BY_COUNT', 'InventoryItem', item.id, `${item.name}: tracked by count (${result.inStore} in store, ${result.withTechnicians} with technicians, ${result.retired} serials retired)`);
+    res.json(result);
+  }),
+);
+
+/** Who holds how many of an item counted by quantity. */
+inventoryRouter.get(
+  '/items/:id/holders',
+  store,
+  ah(async (req, res) => {
+    const holders = await prisma.bulkHolding.findMany({
+      where: { itemId: req.params.id, quantity: { gt: 0 } },
+      include: { user: { select: { id: true, name: true, staffNo: true } } },
+      orderBy: { quantity: 'desc' },
+    });
+    res.json({ holders: holders.map((h) => ({ user: h.user, quantity: h.quantity })) });
+  }),
+);
+
+/**
+ * A technician records some of a counted item used (outside a task report: e.g. cable for a customer
+ * call-out). It goes to the admin; once approved it comes off what they hold.
+ */
+const useSchema = z.object({
+  itemId: z.string().min(1),
+  quantity: z.number().positive('How many did you use?'),
+  note: z.string().trim().min(3, 'Say what it was used for').max(300),
+  taskId: z.string().optional(),
+});
+inventoryRouter.post(
+  '/use',
+  ah(async (req, res) => {
+    const user = me(req);
+    const b = parse(useSchema, req.body);
+    const holding = await prisma.bulkHolding.findUnique({ where: { itemId_userId: { itemId: b.itemId, userId: user.id } }, include: { item: true } });
+    if (!holding || holding.quantity < b.quantity) throw conflict(`You hold only ${holding?.quantity ?? 0} ${holding?.item.unit ?? ''} of ${holding?.item.name ?? 'this item'}`.trim(), 'INSUFFICIENT_HOLDING');
+    const out = await gate(user, 'USE', { itemId: b.itemId, quantity: b.quantity, note: b.note, taskId: b.taskId ?? null }, { summary: `Used ${b.quantity} ${holding.item.unit} of ${holding.item.name} — ${b.note}`, taskId: b.taskId ?? null });
+    if (out.pending) return void res.status(202).json(out);
+    res.json(out.result);
+  }),
+);
+
 /** One-screen catalogue entry: name + scan serials + reorder level, saved as one item with that many units. */
 const catalogEntrySchema = z.object({
   name: z.string().trim().min(2, 'Product name is required'),
@@ -675,6 +747,9 @@ inventoryRouter.post(
         break;
       case 'FAULTY':
         verdict = { tone: 'warning', title: 'Marked faulty', detail: 'This device came back faulty. It should not be issued or installed.' };
+        break;
+      case 'RETIRED':
+        verdict = { tone: 'info', title: 'Label not in use', detail: `${unit.item.name} is now counted by quantity, not by serial number. This label is no longer used.` };
         break;
       default:
         verdict = { tone: 'danger', title: 'Reported lost', detail: 'This device was reported lost. Hand it to the store so the register can be put right.' };

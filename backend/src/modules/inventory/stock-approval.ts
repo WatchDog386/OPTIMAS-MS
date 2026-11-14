@@ -67,6 +67,14 @@ const EXECUTE: Record<StockRequestType, (tx: Tx, actorId: string, p: Payload) =>
     return { serial: unit.serialNumber, status };
   },
   CUSTOMER_ROUTER: (tx, _actor, p) => recordCustomerRouter(tx, p),
+  // Some of a counted item used by the technician (approved: it comes off what they hold)
+  USE: async (tx, actor, p) => {
+    const holding = await tx.bulkHolding.findUnique({ where: { itemId_userId: { itemId: p.itemId, userId: actor } }, include: { item: true } });
+    if (!holding || holding.quantity < p.quantity) throw conflict(`They now hold only ${holding?.quantity ?? 0} ${holding?.item.unit ?? ''} of ${holding?.item.name ?? 'this item'}`.trim(), 'INSUFFICIENT_HOLDING');
+    await tx.bulkHolding.update({ where: { id: holding.id }, data: { quantity: { decrement: p.quantity } } });
+    await tx.stockMovement.create({ data: { type: 'CONSUME', itemId: p.itemId, quantity: p.quantity, fromUserId: actor, actorId: actor, taskId: p.taskId ?? null, note: p.note } });
+    return { used: p.quantity, item: holding.item.name };
+  },
   ADJUST: async (tx, actor, p) => {
     const it = await tx.inventoryItem.findUnique({ where: { id: p.itemId } });
     if (!it) throw badRequest('Item not found', 'NOT_FOUND');

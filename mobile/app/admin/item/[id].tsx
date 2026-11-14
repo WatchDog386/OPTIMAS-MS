@@ -7,6 +7,7 @@ import { api, ApiError } from '../../../src/api/client';
 import type { Item } from '../../../src/api/types';
 import { Badge, Button, Glass, Input, Loading, Screen, ScreenHeader, Section, Segmented, Text } from '../../../src/components';
 import { useApi } from '../../../src/hooks/useApi';
+import { useAuth } from '../../../src/store/auth';
 import { colors } from '../../../src/theme';
 import { confirmAction } from '../../../src/utils/confirm';
 import { toast } from '../../../src/store/feedback';
@@ -23,6 +24,9 @@ export default function ItemDetail() {
   const [qty, setQty] = useState('');
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
+  const isAdmin = useAuth((st) => st.user?.role === 'ADMIN');
+  // Counted items: who holds how many
+  const holders = useApi<{ holders: { user: { id: string; name: string; staffNo: string }; quantity: number }[] }>(`/inventory/items/${id}/holders`);
 
   useEffect(() => {
     if (item) setForm({ name: item.name, unit: item.unit, unitPrice: String(item.unitPrice), reorderLevel: String(item.reorderLevel) });
@@ -68,6 +72,22 @@ export default function ItemDetail() {
       toast.success('Stock adjusted', `${dir === 'add' ? '+' : '−'}${n} ${item.unit} recorded in the ledger.`);
       setQty('');
       setReason('');
+    });
+
+  // Labels generated but not printed: track it by count instead (issued and used by number)
+  const toCount = () =>
+    run('count', async () => {
+      if (
+        !(await confirmAction(
+          'Track by count',
+          `${item.name} will be counted by quantity: no serial numbers or scanning. What is in the store and with each technician becomes a count, and its unused serials are retired. Installed units keep their history.`,
+          'Track by count',
+        ))
+      )
+        return;
+      const r = await api<{ inStore: number; withTechnicians: number; retired: number }>(`/inventory/items/${item.id}/track-by-count`, { body: {} });
+      toast.success('Now counted by quantity', `${r.inStore} in the store · ${r.withTechnicians} with technicians · ${r.retired} serials retired.`);
+      await holders.reload();
     });
 
   const archive = () =>
@@ -165,6 +185,36 @@ export default function ItemDetail() {
           <Button label="Receive stock" icon="add-circle" variant="secondary" onPress={() => router.push(`/admin/receive?itemId=${item.id}`)} />
         </Glass>
       )}
+
+      {item.tracking === 'BULK' ? (
+        <Section title="With whom" subtitle="Issued by number: who holds how many">
+          {holders.data?.holders.length ? (
+            <View style={{ gap: 8 }}>
+              {holders.data.holders.map((h) => (
+                <View key={h.user.id} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text variant="bodySm">
+                    {h.user.name} · {h.user.staffNo}
+                  </Text>
+                  <Text variant="title" style={{ fontSize: 14 }}>
+                    {h.quantity} {item.unit}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <Text variant="bodySm" color={colors.textMuted}>
+              None with technicians.
+            </Text>
+          )}
+        </Section>
+      ) : isAdmin ? (
+        <Glass strong>
+          <Text variant="bodySm" color={colors.textMuted}>
+            Labels for this item not printed? Track it by count instead: issued by number (to whom, how many), technicians record how many they used, and you approve. No scanning.
+          </Text>
+          <Button label="Track by count (no labels)" icon="calculator-outline" variant="secondary" loading={busy === 'count'} onPress={toCount} />
+        </Glass>
+      ) : null}
 
       <Button label="Archive item" icon="archive-outline" variant="danger" loading={busy === 'archive'} onPress={archive} />
     </Screen>
