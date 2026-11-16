@@ -5,6 +5,9 @@ import { secureStorage } from './storage';
 
 const KEY = 'optimas.session';
 
+/** Signing in and opening the app never wait more than a moment for the phone's offline copy. */
+const quickly = (p: Promise<unknown>) => Promise.race([p.catch(() => undefined), new Promise((r) => setTimeout(r, 800))]);
+
 interface AuthState {
   token: string | null;
   user: User | null;
@@ -25,8 +28,8 @@ export const useAuth = create<AuthState>((set) => ({
       const raw = await secureStorage.get(KEY);
       if (raw) {
         const { token, user } = JSON.parse(raw) as { token: string; user: User };
-        // What this person saw last time, so the app opens on it even with no signal
-        await restoreApiCache(user.id).catch(() => undefined);
+        // What this person saw last time, so the app opens on it even with no signal (never waits long)
+        await quickly(restoreApiCache(user.id));
         set({ token, user });
       }
     } finally {
@@ -34,7 +37,7 @@ export const useAuth = create<AuthState>((set) => ({
     }
   },
   setSession: async (token, user) => {
-    await restoreApiCache(user.id).catch(() => undefined);
+    await quickly(restoreApiCache(user.id));
     set({ token, user });
     await secureStorage.set(KEY, JSON.stringify({ token, user }));
   },

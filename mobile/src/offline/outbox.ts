@@ -7,7 +7,7 @@ import { useAuth } from '../store/auth';
 import { toast } from '../store/feedback';
 import { setOnline } from '../store/network';
 import { uriToBlob } from '../utils/upload';
-import { kvGet, kvSet } from './kv';
+import { kvGet, kvSet, legacyDone, legacyGet } from './kv';
 
 /*
  * The outbox: how the app works with no signal, the way WhatsApp sends a message typed offline.
@@ -74,11 +74,16 @@ let running = false;
 const listeners = new Set<() => void>();
 
 const ready = () =>
-  (loaded ??= Promise.all([kvGet<OutboxItem[]>(KEY), kvGet<Record<string, string>>(REFS)]).then(([saved, savedRefs]) => {
-    const keep = (saved ?? []).map((i) => (i.state === 'sending' ? { ...i, state: 'waiting' as const } : i));
+  (loaded ??= Promise.all([kvGet<OutboxItem[]>(KEY), kvGet<Record<string, string>>(REFS), legacyGet<OutboxItem[]>(KEY), legacyGet<Record<string, string>>(REFS)]).then(([saved, savedRefs, oldItems, oldRefs]) => {
+    // Work kept by the 14–15 Nov version under the old store name comes along (once: it is saved here next)
+    const merged = [...(oldItems ?? []).filter((o) => o.state !== 'sent' && !(saved ?? []).some((s) => s.id === o.id)), ...(saved ?? [])];
+    savedRefs = { ...(oldRefs ?? {}), ...(savedRefs ?? {}) };
+    const keep = merged.map((i) => (i.state === 'sending' ? { ...i, state: 'waiting' as const } : i));
     items = [...keep, ...items.filter((i) => !keep.some((s) => s.id === i.id))];
     refs = { ...(savedRefs ?? {}), ...refs };
     emit();
+    if (oldItems?.length) void persist().then(legacyDone);
+    else legacyDone();
   }));
 
 function emit() {
