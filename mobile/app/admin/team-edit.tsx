@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { goBack } from '../../src/utils/nav';
 import { api, ApiError } from '../../src/api/client';
 import { Avatar, Button, Input, Screen, ScreenHeader, SectionHeader, Text } from '../../src/components';

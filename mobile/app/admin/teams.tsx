@@ -1,7 +1,7 @@
 import { View } from 'react-native';
 import { router } from 'expo-router';
 import type { JobTeam } from '../../src/api/types';
-import { Button, HeaderButton, ListRow, PageHeader, Screen, Text } from '../../src/components';
+import { HeaderButton, ListRow, PageHeader, Screen, Text } from '../../src/components';
 import { useApi } from '../../src/hooks/useApi';
 import { useAuth } from '../../src/store/auth';
 import { colors } from '../../src/theme';
@@ -28,10 +28,9 @@ export default function Teams() {
           teams.map((t) => (
             <ListRow
               key={t.id}
-              left={{ icon: 'people-outline' }}
+              icon="people-outline"
               title={t.name}
               subtitle={`${t.members.length} technician(s) · led by ${t.leader.name} · ${t.openJobs ?? 0} open job(s)`}
-              right={{ icon: 'chevron-forward-outline' }}
               onPress={() => router.push(`/admin/team/${t.id}`)}
             />
           ))
