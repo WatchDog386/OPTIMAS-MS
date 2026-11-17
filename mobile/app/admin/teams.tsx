@@ -19,7 +19,7 @@ export default function Teams() {
         subtitle="Crews that take jobs together"
         right={role === 'ADMIN' || role === 'SUPERVISOR' ? <HeaderButton icon="person-add-outline" label="New team" onPress={() => router.push('/admin/team-new')} /> : undefined}
       />
-      <View style={{ paddingHorizontal: 16 }}>
+      <View style={{ gap: 10 }}>
         {teams.length === 0 ? (
           <Text variant="bodySm" color={colors.textMuted} style={{ marginTop: 24, textAlign: 'center' }}>
             No teams yet. Create one to allocate jobs to a whole crew.
