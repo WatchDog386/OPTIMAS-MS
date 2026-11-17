@@ -69,3 +69,62 @@ describe('team jobs', () => {
     expect((await api().delete(`/api/v1/teams/${team.body.team.id}`).set(auth(admin))).status).toBe(204);
   });
 });
+
+describe('team review and edit', () => {
+  it('reviews a single team and edits its name, members, and leader', async () => {
+    const admin = (await login('FBI-ADM-001')).token;
+    const [a, b, c] = await Promise.all([newTechnician(admin), newTechnician(admin), newTechnician(admin)]);
+    const name = `Crew ${Date.now().toString(36)}`;
+
+    const created = await api().post('/api/v1/teams').set(auth(admin)).send({ name, memberIds: [a.user.id, b.user.id], leaderId: a.user.id });
+    expect(created.status).toBe(201);
+    const teamId = created.body.team.id;
+
+    // Review: GET by id
+    const reviewed = await api().get(`/api/v1/teams/${teamId}`).set(auth(admin));
+    expect(reviewed.status).toBe(200);
+    expect(reviewed.body.team.name).toBe(name);
+    expect(reviewed.body.team.leaderId).toBe(a.user.id);
+    expect(reviewed.body.team.members).toHaveLength(2);
+
+    // Edit name
+    const renamed = await api().patch(`/api/v1/teams/${teamId}`).set(auth(admin)).send({ name: `Crew 2 ${Date.now().toString(36)}` });
+    expect(renamed.status).toBe(200);
+    expect(renamed.body.team.name).not.toBe(name);
+
+    // Edit members: add c, remove b (b is not the leader so no open jobs block)
+    const reMembered = await api().patch(`/api/v1/teams/${teamId}`).set(auth(admin)).send({ memberIds: [a.user.id, c.user.id], leaderId: a.user.id });
+    expect(reMembered.status).toBe(200);
+    expect(reMembered.body.team.members.map((m: { userId: string }) => m.userId).sort()).toEqual([a.user.id, c.user.id].sort());
+
+    // Change leader to c
+    const reLed = await api().patch(`/api/v1/teams/${teamId}`).set(auth(admin)).send({ leaderId: c.user.id });
+    expect(reLed.status).toBe(200);
+    expect(reLed.body.team.leaderId).toBe(c.user.id);
+
+    // Non-manager cannot edit
+    expect((await api().patch(`/api/v1/teams/${teamId}`).set(auth(a.token)).send({ name: 'nope' })).status).toBe(403);
+  });
+
+  it('rejects invalid edits', async () => {
+    const admin = (await login('FBI-ADM-001')).token;
+    const [a, b] = await Promise.all([newTechnician(admin), newTechnician(admin)]);
+    const name = `Crew ${Date.now().toString(36)}`;
+    const team = await api().post('/api/v1/teams').set(auth(admin)).send({ name, memberIds: [a.user.id, b.user.id], leaderId: a.user.id });
+    const teamId = team.body.team.id;
+
+    // Leader must be a member
+    expect((await api().patch(`/api/v1/teams/${teamId}`).set(auth(admin)).send({ leaderId: 'someone-else' })).status).toBe(400);
+
+    // Need at least two members
+    expect((await api().patch(`/api/v1/teams/${teamId}`).set(auth(admin)).send({ memberIds: [a.user.id] })).status).toBe(400);
+
+    // Duplicate name
+    const other = await api().post('/api/v1/teams').set(auth(admin)).send({ name: `Other ${Date.now().toString(36)}`, memberIds: [a.user.id, b.user.id], leaderId: a.user.id });
+    expect((await api().patch(`/api/v1/teams/${other.body.team.id}`).set(auth(admin)).send({ name })).body.error.code).toBe('TEAM_EXISTS');
+
+    // Unknown team
+    expect((await api().patch('/api/v1/teams/does-not-exist').set(auth(admin)).send({ name: 'x' })).status).toBe(404);
+    expect((await api().get('/api/v1/teams/does-not-exist').set(auth(admin))).status).toBe(404);
+  });
+});

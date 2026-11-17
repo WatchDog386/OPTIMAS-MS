@@ -27,6 +27,13 @@ export const newTeamSchema = z.object({
 });
 export type NewTeam = z.infer<typeof newTeamSchema>;
 
+export const updateTeamSchema = z.object({
+  name: z.string().trim().min(1, 'Give the team a name or number').max(60).optional(),
+  memberIds: z.array(z.string().min(1)).min(2, 'A team needs at least two technicians').max(20).optional(),
+  leaderId: z.string().min(1, 'Choose the team leader').optional(),
+});
+export type UpdateTeam = z.infer<typeof updateTeamSchema>;
+
 /** Checks the people and creates the team (inside the caller's transaction). */
 export async function createTeam(tx: Prisma.TransactionClient, input: NewTeam, createdById: string) {
   const memberIds = [...new Set(input.memberIds)];
@@ -58,6 +65,21 @@ teamsRouter.get(
   }),
 );
 
+/** Review a single team: members, leader, open jobs. */
+teamsRouter.get(
+  '/:id',
+  requireRole([...ROLES.STORE, 'CUSTOMER_CARE']),
+  ah(async (req, res) => {
+    const team = await prisma.team.findUnique({
+      where: { id: req.params.id },
+      include: { ...teamInclude, _count: { select: { tasks: { where: { status: { in: ['ASSIGNED', 'IN_PROGRESS'] } } } } } },
+    });
+    if (!team) throw notFound('Team');
+    const { _count, ...t } = team;
+    res.json({ team: { ...t, openJobs: _count.tasks } });
+  }),
+);
+
 teamsRouter.post(
   '/',
   requireRole(ROLES.MANAGERS),
@@ -66,6 +88,69 @@ teamsRouter.post(
     const team = await prisma.$transaction((tx) => createTeam(tx, body, me(req).id));
     await audit(me(req).id, 'TEAM_CREATED', 'Team', team.id, `Created team ${team.name} (${team.members.length} technicians, led by ${team.leader.name})`);
     res.status(201).json({ team });
+  }),
+);
+
+/** Edit a team: rename, swap members, change leader. Open jobs on a member being removed block the change. */
+teamsRouter.patch(
+  '/:id',
+  requireRole(ROLES.MANAGERS),
+  ah(async (req, res) => {
+    const body = parse(updateTeamSchema, req.body);
+    const team = await prisma.team.findUnique({
+      where: { id: req.params.id },
+      include: { members: { include: { user: true } }, chat: { include: { members: { select: { userId: true } } } } },
+    });
+    if (!team) throw notFound('Team');
+
+    const memberIds = body.memberIds ? [...new Set(body.memberIds)] : team.members.map((m) => m.userId);
+    const leaderId = body.leaderId ?? team.leaderId;
+
+    if (memberIds.length < 2) throw badRequest('A team needs at least two technicians');
+    if (!memberIds.includes(leaderId)) throw badRequest('The leader must be one of the team members');
+
+    if (body.name && body.name !== team.name) {
+      const clash = await prisma.team.findFirst({ where: { id: { not: team.id }, name: { equals: body.name, mode: 'insensitive' } } });
+      if (clash) throw conflict(`There is already a team called "${clash.name}". Choose it from the list or use another name.`, 'TEAM_EXISTS');
+    }
+
+    const techs = await prisma.user.findMany({ where: { id: { in: memberIds }, role: 'TECHNICIAN', active: true }, select: { id: true } });
+    if (techs.length !== memberIds.length) throw badRequest('Teams can only include active technicians');
+
+    const existing = new Set(team.members.map((m) => m.userId));
+    const added = memberIds.filter((id) => !existing.has(id));
+    const removed = team.members.filter((m) => !memberIds.includes(m.userId));
+
+    const busy = await prisma.task.findMany({
+      where: { teamId: team.id, status: { in: ['ASSIGNED', 'IN_PROGRESS'] }, assigneeId: { in: removed.map((m) => m.userId) } },
+      select: { id: true, code: true, assignee: { select: { name: true } } },
+    });
+    if (busy.length) {
+      throw conflict(`${busy.length} open ${busy.length === 1 ? 'job' : 'jobs'} still assigned to ${busy.map((b) => b.assignee!.name).join(', ')}. Reassign them first.`, 'TEAM_BUSY');
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const t = await tx.team.update({
+        where: { id: team.id },
+        data: {
+          ...(body.name ? { name: body.name } : {}),
+          ...(body.leaderId !== undefined ? { leaderId } : {}),
+        },
+        include: teamInclude,
+      });
+      for (const m of removed) {
+        await tx.teamMember.delete({ where: { id: m.id } });
+        if (team.chat) await tx.conversationMember.deleteMany({ where: { conversationId: team.chat.id, userId: m.userId } });
+      }
+      for (const userId of added) {
+        await tx.teamMember.create({ data: { teamId: team.id, userId } });
+        if (team.chat) await tx.conversationMember.create({ data: { conversationId: team.chat.id, userId } });
+      }
+      return t;
+    });
+
+    await audit(me(req).id, 'TEAM_UPDATED', 'Team', team.id, `Updated team ${updated.name} (${updated.members.length} technicians, led by ${updated.leader.name})`);
+    res.json({ team: updated });
   }),
 );
 
