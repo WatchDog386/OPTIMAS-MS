@@ -8,6 +8,20 @@ const KEY = 'office';
 let cached: { at: number; office: Office | null } | null = null;
 const FRESH_MS = 60_000;
 
+/** A previous build or a manually edited setting must not be allowed to publish NaN coordinates. */
+function validSavedOffice(value: unknown): Office | null {
+  if (!value || typeof value !== 'object') return null;
+  const office = value as Partial<Office>;
+  if (
+    typeof office.lat !== 'number' || !Number.isFinite(office.lat) || office.lat < -90 || office.lat > 90 ||
+    typeof office.lng !== 'number' || !Number.isFinite(office.lng) || office.lng < -180 || office.lng > 180 ||
+    typeof office.radiusM !== 'number' || !Number.isFinite(office.radiusM) || office.radiusM <= 0 ||
+    typeof office.name !== 'string' || !office.name.trim()
+  ) return null;
+  const source = office.source === 'settings' || office.source === 'address' || office.source === 'app' ? office.source : 'app';
+  return { lat: office.lat, lng: office.lng, radiusM: office.radiusM, name: office.name, source };
+}
+
 /**
  * Where staff check in and out. In order: the spot a supervisor set from their phone at the office (in the
  * app), the OFFICE_LAT / OFFICE_LNG settings, or the OFFICE_ADDRESS looked up on the map (saved once found).
@@ -17,10 +31,12 @@ export async function getOffice(): Promise<Office | null> {
   const saved = await prisma.setting.findUnique({ where: { key: KEY } }).catch(() => null);
   let office: Office | null = null;
   if (saved) {
-    office = saved.value as unknown as Office;
-  } else if (env.OFFICE_LAT !== undefined && env.OFFICE_LNG !== undefined) {
+    office = validSavedOffice(saved.value);
+  }
+  // A malformed saved value is ignored so a valid configured office can still be used.
+  if (!office && env.OFFICE_LAT !== undefined && env.OFFICE_LNG !== undefined) {
     office = { lat: env.OFFICE_LAT, lng: env.OFFICE_LNG, radiusM: env.OFFICE_RADIUS_M, name: env.OFFICE_ADDRESS, source: 'settings' };
-  } else {
+  } else if (!office) {
     // The address, then the road and area, then just the area, if the shop itself is not on the map
     const parts = env.OFFICE_ADDRESS.split(',').map((p) => p.trim());
     let hit = null;

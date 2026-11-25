@@ -4,7 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Location from 'expo-location';
 import { useApi } from '../hooks/useApi';
 import { colors, fonts, isDark } from '../theme';
-import { distanceLabel, metres, watchFix, type Fix } from '../utils/location';
+import { distanceLabel, hasValidCoordinates, metres, watchFix, type Fix } from '../utils/location';
 import { MapCanvas, type MapCircle, type MapPin } from './map';
 import { PulseDot } from './Motion';
 import { Text } from './Text';
@@ -46,26 +46,28 @@ export function useOfficeCheck() {
     };
   }, []);
 
-  const o = office.data?.office ?? null;
-  const away = o && fix ? metres([fix.lat, fix.lng], [o.lat, o.lng]) : null;
-  const rough = fix?.accuracy == null || fix.accuracy > PRECISE_ENOUGH_M;
+  const candidate = office.data?.office ?? null;
+  const o = candidate && hasValidCoordinates(candidate.lat, candidate.lng) && Number.isFinite(candidate.radiusM) && candidate.radiusM > 0 ? candidate : null;
+  const position = fix && hasValidCoordinates(fix.lat, fix.lng) ? fix : null;
+  const away = o && position ? metres([position.lat, position.lng], [o.lat, o.lng]) : null;
+  const rough = position?.accuracy == null || position.accuracy > PRECISE_ENOUGH_M;
   const state: OfficeState = !office.data
     ? 'loading'
     : off
       ? 'off'
       : !o
         ? 'no-office'
-        : !fix
+        : !position
           ? 'searching'
           : away! > o.radiusM
             ? // Clearly outside, even allowing for the GPS error, or a precise reading outside
-              rough && away! - (fix.accuracy ?? 0) <= o.radiusM
-              ? 'weak'
-              : 'away'
-            : rough && (fix.accuracy ?? Infinity) > o.radiusM
+              rough && away! - (position.accuracy ?? 0) <= o.radiusM
+                ? 'weak'
+                : 'away'
+            : rough && (position.accuracy ?? Infinity) > o.radiusM
               ? 'weak'
               : 'at';
-  return { office: o, fix, away, state };
+  return { office: o, fix: position, away, state };
 }
 
 const TONE = {

@@ -1,10 +1,12 @@
 import 'dotenv/config';
 import { z } from 'zod';
 
-const optionalNumber = z
-  .string()
-  .optional()
-  .transform((v) => (v === undefined || v.trim() === '' ? undefined : Number(v)));
+const optionalNumber = (min: number, max: number) =>
+  z
+    .string()
+    .optional()
+    .transform((v) => (v === undefined || v.trim() === '' ? undefined : Number(v)))
+    .refine((v) => v === undefined || (Number.isFinite(v) && v >= min && v <= max), `must be a finite number between ${min} and ${max}`);
 
 const schema = z.object({
   PORT: z.coerce.number().default(4000),
@@ -24,9 +26,9 @@ const schema = z.object({
   LATE_GRACE_MINUTES: z.coerce.number().default(15),
   CAPTURE_TTL_SECONDS: z.coerce.number().default(90),
   MIN_GPS_ACCURACY_M: z.coerce.number().default(100),
-  OFFICE_LAT: optionalNumber.default(-1.18527),
-  OFFICE_LNG: optionalNumber.default(36.90382),
-  OFFICE_RADIUS_M: z.coerce.number().default(300),
+  OFFICE_LAT: optionalNumber(-90, 90).default(-1.18527),
+  OFFICE_LNG: optionalNumber(-180, 180).default(36.90382),
+  OFFICE_RADIUS_M: z.coerce.number().finite().positive().default(300),
   /** Where staff check in, by address: looked up on the map when no coordinates are set. */
   OFFICE_ADDRESS: z.string().default('Barber & Spa, Kahawa Station Road, Kahawa West, Nairobi'),
   MAX_ROUTERS_IN_CUSTODY: z.coerce.number().default(5),

@@ -19,6 +19,7 @@ const TILE_ATTRIBUTION = process.env.EXPO_PUBLIC_MAP_TILE_ATTRIBUTION || '&copy;
 const KAHAWA_WEST: LatLng = [-1.1863, 36.9035];
 const SERVICE_AREA = L.latLngBounds([-1.45, 36.6], [-1.05, 37.15]);
 const GLIDE_MS = 1100;
+const validPoint = (lat: number, lng: number) => Number.isFinite(lat) && lat >= -90 && lat <= 90 && Number.isFinite(lng) && lng >= -180 && lng <= 180;
 
 const DEFAULT_COLOR: Record<MapPin['kind'], string> = {
   tech: colors.navy,
@@ -153,6 +154,7 @@ export default function LeafletMap({ pins, circles, route, trail, fitKey, follow
     const live = markers.current;
     const seen = new Set<string>();
     for (const p of pins) {
+      if (!validPoint(p.lat, p.lng)) continue;
       seen.add(p.id);
       const to = L.latLng(p.lat, p.lng);
       const existing = live.get(p.id);
@@ -217,6 +219,7 @@ export default function LeafletMap({ pins, circles, route, trail, fitKey, follow
     const live = circleLayers.current;
     const seen = new Set<string>();
     for (const c of circles ?? []) {
+      if (!validPoint(c.lat, c.lng) || !Number.isFinite(c.radiusM) || c.radiusM <= 0) continue;
       seen.add(c.id);
       const style = { color: c.color, weight: c.dashed ? 1.5 : 2, opacity: 0.85, fillColor: c.color, fillOpacity: c.dashed ? 0.08 : 0.14, dashArray: c.dashed ? '4 6' : undefined, interactive: false };
       const existing = live.get(c.id);
@@ -237,9 +240,10 @@ export default function LeafletMap({ pins, circles, route, trail, fitKey, follow
   useEffect(() => {
     const m = map.current;
     if (!m || !ready) return;
-    if (trail && trail.length > 1) {
-      if (trailLayer.current) trailLayer.current.setLatLngs(trail);
-      else trailLayer.current = L.polyline(trail, { color: colors.navy, weight: 4, opacity: 0.45, dashArray: '2 8', lineCap: 'round' }).addTo(m);
+    const safeTrail = trail?.filter(([lat, lng]) => validPoint(lat, lng));
+    if (safeTrail && safeTrail.length > 1) {
+      if (trailLayer.current) trailLayer.current.setLatLngs(safeTrail);
+      else trailLayer.current = L.polyline(safeTrail, { color: colors.navy, weight: 4, opacity: 0.45, dashArray: '2 8', lineCap: 'round' }).addTo(m);
     } else if (trailLayer.current) {
       trailLayer.current.remove();
       trailLayer.current = null;
@@ -249,23 +253,24 @@ export default function LeafletMap({ pins, circles, route, trail, fitKey, follow
   useEffect(() => {
     const m = map.current;
     if (!m || !ready) return;
-    if (!route || route.length < 2) {
+    const safeRoute = route?.filter(([lat, lng]) => validPoint(lat, lng));
+    if (!safeRoute || safeRoute.length < 2) {
       routeLayers.current?.casing.remove();
       routeLayers.current?.line.remove();
       routeLayers.current = null;
       return;
     }
     // A route to a new place is drawn in; a refreshed route to the same place just updates
-    const key = route[route.length - 1].map((n) => n.toFixed(4)).join(',');
+    const key = safeRoute[safeRoute.length - 1].map((n) => n.toFixed(4)).join(',');
     if (routeLayers.current && routeLayers.current.key === key) {
-      routeLayers.current.casing.setLatLngs(route);
-      routeLayers.current.line.setLatLngs(route);
+      routeLayers.current.casing.setLatLngs(safeRoute);
+      routeLayers.current.line.setLatLngs(safeRoute);
       return;
     }
     routeLayers.current?.casing.remove();
     routeLayers.current?.line.remove();
-    const casing = L.polyline(route, { color: '#FFFFFF', weight: 11, opacity: 0.95, lineCap: 'round', lineJoin: 'round' }).addTo(m);
-    const line = L.polyline(route, { color: colors.navy, weight: 6, opacity: 0.95, lineCap: 'round', lineJoin: 'round', className: 'om-route' }).addTo(m);
+    const casing = L.polyline(safeRoute, { color: '#FFFFFF', weight: 11, opacity: 0.95, lineCap: 'round', lineJoin: 'round' }).addTo(m);
+    const line = L.polyline(safeRoute, { color: colors.navy, weight: 6, opacity: 0.95, lineCap: 'round', lineJoin: 'round', className: 'om-route' }).addTo(m);
     routeLayers.current = { casing, line, key };
     const path = line.getElement() as SVGPathElement | undefined;
     if (path && !prefersReducedMotion()) {
@@ -289,9 +294,13 @@ export default function LeafletMap({ pins, circles, route, trail, fitKey, follow
   frame.current = () => {
     const m = map.current;
     if (!m) return;
-    const pts: LatLng[] = [...pins.map((p) => [p.lat, p.lng] as LatLng), ...(route ?? [])];
+    const pts: LatLng[] = [
+      ...pins.filter((p) => validPoint(p.lat, p.lng)).map((p) => [p.lat, p.lng] as LatLng),
+      ...(route ?? []).filter(([lat, lng]) => validPoint(lat, lng)),
+    ];
     // Circles count by their edges, so a whole zone is in view
     for (const c of circles ?? []) {
+      if (!validPoint(c.lat, c.lng) || !Number.isFinite(c.radiusM) || c.radiusM <= 0) continue;
       const b = L.latLng(c.lat, c.lng).toBounds(c.radiusM * 2);
       pts.push([b.getNorth(), b.getEast()], [b.getSouth(), b.getWest()]);
     }
@@ -309,7 +318,7 @@ export default function LeafletMap({ pins, circles, route, trail, fitKey, follow
     if (!recenterKey || !map.current) return;
     const p = follow ? pins.find((x) => x.id === follow) : null;
     userPanned.current = false;
-    if (p) map.current.flyTo([p.lat, p.lng], Math.max(map.current.getZoom(), 16), { duration: 0.8 });
+    if (p && validPoint(p.lat, p.lng)) map.current.flyTo([p.lat, p.lng], Math.max(map.current.getZoom(), 16), { duration: 0.8 });
     else frame.current();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the button is pressed
   }, [recenterKey]);

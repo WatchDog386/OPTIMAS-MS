@@ -13,16 +13,25 @@ export interface Fix {
   at: number;
 }
 
+/** True only for real WGS84 coordinates (GPS APIs and cached server settings can both be malformed). */
+export function hasValidCoordinates(lat: unknown, lng: unknown): boolean {
+  return typeof lat === 'number' && Number.isFinite(lat) && lat >= -90 && lat <= 90 &&
+    typeof lng === 'number' && Number.isFinite(lng) && lng >= -180 && lng <= 180;
+}
+
 const clean = (n: number | null | undefined, max: number) => (n == null || Number.isNaN(n) || n < 0 || n > max ? null : n);
 
-export const toFix = (l: Location.LocationObject): Fix => ({
-  lat: l.coords.latitude,
-  lng: l.coords.longitude,
-  accuracy: clean(l.coords.accuracy, 100_000),
-  heading: clean(l.coords.heading, 360),
-  speed: clean(l.coords.speed, 100),
-  at: l.timestamp || Date.now(),
-});
+export const toFix = (l: Location.LocationObject): Fix | null => {
+  if (!hasValidCoordinates(l.coords.latitude, l.coords.longitude)) return null;
+  return {
+    lat: l.coords.latitude,
+    lng: l.coords.longitude,
+    accuracy: clean(l.coords.accuracy, 100_000),
+    heading: clean(l.coords.heading, 360),
+    speed: clean(l.coords.speed, 100),
+    at: l.timestamp || Date.now(),
+  };
+};
 
 /** Asks the phone/browser for location permission. True when allowed. */
 export async function askLocation(): Promise<boolean> {
@@ -75,6 +84,7 @@ function webHub(onFix: (f: Fix) => void, onError?: () => void): () => void {
     hub.denied = false;
     hub.id = geo.watchPosition(
       (p) => {
+        if (!hasValidCoordinates(p.coords.latitude, p.coords.longitude)) return;
         const f: Fix = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: clean(p.coords.accuracy, 100_000), heading: clean(p.coords.heading, 360), speed: clean(p.coords.speed, 100), at: p.timestamp || Date.now() };
         hub.last = f;
         hub.listeners.forEach((l) => l.onFix(f));
@@ -106,7 +116,11 @@ export function watchFix(onFix: (f: Fix) => void, onError?: () => void): () => v
   if (Platform.OS === 'web') return webHub(onFix, onError);
   let stopped = false;
   let sub: Location.LocationSubscription | null = null;
-  Location.watchPositionAsync({ accuracy: Location.Accuracy.BestForNavigation, timeInterval: 4000, distanceInterval: 5 }, (l) => !stopped && onFix(toFix(l)))
+  Location.watchPositionAsync({ accuracy: Location.Accuracy.BestForNavigation, timeInterval: 4000, distanceInterval: 5 }, (l) => {
+    if (stopped) return;
+    const fix = toFix(l);
+    if (fix) onFix(fix);
+  })
     .then((s) => (stopped ? s.remove() : (sub = s)))
     .catch(() => onError?.());
   return () => {

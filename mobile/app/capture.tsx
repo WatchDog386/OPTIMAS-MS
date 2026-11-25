@@ -16,7 +16,7 @@ import { resolveCapture, type CaptureResult } from '../src/store/bridge';
 import { colors, fonts, radius, space } from '../src/theme';
 import { useStatusBarColor } from '../src/utils/statusBar';
 import { appendFile, grabCameraFrame, photoFromPhoneCamera } from '../src/utils/upload';
-import { distanceLabel, metres, watchFix, type Fix } from '../src/utils/location';
+import { distanceLabel, hasValidCoordinates, metres, watchFix, type Fix } from '../src/utils/location';
 import { PRECISE_ENOUGH_M } from '../src/components/OfficeCheck';
 import { useApi } from '../src/hooks/useApi';
 
@@ -276,7 +276,7 @@ function GpsLine({ fix, off, office }: { fix: Fix | null; off: boolean; office?:
       </View>
     );
   }
-  if (!fix) {
+  if (!fix || !hasValidCoordinates(fix.lat, fix.lng)) {
     return (
       <View style={styles.gps}>
         <ActivityIndicator size="small" color={colors.textMuted} />
@@ -286,15 +286,16 @@ function GpsLine({ fix, off, office }: { fix: Fix | null; off: boolean; office?:
       </View>
     );
   }
-  const away = office ? metres([fix.lat, fix.lng], [office.lat, office.lng]) : null;
+  const validOffice = office && hasValidCoordinates(office.lat, office.lng) && Number.isFinite(office.radiusM) && office.radiusM > 0 ? office : null;
+  const away = validOffice ? metres([fix.lat, fix.lng], [validOffice.lat, validOffice.lng]) : null;
   const rough = fix.accuracy == null || fix.accuracy > PRECISE_ENOUGH_M;
   // A coloured status chip: green at the office, red away, amber while the reading is still rough
-  const state = office === undefined ? (rough ? 'wait' : 'ok') : !office ? 'info' : away! > office.radiusM && !(rough && away! - (fix.accuracy ?? 0) <= office.radiusM) ? 'bad' : rough && (fix.accuracy ?? Infinity) > office.radiusM ? 'wait' : 'ok';
+  const state = office === undefined ? (rough ? 'wait' : 'ok') : !validOffice ? 'info' : away! > validOffice.radiusM && !(rough && away! - (fix.accuracy ?? 0) <= validOffice.radiusM) ? 'bad' : rough && (fix.accuracy ?? Infinity) > validOffice.radiusM ? 'wait' : 'ok';
   const tone = { ok: '#2DA043', bad: '#DC2626', wait: '#D97706', info: colors.textMuted }[state];
   const title =
     office === undefined
       ? `GPS ±${distanceLabel(fix.accuracy ?? 0)}`
-      : !office
+      : !validOffice
         ? 'Office location not set yet'
         : state === 'ok'
           ? 'At the office'
@@ -310,7 +311,7 @@ function GpsLine({ fix, off, office }: { fix: Fix | null; off: boolean; office?:
         </Text>
         <Text variant="label" color={colors.textMuted} style={{ fontSize: 11 }}>
           GPS ±{distanceLabel(fix.accuracy ?? 0)}
-          {office && away != null ? ` · ${distanceLabel(away)} to the office pin` : ''}
+          {validOffice && away != null ? ` · ${distanceLabel(away)} to the office pin` : ''}
         </Text>
       </View>
     </View>
